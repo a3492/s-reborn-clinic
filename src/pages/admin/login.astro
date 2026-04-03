@@ -112,7 +112,7 @@ import BaseHead from '../../components/BaseHead.astro';
           const { error } = await supabase.auth.signInWithOtp({
             email,
             options: {
-              emailRedirectTo: `${window.location.origin}${redirectTo}`,
+              emailRedirectTo: window.location.href,  // 로그인 페이지로 되돌아와서 토큰 처리 후 admin 이동
             },
           });
 
