@@ -1,7 +1,24 @@
 export const SITE_TITLE = '에스리본 클리닉';
 export const SITE_DESCRIPTION = '에스리본 클리닉 공식 블로그 — 시술 안내, 건강 정보, 원장 칼럼';
-export const CONTACT_EMAIL = '';
-export const KAKAO_CHANNEL_ID = '';
+export const CONTACT_EMAIL = 'a01034920591@gmail.com';
+export const KAKAO_CHANNEL_ID = '_MNGNb';
+
+// 클리닉 기본 정보
+export const CLINIC_INFO = {
+  name: '에스리본의원',
+  director: '김도위 대표원장',
+  phone: '1833-5881',
+  address: '서울특별시 마포구 양화로 162, 좋은사람들빌딩 8층',
+  addressDetail: '(동교동, 홍대입구역 8·9번 출구 도보 2~3분)',
+  website: 'https://www.s-reborn.com',
+  kakaoChannel: 'http://pf.kakao.com/_MNGNb',
+  hours: [
+    { days: '월·화·수·금', time: '10:30 – 19:30' },
+    { days: '목 (야간진료)', time: '13:00 – 21:00' },
+    { days: '토', time: '10:00 – 16:00' },
+    { days: '일·공휴일', time: '휴무' },
+  ],
+} as const;
 
 export const CATEGORIES = [
   { id: 'procedures',    label: '시술·치료',   description: '클리닉 시술 및 치료 안내' },

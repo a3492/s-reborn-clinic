@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { CLINIC_INFO } from '../consts';
 ---
 
 <Layout title="클리닉 소개" description="에스리본 클리닉 소개 — 전문 의료진, 진료 철학, 클리닉 소식">
@@ -42,8 +43,8 @@ import Layout from '../layouts/Layout.astro';
       <div class="doctor-grid">
         <div class="doctor-card">
           <div class="doctor-avatar" aria-hidden="true">👨‍⚕️</div>
-          <h3 class="doctor-name">원장 (미정)</h3>
-          <p class="doctor-spec">전문 분야: 피부과·미용의학</p>
+          <h3 class="doctor-name">{CLINIC_INFO.director}</h3>
+          <p class="doctor-spec">가정의학과 전문의 · 한양대학교 의과대학</p>
           <p class="doctor-bio">풍부한 임상 경험을 바탕으로 한 분 한 분의 피부 상태를 면밀히 분석하고, 최적의 시술 방향을 제안합니다.</p>
         </div>
       </div>
@@ -55,18 +56,18 @@ import Layout from '../layouts/Layout.astro';
         <div class="location-detail">
           <div class="location-item">
             <strong>주소</strong>
-            <span>서울특별시 강남구 (주소 미정)</span>
+            <span>{CLINIC_INFO.address}<br/><small>{CLINIC_INFO.addressDetail}</small></span>
           </div>
           <div class="location-item">
             <strong>전화</strong>
-            <span>000-0000-0000</span>
+            <span><a href={`tel:${CLINIC_INFO.phone}`}>{CLINIC_INFO.phone}</a></span>
           </div>
           <div class="location-item">
             <strong>진료시간</strong>
             <div>
-              <p>월~금: 09:00 – 18:00</p>
-              <p>토: 09:00 – 13:00</p>
-              <p>일·공휴일: 휴진</p>
+              {CLINIC_INFO.hours.map(h => (
+                <p>{h.days}: {h.time}</p>
+              ))}
             </div>
           </div>
         </div>
