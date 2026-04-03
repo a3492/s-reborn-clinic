@@ -1,6 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { CATEGORIES, CLINIC_INFO } from '../consts';
+import { CATEGORIES, CLINIC_INFO, NAVER_MAP_SEARCH_URL } from '../consts';
 ---
 
 <Layout title="온라인 상담" description="에스리본 클리닉 온라인 상담 신청 — 전문 의료진이 직접 답변합니다.">
@@ -93,7 +93,7 @@ import { CATEGORIES, CLINIC_INFO } from '../consts';
             </li>
           </ul>
           <div class="consult-map-links">
-            <a href={`https://map.naver.com/p/search/${encodeURIComponent(CLINIC_INFO.name)}`} target="_blank" rel="noopener" class="map-link naver">네이버 지도에서 보기</a>
+            <a href={NAVER_MAP_SEARCH_URL} target="_blank" rel="noopener noreferrer" class="map-link naver">네이버 지도에서 보기</a>
           </div>
         </div>
 

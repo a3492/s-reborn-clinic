@@ -20,6 +20,11 @@ export const CLINIC_INFO = {
   ],
 } as const;
 
+/** 네이버 지도 웹에서 장소 검색으로 여는 URL. 지도 앱 전체 URL을 iframe에 넣으면 차단·깨짐이 잦아 링크만 사용합니다. */
+export const NAVER_MAP_SEARCH_URL = `https://map.naver.com/p/search/${encodeURIComponent(
+  `${CLINIC_INFO.name} ${CLINIC_INFO.address}`,
+)}`;
+
 export const CATEGORIES = [
   { id: 'procedures',    label: '시술·치료',   description: '클리닉 시술 및 치료 안내' },
   { id: 'before-after',  label: '전후 사례',   description: '시술 전후 비교 사례' },
