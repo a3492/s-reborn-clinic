@@ -19,8 +19,8 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
       <h1 class="hero-title">당신의 아름다움을<br/>다시 피우다</h1>
       <p class="hero-desc">전문 의료진의 섬세한 손길로 당신만의 자연스러운 아름다움을 완성합니다.</p>
       <div class="hero-actions">
-        <a href="/consult" class="btn btn-primary btn-lg">무료 상담 신청</a>
-        <a href="/procedures" class="btn btn-outline btn-lg">시술 안내 보기</a>
+        <a href="/procedures" class="btn btn-primary btn-lg">시술 안내 보기</a>
+        <a href="/consult" class="hero-consult-link">온라인 문의</a>
       </div>
     </div>
   </section>
@@ -40,7 +40,7 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
       <div class="trust-divider"></div>
       <div class="trust-item">
         <span class="trust-icon">💬</span>
-        <span class="trust-label">무료 온라인 상담</span>
+        <span class="trust-label">친절한 안내</span>
       </div>
       <div class="trust-divider"></div>
       <div class="trust-item">
@@ -144,18 +144,6 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
     </section>
   )}
 
-  <!-- 상담 CTA 섹션 -->
-  <section class="cta-section">
-    <div class="cta-inner">
-      <h2 class="cta-title">지금 바로 상담해보세요</h2>
-      <p class="cta-desc">전문 의료진이 맞춤형 시술 플랜을 제안드립니다.</p>
-      <div class="cta-actions">
-        <a href="/consult" class="btn btn-primary btn-lg">무료 온라인 상담 신청</a>
-        <a href={CLINIC_INFO.kakaoChannel} target="_blank" rel="noopener" class="btn btn-kakao btn-lg">카카오로 문의</a>
-      </div>
-    </div>
-  </section>
-
   <!-- 플로팅 연락 버튼 -->
   <div class="floating-contact">
     <a href={`tel:${CLINIC_INFO.phone}`} class="floating-btn phone" aria-label="전화 연결">
@@ -212,8 +200,22 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
   .hero-actions {
     display: flex;
     gap: 1rem;
+    align-items: center;
     justify-content: center;
     flex-wrap: wrap;
+  }
+
+  .hero-consult-link {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--t2);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    padding: 0.5rem 0.25rem;
+  }
+
+  .hero-consult-link:hover {
+    color: var(--accent-dark);
   }
 
   .section {
@@ -524,48 +526,6 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
     .trust-bar-inner { gap: 0.75rem; }
   }
 
-  /* CTA */
-  .cta-section {
-    background: linear-gradient(135deg, var(--color-charcoal), var(--color-brown-dark));
-    padding: 4rem 2rem;
-    text-align: center;
-    margin-inline: -2rem;
-  }
-
-  .cta-inner {
-    max-width: 560px;
-    margin: 0 auto;
-  }
-
-  .cta-title {
-    font-size: 2rem;
-    font-weight: 800;
-    color: white;
-    margin: 0 0 0.75rem;
-  }
-
-  .cta-desc {
-    color: rgba(255,255,255,0.75);
-    margin: 0 0 2rem;
-    line-height: 1.7;
-  }
-
-  .cta-actions {
-    display: flex;
-    gap: 0.75rem;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-
-  .btn-kakao {
-    background: #fee500;
-    color: #3a1d1d;
-    border: none;
-  }
-  .btn-kakao:hover {
-    background: #ffd900;
-  }
-
   /* 플로팅 버튼 */
   .floating-contact {
     position: fixed;
@@ -614,9 +574,5 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
       padding-inline: 1rem;
     }
 
-    .cta-section {
-      margin-inline: -1rem;
-      padding: 3rem 1rem;
-    }
   }
 </style>

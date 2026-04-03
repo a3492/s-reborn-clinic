@@ -50,7 +50,7 @@ import { CLINIC_INFO } from '../consts';
       </div>
     </section>
 
-    <section class="about-section">
+    <section class="about-section" id="location">
       <h2>오시는 길</h2>
       <div class="location-info">
         <div class="location-detail">
@@ -84,17 +84,11 @@ import { CLINIC_INFO } from '../consts';
           ></iframe>
           <div class="map-link-row">
             <a href={`https://map.naver.com/p/search/${encodeURIComponent(CLINIC_INFO.name)}`} target="_blank" rel="noopener" class="map-ext-link naver">네이버 지도로 보기</a>
-            <a href={`https://map.kakao.com/?q=${encodeURIComponent(CLINIC_INFO.name)}`} target="_blank" rel="noopener" class="map-ext-link kakao">카카오맵으로 보기</a>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="about-cta">
-      <h2>궁금한 점이 있으신가요?</h2>
-      <p>전문 의료진이 직접 답변드립니다.</p>
-      <a href="/consult" class="btn btn-primary btn-lg">무료 온라인 상담 신청</a>
-    </section>
   </div>
 </Layout>
 
@@ -294,27 +288,6 @@ import { CLINIC_INFO } from '../consts';
   }
   .map-ext-link:hover { opacity: 0.8; }
   .map-ext-link.naver { background: #03c75a; color: white; }
-  .map-ext-link.kakao { background: #fee500; color: #3a1d1d; }
-
-  .about-cta {
-    text-align: center;
-    padding: 3rem 2rem;
-    background: linear-gradient(135deg, var(--color-pink-light), var(--color-gold-light));
-    border-radius: 20px;
-    margin: 2rem;
-  }
-
-  .about-cta h2 {
-    margin: 0 0 0.5rem;
-    font-size: 1.5rem;
-    font-weight: 800;
-    color: var(--text);
-  }
-
-  .about-cta p {
-    margin: 0 0 1.5rem;
-    color: var(--t2);
-  }
 
   @media (max-width: 768px) {
     .about-grid,

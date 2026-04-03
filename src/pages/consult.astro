@@ -93,8 +93,7 @@ import { CATEGORIES, CLINIC_INFO } from '../consts';
             </li>
           </ul>
           <div class="consult-map-links">
-            <a href={`https://map.naver.com/p/search/${encodeURIComponent(CLINIC_INFO.name)}`} target="_blank" rel="noopener" class="map-link naver">네이버 지도</a>
-            <a href={`https://map.kakao.com/?q=${encodeURIComponent(CLINIC_INFO.name)}`} target="_blank" rel="noopener" class="map-link kakao">카카오맵</a>
+            <a href={`https://map.naver.com/p/search/${encodeURIComponent(CLINIC_INFO.name)}`} target="_blank" rel="noopener" class="map-link naver">네이버 지도에서 보기</a>
           </div>
         </div>
 
@@ -114,16 +113,14 @@ import { CATEGORIES, CLINIC_INFO } from '../consts';
 
 <style>
   .consult-map-links {
-    display: flex;
-    gap: 0.5rem;
     margin-top: 1rem;
   }
 
   .map-link {
-    flex: 1;
-    padding: 0.5rem;
+    display: inline-block;
+    padding: 0.5rem 1rem;
     border-radius: 8px;
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     font-weight: 700;
     text-align: center;
     text-decoration: none;
@@ -131,7 +128,6 @@ import { CATEGORIES, CLINIC_INFO } from '../consts';
   }
   .map-link:hover { opacity: 0.8; }
   .map-link.naver { background: #03c75a; color: white; }
-  .map-link.kakao { background: #fee500; color: #3a1d1d; }
 
   .consult-info-list small {
     font-size: 0.78rem;

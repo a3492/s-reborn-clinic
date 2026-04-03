@@ -179,10 +179,6 @@ body {
   color: var(--text);
 }
 
-.site-header-cta {
-  flex-shrink: 0;
-}
-
 /* ── 버튼 ────────────────────────────────────────────────────── */
 
 .btn {
@@ -443,31 +439,6 @@ body {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: var(--space-lg);
-}
-
-/* ── 상담 CTA 배너 ────────────────────────────────────────── */
-
-.consult-cta {
-  padding: var(--space-2xl);
-  border-radius: var(--radius-xl);
-  background: linear-gradient(135deg, var(--color-gold-light), var(--color-pink-light));
-  border: 1px solid rgba(201, 169, 110, 0.25);
-  text-align: center;
-}
-
-.consult-cta-title {
-  margin: 0 0 var(--space-sm);
-  font-size: 1.5rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--text);
-}
-
-.consult-cta-desc {
-  margin: 0 0 var(--space-lg);
-  font-size: 0.95rem;
-  line-height: 1.7;
-  color: var(--t2);
 }
 
 /* ── 폼 ────────────────────────────────────────────────────── */
@@ -777,10 +748,6 @@ body {
 @media (max-width: 480px) {
   .site-nav {
     display: none;
-  }
-
-  .consult-cta {
-    padding: var(--space-lg);
   }
 }
 
