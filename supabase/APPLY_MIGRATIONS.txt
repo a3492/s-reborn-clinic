@@ -1,0 +1,28 @@
+에스리본 클리닉 Supabase — 마이그레이션 적용 방법
+================================================
+
+원격 DB에 아직 테이블이 없으면 상담 신청(consult_requests) 등이 실패합니다.
+
+방법 A) Supabase CLI (권장)
+---------------------------
+1) npm i -g supabase   또는   npx supabase login
+2) 이 폴더(s-reborn-clinic)에서:
+   npx supabase link --project-ref <대시보드의 Project ID>
+3) npx supabase db push
+
+방법 B) SQL Editor (수동)
+-------------------------
+Dashboard → SQL Editor → 아래 파일을 이름 순서대로 붙여넣어 실행:
+
+  migrations/20260403_admin_phase1.sql
+  migrations/20260403_consult_requests.sql
+  migrations/20260403_site_settings.sql
+  migrations/20260403_media_assets.sql
+  migrations/20260403_media_assets_soft_delete.sql
+  migrations/20260403_publish_jobs.sql
+  migrations/20260404_site_settings_public_anon_select.sql
+
+주의: admin_phase1이 먼저여야 consult_requests의 is_admin() 정책이 동작합니다.
+
+Edge Function notify-consult는 별도로 배포:
+  npx supabase functions deploy notify-consult --project-ref <ID>
