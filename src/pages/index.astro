@@ -1,7 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
-import { CATEGORIES } from '../consts';
+import { CATEGORIES, CLINIC_INFO } from '../consts';
 
 const allPosts = (await getCollection('blog', ({ data }) => !data.draft))
   .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
@@ -21,6 +21,31 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
       <div class="hero-actions">
         <a href="/consult" class="btn btn-primary btn-lg">무료 상담 신청</a>
         <a href="/procedures" class="btn btn-outline btn-lg">시술 안내 보기</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 신뢰 지표 바 -->
+  <section class="trust-bar">
+    <div class="trust-bar-inner">
+      <div class="trust-item">
+        <span class="trust-icon">🏥</span>
+        <span class="trust-label">가정의학과 전문의</span>
+      </div>
+      <div class="trust-divider"></div>
+      <div class="trust-item">
+        <span class="trust-icon">✦</span>
+        <span class="trust-label">FDA 승인 제품만 사용</span>
+      </div>
+      <div class="trust-divider"></div>
+      <div class="trust-item">
+        <span class="trust-icon">💬</span>
+        <span class="trust-label">무료 온라인 상담</span>
+      </div>
+      <div class="trust-divider"></div>
+      <div class="trust-item">
+        <span class="trust-icon">📍</span>
+        <span class="trust-label">홍대입구역 도보 2분</span>
       </div>
     </div>
   </section>
@@ -124,9 +149,22 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
     <div class="cta-inner">
       <h2 class="cta-title">지금 바로 상담해보세요</h2>
       <p class="cta-desc">전문 의료진이 맞춤형 시술 플랜을 제안드립니다.</p>
-      <a href="/consult" class="btn btn-primary btn-lg">무료 온라인 상담 신청</a>
+      <div class="cta-actions">
+        <a href="/consult" class="btn btn-primary btn-lg">무료 온라인 상담 신청</a>
+        <a href={CLINIC_INFO.kakaoChannel} target="_blank" rel="noopener" class="btn btn-kakao btn-lg">카카오로 문의</a>
+      </div>
     </div>
   </section>
+
+  <!-- 플로팅 연락 버튼 -->
+  <div class="floating-contact">
+    <a href={`tel:${CLINIC_INFO.phone}`} class="floating-btn phone" aria-label="전화 연결">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
+    </a>
+    <a href={CLINIC_INFO.kakaoChannel} target="_blank" rel="noopener" class="floating-btn kakao" aria-label="카카오 채널">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.477 3 2 6.477 2 10.5c0 2.52 1.57 4.74 3.95 6.07-.16.58-.52 1.97-.6 2.27-.1.36.13.36.28.26.11-.07 1.83-1.22 2.57-1.72.57.08 1.16.12 1.8.12 5.523 0 10-3.477 10-7.5S17.523 3 12 3z"/></svg>
+    </a>
+  </div>
 </Layout>
 
 <style>
@@ -442,6 +480,51 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
     color: var(--t2);
   }
 
+  /* 신뢰 지표 바 */
+  .trust-bar {
+    background: var(--surface);
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 1rem 2rem;
+    margin-inline: -2rem;
+  }
+
+  .trust-bar-inner {
+    max-width: 700px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .trust-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--t2);
+    white-space: nowrap;
+  }
+
+  .trust-icon {
+    font-size: 1rem;
+  }
+
+  .trust-divider {
+    width: 1px;
+    height: 1rem;
+    background: var(--rule);
+  }
+
+  @media (max-width: 600px) {
+    .trust-divider { display: none; }
+    .trust-bar-inner { gap: 0.75rem; }
+  }
+
+  /* CTA */
   .cta-section {
     background: linear-gradient(135deg, var(--color-charcoal), var(--color-brown-dark));
     padding: 4rem 2rem;
@@ -466,6 +549,51 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
     margin: 0 0 2rem;
     line-height: 1.7;
   }
+
+  .cta-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-kakao {
+    background: #fee500;
+    color: #3a1d1d;
+    border: none;
+  }
+  .btn-kakao:hover {
+    background: #ffd900;
+  }
+
+  /* 플로팅 버튼 */
+  .floating-contact {
+    position: fixed;
+    bottom: 1.75rem;
+    right: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    z-index: 100;
+  }
+
+  .floating-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    text-decoration: none;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .floating-btn:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 22px rgba(0,0,0,0.22);
+  }
+  .floating-btn.phone { background: var(--accent); color: white; }
+  .floating-btn.kakao { background: #fee500; color: #3a1d1d; }
 
   @media (max-width: 768px) {
     .hero {
