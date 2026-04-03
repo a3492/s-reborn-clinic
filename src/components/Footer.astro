@@ -1,0 +1,44 @@
+---
+import { SITE_TITLE } from '../consts';
+
+interface Props {
+  siteTitle?: string;
+  socialLinks?: Record<string, string>;
+}
+
+const { siteTitle = SITE_TITLE, socialLinks = {} } = Astro.props;
+const socialEntries = Object.entries(socialLinks).filter(([, value]) => value);
+---
+
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <div class="site-footer-top">
+      <div>
+        <p class="site-footer-brand">{siteTitle}</p>
+        <div class="site-footer-info">
+          <p>주소: 서울특별시 강남구 (주소 미정)</p>
+          <p>전화: 000-0000-0000 | 이메일: info@s-reborn-clinic.com</p>
+          <p>진료시간: 월–금 09:00–18:00 | 토 09:00–13:00 | 일·공휴일 휴진</p>
+        </div>
+      </div>
+
+      <div class="site-footer-links">
+        <a href="/about" class="site-footer-link">클리닉 소개</a>
+        <a href="/procedures" class="site-footer-link">시술 안내</a>
+        <a href="/blog" class="site-footer-link">블로그</a>
+        <a href="/consult" class="site-footer-link">온라인 상담</a>
+        {socialEntries.map(([label, href]) => (
+          <a href={href} target="_blank" rel="noreferrer" class="site-footer-link">{label}</a>
+        ))}
+      </div>
+    </div>
+
+    <div class="site-footer-bottom">
+      <span>© 2026 {siteTitle}. All rights reserved.</span>
+      <div style="display:flex;gap:1rem;">
+        <a href="#" class="site-footer-link">개인정보처리방침</a>
+        <a href="#" class="site-footer-link">이용약관</a>
+      </div>
+    </div>
+  </div>
+</footer>

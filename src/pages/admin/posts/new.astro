@@ -1,0 +1,320 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { CATEGORIES } from '../../../consts';
+
+---
+
+<AdminLayout
+  title="New Post"
+  pageTitle="New Post"
+  pageDescription="운영용 메타까지 포함한 draft 생성 폼입니다. 저장 후 바로 편집 화면으로 이동합니다."
+  status="Draft Save"
+>
+  <div class="admin-split">
+    <section class="admin-card pad-lg">
+      <div class="admin-actions-row">
+        <div>
+          <h2 class="admin-section-title">Editor</h2>
+          <p class="admin-section-desc">Markdown 본문과 SEO/frontmatter 메타를 함께 작성합니다.</p>
+        </div>
+        <div class="admin-actions-cluster">
+          <a href="/admin/posts/preview" class="admin-btn" data-admin-preview-link>미리보기</a>
+          <button type="submit" form="admin-post-form" class="admin-btn primary" data-admin-save-button>Draft 저장</button>
+        </div>
+      </div>
+
+      <form id="admin-post-form" class="admin-form-grid" data-admin-post-form>
+        <div class="admin-field full">
+          <label class="admin-label" for="title">제목</label>
+          <input id="title" name="title" class="admin-input" type="text" placeholder="글 제목을 입력하세요." required />
+        </div>
+
+        <div class="admin-field full">
+          <label class="admin-label" for="description">설명</label>
+          <textarea id="description" name="description" class="admin-textarea" style="min-height: 100px;" placeholder="목록과 SEO에 사용할 설명" required></textarea>
+        </div>
+
+        <div class="admin-field">
+          <label class="admin-label" for="slug">Slug</label>
+          <input id="slug" name="slug" class="admin-input" type="text" placeholder="my-new-post" />
+          <span class="admin-help">비워두면 제목 기준으로 자동 생성합니다.</span>
+        </div>
+
+        <div class="admin-field">
+          <label class="admin-label" for="category">카테고리</label>
+          <select id="category" name="category" class="admin-select">
+            {CATEGORIES.map((c) => (
+              <option value={c.id}>{c.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div class="admin-field">
+          <label class="admin-label" for="date">발행일</label>
+          <input id="date" name="date" class="admin-input" type="datetime-local" />
+        </div>
+
+        <div class="admin-field">
+          <label class="admin-label" for="status">상태</label>
+          <select id="status" name="status" class="admin-select">
+            <option value="draft">draft</option>
+            <option value="review">review</option>
+            <option value="scheduled">scheduled</option>
+          </select>
+        </div>
+
+        <div class="admin-field full">
+          <label class="admin-label" for="thumbnail_url">Thumbnail URL</label>
+          <input id="thumbnail_url" name="thumbnail_url" class="admin-input" type="url" placeholder="https://... 또는 /images/..." />
+        </div>
+
+        <div class="admin-field full">
+          <label class="admin-label" for="tags">태그</label>
+          <input id="tags" name="tags" class="admin-input" type="text" placeholder="ai, workflow, clinic" />
+          <span class="admin-help">쉼표 기준으로 분리합니다.</span>
+        </div>
+
+        <div class="admin-field">
+          <label class="admin-label" for="seo_title">SEO Title</label>
+          <input id="seo_title" name="seo_title" class="admin-input" type="text" placeholder="비우면 제목을 사용합니다." />
+        </div>
+
+        <div class="admin-field">
+          <label class="admin-label" for="canonical_url">Canonical URL</label>
+          <input id="canonical_url" name="canonical_url" class="admin-input" type="url" placeholder="https://..." />
+        </div>
+
+        <div class="admin-field full">
+          <label class="admin-label" for="seo_description">SEO Description</label>
+          <textarea id="seo_description" name="seo_description" class="admin-textarea" style="min-height: 110px;" placeholder="비우면 기본 설명을 사용합니다."></textarea>
+        </div>
+
+        <div class="admin-field full">
+          <label class="admin-label" for="body">본문 Markdown</label>
+          <textarea id="body" name="body" class="admin-textarea" placeholder="# 글 제목&#10;&#10;여기에 Markdown 본문을 작성합니다."></textarea>
+        </div>
+      </form>
+
+      <p class="admin-inline-note" data-admin-post-message hidden></p>
+    </section>
+
+    <div class="admin-panel-stack">
+      <section class="admin-card pad-md">
+        <h2 class="admin-section-title">Save Flow</h2>
+        <p class="admin-section-desc">저장 후 글 목록으로 돌아가지 않고, 바로 편집/발행 화면으로 이동합니다.</p>
+        <ul class="admin-list">
+          <li class="admin-list-row"><div><p class="admin-item-title">draft insert</p><p class="admin-item-meta">posts + post_revisions + audit_logs를 함께 기록합니다.</p></div><div><span class="admin-status ready">Live</span></div></li>
+          <li class="admin-list-row"><div><p class="admin-item-title">edit redirect</p><p class="admin-item-meta">생성 직후 `/admin/posts/edit`로 이동해 바로 발행/수정합니다.</p></div><div><span class="admin-status ready">Live</span></div></li>
+          <li class="admin-list-row"><div><p class="admin-item-title">SEO meta</p><p class="admin-item-meta">thumbnail, seo title/description, canonical까지 함께 저장합니다.</p></div><div><span class="admin-status ready">Live</span></div></li>
+        </ul>
+      </section>
+
+      <section class="admin-card pad-md">
+        <h2 class="admin-section-title">Validation Checklist</h2>
+        <p class="admin-section-desc">저장 전에 점검하는 규칙들</p>
+        <ul class="admin-list">
+          <li class="admin-list-row"><div><p class="admin-item-title">필수 메타</p><p class="admin-item-meta">title, description, body</p></div></li>
+          <li class="admin-list-row"><div><p class="admin-item-title">slug 정규화</p><p class="admin-item-meta">영문 소문자와 하이픈 기준으로 자동 보정합니다.</p></div></li>
+          <li class="admin-list-row"><div><p class="admin-item-title">중복 저장 방지</p><p class="admin-item-meta">저장 중 버튼을 잠가 중복 insert를 막습니다.</p></div></li>
+        </ul>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    import { createClient } from '@supabase/supabase-js';
+    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+    const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+    const form = document.querySelector('[data-admin-post-form]');
+    const previewLink = document.querySelector('[data-admin-preview-link]');
+    const message = document.querySelector('[data-admin-post-message]');
+    const saveButton = document.querySelector('[data-admin-save-button]');
+    const getCurrentRole = () => document.body.dataset.adminRole || '';
+
+    const slugify = (value) =>
+      value
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+
+    const setMessage = (text, state = 'info') => {
+      if (!message) return;
+      message.hidden = false;
+      message.textContent = text;
+      message.dataset.state = state;
+    };
+
+    const setBusy = (busy) => {
+      if (!saveButton) return;
+      saveButton.disabled = busy;
+      saveButton.textContent = busy ? '저장 중...' : 'Draft 저장';
+    };
+
+    const syncPreview = () => {
+      if (!form) return;
+      const data = new FormData(form);
+      const title = String(data.get('title') || '');
+      const rawSlug = String(data.get('slug') || '');
+      const preview = {
+        title,
+        description: String(data.get('description') || ''),
+        slug: slugify(rawSlug || title),
+        category: String(data.get('category') || ''),
+        tags: String(data.get('tags') || '').split(',').map((tag) => tag.trim()).filter(Boolean),
+        status: String(data.get('status') || 'draft'),
+        published_at: String(data.get('date') || '') || null,
+        thumbnail_url: String(data.get('thumbnail_url') || '').trim() || null,
+        seo_title: String(data.get('seo_title') || '').trim() || null,
+        seo_description: String(data.get('seo_description') || '').trim() || null,
+        canonical_url: String(data.get('canonical_url') || '').trim() || null,
+        body: String(data.get('body') || ''),
+      };
+      localStorage.setItem('admin_post_draft_preview', JSON.stringify(preview));
+    };
+
+    // URL 파라미터로 제목 prefill (?title=...)
+    const urlParams = new URLSearchParams(window.location.search);
+    const prefillTitle = urlParams.get('title');
+    if (prefillTitle) {
+      const titleInput = document.getElementById('title');
+      if (titleInput) {
+        titleInput.value = prefillTitle;
+        titleInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+
+    form?.addEventListener('input', syncPreview);
+    previewLink?.addEventListener('click', syncPreview);
+    syncPreview();
+
+    if (!supabaseUrl || !supabaseKey) {
+      setMessage('Supabase 환경 변수가 없어 저장 기능을 초기화할 수 없습니다.', 'error');
+    } else {
+      let currentSessionUserId = null;
+      document.addEventListener('admin:session-ready', ({ detail }) => {
+        supabase = window.__adminSupabase;
+        currentSessionUserId = detail.userId;
+      });
+
+      let supabase = null;
+
+      form?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!getCurrentRole()) {
+          setMessage('admin_profiles 권한 확인이 끝나기 전에는 저장할 수 없습니다.', 'error');
+          return;
+        }
+        setBusy(true);
+        setMessage('draft를 저장하는 중입니다...', 'info');
+
+        const formData = new FormData(form);
+        const title = String(formData.get('title') || '').trim();
+        const description = String(formData.get('description') || '').trim();
+        const rawSlug = String(formData.get('slug') || '').trim();
+        const body = String(formData.get('body') || '').trim();
+        const slug = slugify(rawSlug || title);
+        const tags = String(formData.get('tags') || '')
+          .split(',')
+          .map((tag) => tag.trim())
+          .filter(Boolean);
+
+        if (!title || !description || !body) {
+          setBusy(false);
+          setMessage('제목, 설명, 본문은 필수입니다.', 'error');
+          return;
+        }
+
+        if (!slug) {
+          setBusy(false);
+          setMessage('slug를 생성할 수 없습니다. 제목 또는 slug를 확인하세요.', 'error');
+          return;
+        }
+
+        const { data: existingPost, error: existingPostError } = await supabase
+          .from('posts')
+          .select('id')
+          .eq('slug', slug)
+          .maybeSingle();
+
+        if (existingPostError) {
+          setBusy(false);
+          setMessage(`기존 slug 확인에 실패했습니다: ${existingPostError.message}`, 'error');
+          return;
+        }
+
+        if (existingPost) {
+          setBusy(false);
+          setMessage(`이미 사용 중인 slug입니다: ${slug}`, 'error');
+          return;
+        }
+
+        const payload = {
+          title,
+          description,
+          slug,
+          category: String(formData.get('category') || '') || null,
+          body_markdown: body,
+          status: String(formData.get('status') || 'draft'),
+          tags,
+          published_at: String(formData.get('date') || '') || null,
+          thumbnail_url: String(formData.get('thumbnail_url') || '').trim() || null,
+          seo_title: String(formData.get('seo_title') || '').trim() || null,
+          seo_description: String(formData.get('seo_description') || '').trim() || null,
+          canonical_url: String(formData.get('canonical_url') || '').trim() || null,
+          created_by: currentSessionUserId,
+          updated_by: currentSessionUserId,
+        };
+
+        const { data: post, error: postError } = await supabase
+          .from('posts')
+          .insert(payload)
+          .select('id, slug')
+          .single();
+
+        if (postError) {
+          setBusy(false);
+          setMessage(postError.message, 'error');
+          return;
+        }
+
+        const { error: revisionError } = await supabase.from('post_revisions').insert({
+          post_id: post.id,
+          body_markdown: body,
+          meta_snapshot: {
+            title,
+            description,
+            slug,
+            category: payload.category,
+            tags,
+            status: payload.status,
+            thumbnail_url: payload.thumbnail_url,
+            seo_title: payload.seo_title,
+            seo_description: payload.seo_description,
+            canonical_url: payload.canonical_url,
+          },
+          created_by: currentSessionUserId,
+        });
+
+        if (revisionError) {
+          setBusy(false);
+          setMessage(`글은 저장됐지만 revision 생성에 실패했습니다: ${revisionError.message}`, 'error');
+          return;
+        }
+
+        await supabase.from('audit_logs').insert({
+          actor_id: currentSessionUserId,
+          action: 'post_created',
+          resource_type: 'post',
+          resource_id: post.id,
+          after_json: { title, slug, status: payload.status },
+        });
+
+        window.location.replace(`/admin/posts/edit?slug=${encodeURIComponent(post.slug)}&created=1`);
+      });
+    }
+  </script>
+</AdminLayout>

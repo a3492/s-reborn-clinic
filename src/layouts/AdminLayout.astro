@@ -1,0 +1,203 @@
+---
+import '../styles/admin.css';
+import BaseHead from '../components/BaseHead.astro';
+import AdminSidebar from '../components/admin/AdminSidebar.astro';
+import AdminHeader from '../components/admin/AdminHeader.astro';
+
+interface Props {
+  title: string;
+  description?: string;
+  pageTitle: string;
+  pageDescription?: string;
+  status?: string;
+  requiredRole?: 'owner' | 'editor';
+}
+
+const {
+  title,
+  description = '에스리본 클리닉 관리자 패널',
+  pageTitle,
+  pageDescription,
+  status,
+  requiredRole = 'editor',
+} = Astro.props;
+
+const pathname = Astro.url.pathname;
+---
+
+<!doctype html>
+<html lang="ko" class="admin-shell">
+  <head>
+    <BaseHead title={`${title} | Admin`} description={description} />
+  </head>
+  <body class="admin-shell admin-guarded" data-required-role={requiredRole}>
+    <div class="admin-auth-loading" data-admin-auth-loading>
+      <div class="admin-auth-loading-card">
+        <strong>관리자 세션 확인 중</strong>
+        <span>Supabase 로그인 상태를 확인하고 있습니다.</span>
+      </div>
+    </div>
+
+    <div class="admin-auth-loading" data-admin-access-denied hidden>
+      <div class="admin-auth-loading-card">
+        <strong>접근 권한이 없습니다.</strong>
+        <span data-admin-access-denied-text>이 페이지는 더 높은 권한이 필요합니다.</span>
+      </div>
+    </div>
+
+    <div class="admin-app" data-admin-app hidden>
+      <AdminSidebar pathname={pathname} />
+      <main class="admin-main">
+        <p class="admin-inline-note" data-admin-role-warning hidden></p>
+        <AdminHeader title={pageTitle} description={pageDescription} status={status} />
+        <div data-admin-page-slot>
+          <slot />
+        </div>
+      </main>
+    </div>
+
+    <script>
+      import { createClient } from '@supabase/supabase-js';
+      const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+      const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+      const requiredRole = document.body.dataset.requiredRole || 'editor';
+
+      const loading = document.querySelector('[data-admin-auth-loading]');
+      const accessDenied = document.querySelector('[data-admin-access-denied]');
+      const accessDeniedText = document.querySelector('[data-admin-access-denied-text]');
+      const app = document.querySelector('[data-admin-app]');
+      const slot = document.querySelector('[data-admin-page-slot]');
+      const logoutButton = document.querySelector('[data-admin-logout]');
+      const userPill = document.querySelector('[data-admin-user]');
+      const roleWarning = document.querySelector('[data-admin-role-warning]');
+      const roleCopy = document.querySelector('[data-admin-role-copy]');
+      const roleCta = document.querySelector('[data-admin-role-cta]');
+      const roleCtaLabel = document.querySelector('[data-admin-role-cta-label]');
+      const roleCtaLink = document.querySelector('[data-admin-role-cta-link]');
+      const loginPath = '/admin/login';
+      const roleRank = { editor: 1, owner: 2 };
+      const syncOwnerOnlyNavigation = (role) => {
+        document.querySelectorAll('[data-owner-only="true"]').forEach((link) => {
+          link.closest('li')?.toggleAttribute('hidden', role !== 'owner');
+        });
+      };
+
+      const finish = () => {
+        loading?.setAttribute('hidden', '');
+        app?.removeAttribute('hidden');
+      };
+
+      const deny = (text) => {
+        loading?.setAttribute('hidden', '');
+        app?.removeAttribute('hidden');
+        accessDenied?.removeAttribute('hidden');
+        if (slot) slot.innerHTML = '';
+        if (accessDeniedText) accessDeniedText.textContent = text;
+      };
+
+      const syncRoleCopy = (role) => {
+        if (!roleCopy || !roleCta || !roleCtaLabel || !roleCtaLink) return;
+        const isOwner = role === 'owner';
+        roleCopy.textContent = isOwner
+          ? 'owner는 site settings, pipeline, media registry를 함께 관리합니다.'
+          : 'editor는 글 작성과 발행 흐름에 집중하세요. owner 전용 설정은 숨겨집니다.';
+        roleCta.hidden = false;
+        roleCtaLabel.textContent = isOwner ? 'owner shortcut' : 'editor shortcut';
+        roleCtaLink.textContent = isOwner ? 'Pipeline 확인' : '글 작성';
+        roleCtaLink.href = isOwner ? '/admin/pipeline' : '/admin/posts';
+      };
+
+      const setRoleWarning = (text, state = 'warn') => {
+        if (!roleWarning) return;
+        roleWarning.hidden = false;
+        roleWarning.textContent = text;
+        roleWarning.dataset.state = state;
+      };
+
+      if (!supabaseUrl || !supabaseKey) {
+        if (loading) {
+          loading.innerHTML = '<div class="admin-auth-loading-card"><strong>환경 변수 누락</strong><span>`PUBLIC_SUPABASE_URL`과 `PUBLIC_SUPABASE_ANON_KEY`가 필요합니다.</span></div>';
+        }
+      } else {
+        const supabase = createClient(supabaseUrl, supabaseKey, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: false,
+          },
+        });
+        window.__adminSupabase = supabase;
+
+        const applyUser = async (session) => {
+          const email = session?.user?.email;
+          const userId = session?.user?.id;
+          const accessToken = session?.access_token;
+          if (!userPill || !email || !userId) return null;
+
+          userPill.textContent = email;
+
+          const res = await fetch(
+            `${supabaseUrl}/rest/v1/admin_profiles?id=eq.${userId}&select=display_name,role,email`,
+            {
+              headers: {
+                apikey: supabaseKey,
+                Authorization: `Bearer ${accessToken}`,
+              },
+            }
+          );
+          if (!res.ok) {
+            setRoleWarning(`admin_profiles 조회 실패: ${res.status} ${res.statusText}`, 'error');
+            return null;
+          }
+          const rows = await res.json();
+          const profile = rows?.[0] ?? null;
+
+          if (!profile) {
+            setRoleWarning('admin_profiles에 현재 계정이 없습니다. SQL migration 적용 후 owner/editor 프로필을 먼저 추가해야 합니다.', 'warn');
+            return null;
+          }
+
+          userPill.textContent = `${profile.display_name || profile.email} · ${profile.role}`;
+          document.body.dataset.adminRole = profile.role;
+          document.body.dataset.adminUserId = userId;
+          syncOwnerOnlyNavigation(profile.role);
+          syncRoleCopy(profile.role);
+          document.dispatchEvent(new CustomEvent('admin:session-ready', {
+            detail: {
+              userId,
+              email,
+              role: profile.role,
+            },
+          }));
+          return profile;
+        };
+
+        logoutButton?.addEventListener('click', async () => {
+          await supabase.auth.signOut();
+          window.location.replace(loginPath);
+        });
+
+        supabase.auth.onAuthStateChange(async (event, session) => {
+          if (!session) {
+            window.location.replace(
+              event === 'SIGNED_OUT'
+                ? loginPath
+                : `${loginPath}?redirectTo=${encodeURIComponent(window.location.pathname)}`
+            );
+            return;
+          }
+          const profile = await applyUser(session);
+          if (!profile) {
+            finish();
+            return;
+          }
+          if ((roleRank[profile.role] || 0) < (roleRank[requiredRole] || 0)) {
+            deny(`이 페이지는 ${requiredRole} 권한이 필요합니다. 현재 권한: ${profile.role}`);
+            return;
+          }
+          finish();
+        });
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,261 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+import { CATEGORIES } from '../consts';
+
+const allPosts = (await getCollection('blog', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+
+const proceduresPosts = allPosts.filter(p => p.data.category === 'procedures');
+const beforeAfterPosts = allPosts.filter(p => p.data.category === 'before-after');
+---
+
+<Layout title="시술 안내" description="에스리본 클리닉의 다양한 시술과 치료를 안내합니다.">
+  <div class="procedures-wrap">
+    <div class="procedures-hero">
+      <div class="procedures-hero-badge">Treatments</div>
+      <h1 class="procedures-hero-title">시술 안내</h1>
+      <p class="procedures-hero-desc">에스리본 클리닉의 전문 시술 프로그램을 소개합니다.</p>
+    </div>
+
+    <!-- 카테고리 카드 -->
+    <section class="procedures-categories">
+      {CATEGORIES.filter(c => ['procedures', 'before-after', 'patient-story'].includes(c.id)).map(cat => {
+        const catPosts = allPosts.filter(p => p.data.category === cat.id);
+        return (
+          <div class="category-card">
+            <h2 class="category-card-title">{cat.label}</h2>
+            <p class="category-card-desc">{cat.description}</p>
+            <span class="category-card-count">{catPosts.length}개 글</span>
+            <a href={`/blog?category=${cat.id}`} class="btn btn-outline btn-sm">더 보기 →</a>
+          </div>
+        );
+      })}
+    </section>
+
+    <!-- 시술·치료 글 목록 -->
+    {proceduresPosts.length > 0 && (
+      <section class="procedures-section">
+        <div class="procedures-section-header">
+          <h2>시술·치료</h2>
+          <a href="/blog?category=procedures" class="section-more">전체 보기 →</a>
+        </div>
+        <div class="procedures-grid">
+          {proceduresPosts.slice(0, 6).map(post => (
+            <a href={`/blog/${post.id}/`} class="procedure-post-card">
+              {post.data.thumbnail && (
+                <div class="procedure-post-thumb">
+                  <img src={post.data.thumbnail} alt={post.data.title} loading="lazy" />
+                </div>
+              )}
+              <div class="procedure-post-body">
+                <h3 class="procedure-post-title">{post.data.title}</h3>
+                <p class="procedure-post-desc">{post.data.description}</p>
+              </div>
+            </a>
+          ))}
+        </div>
+      </section>
+    )}
+
+    <!-- 상담 CTA -->
+    <div class="procedures-cta">
+      <h2>어떤 시술이 나에게 맞을까요?</h2>
+      <p>개인별 피부 타입과 원하는 결과에 맞춘 맞춤 상담을 진행합니다.</p>
+      <a href="/consult" class="btn btn-primary btn-lg">무료 상담 예약</a>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .procedures-wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding-bottom: 3rem;
+  }
+
+  .procedures-hero {
+    text-align: center;
+    padding: 4rem 2rem 2.5rem;
+  }
+
+  .procedures-hero-badge {
+    display: inline-block;
+    margin-bottom: 1rem;
+    padding: 0.3rem 0.9rem;
+    border-radius: 999px;
+    background: rgba(201, 169, 110, 0.15);
+    border: 1px solid rgba(201, 169, 110, 0.3);
+    color: var(--accent-dark);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .procedures-hero-title {
+    font-size: 2.4rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--text);
+    margin: 0 0 0.75rem;
+  }
+
+  .procedures-hero-desc {
+    font-size: 1rem;
+    color: var(--t2);
+    margin: 0;
+  }
+
+  .procedures-categories {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+    padding: 0 2rem 2rem;
+  }
+
+  .category-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1.5rem;
+    border: 1px solid var(--rule);
+    border-radius: 20px;
+    background: var(--surface);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .category-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 8px 20px rgba(201, 169, 110, 0.1);
+  }
+
+  .category-card-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .category-card-desc {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--t2);
+    line-height: 1.6;
+    flex: 1;
+  }
+
+  .category-card-count {
+    font-size: 0.78rem;
+    color: var(--t3);
+    font-weight: 600;
+  }
+
+  .procedures-section {
+    padding: 2rem;
+  }
+
+  .procedures-section-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+
+  .procedures-section-header h2 {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  .section-more {
+    color: var(--accent-dark);
+    font-size: 0.88rem;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .procedures-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .procedure-post-card {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--rule);
+    border-radius: 18px;
+    overflow: hidden;
+    text-decoration: none;
+    background: var(--surface);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .procedure-post-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px rgba(28, 24, 20, 0.07);
+  }
+
+  .procedure-post-thumb {
+    height: 180px;
+    overflow: hidden;
+    background: var(--bg2);
+  }
+
+  .procedure-post-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .procedure-post-body {
+    padding: 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .procedure-post-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.4;
+  }
+
+  .procedure-post-desc {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--t2);
+    line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .procedures-cta {
+    text-align: center;
+    padding: 3rem 2rem;
+    background: linear-gradient(135deg, var(--color-charcoal), var(--color-brown-dark));
+    border-radius: 20px;
+    margin: 2rem;
+    color: white;
+  }
+
+  .procedures-cta h2 {
+    margin: 0 0 0.75rem;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: white;
+  }
+
+  .procedures-cta p {
+    margin: 0 0 1.75rem;
+    color: rgba(255, 255, 255, 0.75);
+    line-height: 1.7;
+  }
+</style>

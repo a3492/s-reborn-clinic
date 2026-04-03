@@ -1,0 +1,705 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { CATEGORIES } from '../../../consts';
+
+const slug = Astro.url.searchParams.get('slug') ?? '';
+---
+
+<AdminLayout
+  title="Edit Post"
+  pageTitle="Edit Post"
+  pageDescription="기존 draft를 수정하고 revision을 추가합니다."
+  status="Draft Edit"
+>
+  <div class="admin-split">
+    <section class="admin-card pad-lg">
+      <div class="admin-actions-row">
+        <div>
+          <h2 class="admin-section-title">Editor</h2>
+          <p class="admin-section-desc">선택한 글을 불러와 수정하고, preview 또는 publish 요청을 실행합니다.</p>
+        </div>
+        <div class="admin-actions-cluster">
+          <a href="/admin/posts/preview" class="admin-btn" data-admin-edit-preview-link>저장본 미리보기</a>
+          <button type="button" class="admin-btn" data-admin-publish-dryrun>Publish Dry Run</button>
+          <button type="button" class="admin-btn" data-admin-publish-live>Publish 요청</button>
+          <button type="submit" form="admin-edit-post-form" class="admin-btn primary" data-admin-save-button>변경 저장</button>
+        </div>
+      </div>
+
+      <form id="admin-edit-post-form" class="admin-form-grid" data-admin-edit-post-form>
+        <div class="admin-field full">
+          <label class="admin-label" for="title">제목</label>
+          <input id="title" name="title" class="admin-input" type="text" required />
+        </div>
+
+        <div class="admin-field full">
+          <label class="admin-label" for="description">설명</label>
+          <textarea id="description" name="description" class="admin-textarea" style="min-height: 100px;" required></textarea>
+        </div>
+
+        <div class="admin-field">
+          <label class="admin-label" for="slug">Slug</label>
+          <input id="slug" name="slug" class="admin-input" type="text" required />
+        </div>
+
+        <div class="admin-field">
+          <label class="admin-label" for="category">카테고리</label>
+          <select id="category" name="category" class="admin-select">
+            {CATEGORIES.map((c) => (
+              <option value={c.id}>{c.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div class="admin-field">
+          <label class="admin-label" for="date">발행일</label>
+          <input id="date" name="date" class="admin-input" type="datetime-local" />
+        </div>
+
+        <div class="admin-field">
+          <label class="admin-label" for="status">상태</label>
+          <select id="status" name="status" class="admin-select">
+            <option value="draft">draft</option>
+            <option value="review">review</option>
+            <option value="scheduled">scheduled</option>
+            <option value="published">published</option>
+            <option value="archived">archived</option>
+          </select>
+        </div>
+
+        <div class="admin-field full">
+          <label class="admin-label" for="thumbnail_url">Thumbnail URL</label>
+          <input id="thumbnail_url" name="thumbnail_url" class="admin-input" type="url" />
+        </div>
+
+        <div class="admin-field full">
+          <label class="admin-label" for="tags">태그</label>
+          <input id="tags" name="tags" class="admin-input" type="text" />
+        </div>
+
+        <div class="admin-field">
+          <label class="admin-label" for="seo_title">SEO Title</label>
+          <input id="seo_title" name="seo_title" class="admin-input" type="text" />
+        </div>
+
+        <div class="admin-field">
+          <label class="admin-label" for="canonical_url">Canonical URL</label>
+          <input id="canonical_url" name="canonical_url" class="admin-input" type="url" />
+        </div>
+
+        <div class="admin-field full">
+          <label class="admin-label" for="seo_description">SEO Description</label>
+          <textarea id="seo_description" name="seo_description" class="admin-textarea" style="min-height: 110px;"></textarea>
+        </div>
+
+        <div class="admin-field full">
+          <label class="admin-label" for="body">본문 Markdown</label>
+          <textarea id="body" name="body" class="admin-textarea"></textarea>
+        </div>
+      </form>
+
+      <p class="admin-inline-note" data-admin-edit-post-message hidden></p>
+    </section>
+
+    <div class="admin-panel-stack">
+      <section class="admin-card pad-md">
+        <h2 class="admin-section-title">Entry State</h2>
+        <ul class="admin-list" data-admin-edit-meta>
+          <li class="admin-list-row"><div><p class="admin-item-title">불러오는 중...</p></div></li>
+        </ul>
+        <ul class="admin-list" style="margin-top:0.5rem;" data-admin-release-state>
+          <li class="admin-list-row"><div><p class="admin-item-title">불러오는 중...</p></div></li>
+        </ul>
+      </section>
+
+      <section class="admin-card pad-md">
+        <div class="admin-actions-row">
+          <h2 class="admin-section-title">Publish History</h2>
+          <a href="/admin/jobs" class="admin-btn admin-btn-sm">Jobs</a>
+        </div>
+        <div data-admin-publish-history-summary>
+          <p class="admin-help">불러오는 중...</p>
+        </div>
+      </section>
+
+      <section class="admin-card pad-md">
+        <div class="admin-actions-row">
+          <div>
+            <h2 class="admin-section-title">Publish Pipeline</h2>
+            <p class="admin-section-desc">요청 직후 current job 상태를 이 패널에서 추적합니다.</p>
+          </div>
+          <a href="/admin/jobs" class="admin-btn">Jobs 보기</a>
+        </div>
+        <ul class="admin-list">
+          <li class="admin-list-row"><div><p class="admin-item-title">Dry Run</p><p class="admin-item-meta">Markdown preview와 target path만 확인</p></div></li>
+          <li class="admin-list-row"><div><p class="admin-item-title">Live Publish</p><p class="admin-item-meta">publish_jobs 생성 후 GitHub Contents API 호출</p></div></li>
+        </ul>
+        <div class="admin-job-card" data-admin-current-job hidden>
+          <div class="admin-job-card-head">
+            <strong data-admin-current-job-title>현재 publish job</strong>
+            <span class="admin-status pending" data-admin-current-job-status>pending</span>
+          </div>
+          <p class="admin-job-card-path" data-admin-current-job-path>-</p>
+          <p class="admin-job-card-meta" data-admin-current-job-meta>job 상태를 기다리는 중입니다.</p>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    import { createClient } from '@supabase/supabase-js';
+    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+    const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+    const slug = new URLSearchParams(window.location.search).get('slug') ?? '';
+
+    const form = document.querySelector('[data-admin-edit-post-form]');
+    const message = document.querySelector('[data-admin-edit-post-message]');
+    const metaList = document.querySelector('[data-admin-edit-meta]');
+    const releaseState = document.querySelector('[data-admin-release-state]');
+    const publishHistorySummary = document.querySelector('[data-admin-publish-history-summary]');
+    const previewLink = document.querySelector('[data-admin-edit-preview-link]');
+    const dryRunButton = document.querySelector('[data-admin-publish-dryrun]');
+    const livePublishButton = document.querySelector('[data-admin-publish-live]');
+    const saveButton = document.querySelector('[data-admin-save-button]');
+    const jobCard = document.querySelector('[data-admin-current-job]');
+    const jobTitle = document.querySelector('[data-admin-current-job-title]');
+    const jobStatus = document.querySelector('[data-admin-current-job-status]');
+    const jobPath = document.querySelector('[data-admin-current-job-path]');
+    const jobMeta = document.querySelector('[data-admin-current-job-meta]');
+    let currentPostId = null;
+    let currentSlug = slug;
+    let currentUserId = null;
+    let publishPollTimer = null;
+    let hasUnsavedChanges = false;
+    let formSnapshot = '';
+    const getCurrentRole = () => document.body.dataset.adminRole || '';
+
+    const escapeHtml = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    const setMessage = (text, state = 'info') => {
+      if (!message) return;
+      message.hidden = false;
+      message.textContent = text;
+      message.dataset.state = state;
+    };
+
+    const setActionBusy = (type, busy) => {
+      if (type === 'save' && saveButton) {
+        saveButton.disabled = busy;
+        saveButton.textContent = busy ? '저장 중...' : '변경 저장';
+      }
+      if (type === 'publish') {
+        if (livePublishButton) livePublishButton.disabled = busy;
+        if (dryRunButton) dryRunButton.disabled = busy;
+      }
+    };
+
+    const slugify = (value) =>
+      value
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+
+    const formatDateInput = (value) => {
+      if (!value) return '';
+      const date = new Date(value);
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    };
+
+    const formatDate = (value) => {
+      if (!value) return '-';
+      return new Intl.DateTimeFormat('ko-KR', {
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+      }).format(new Date(value));
+    };
+
+    const updatePreviewHref = (value) => {
+      currentSlug = value || currentSlug;
+      if (previewLink) {
+        previewLink.href = `/admin/posts/preview?slug=${encodeURIComponent(currentSlug)}`;
+      }
+    };
+
+    const serializeForm = () => {
+      if (!form) return '';
+      return JSON.stringify(Object.fromEntries(new FormData(form).entries()));
+    };
+
+    const updateDirtyState = () => {
+      hasUnsavedChanges = serializeForm() !== formSnapshot;
+      if (saveButton) {
+        saveButton.dataset.dirty = hasUnsavedChanges ? 'true' : 'false';
+      }
+    };
+
+    const fillMeta = (post) => {
+      if (!metaList) return;
+      metaList.innerHTML = `
+        <li class="admin-list-row"><div><p class="admin-item-title">${post.title}</p><p class="admin-item-meta">slug: ${post.slug}</p></div><div><span class="admin-status ${post.status}">${post.status}</span></div></li>
+        <li class="admin-list-row"><div><p class="admin-item-title">카테고리</p><p class="admin-item-meta">${post.category ?? '-'}</p></div></li>
+        <li class="admin-list-row"><div><p class="admin-item-title">최근 수정</p><p class="admin-item-meta">${post.updated_at ?? '-'}</p></div></li>
+      `;
+      updatePreviewHref(post.slug);
+    };
+
+    const fillReleaseState = (post, publishMeta = {}) => {
+      if (!releaseState) return;
+      const canonical = post.canonical_url || '-';
+      const publishStatusClass = post.status === 'published' ? 'ready' : post.status;
+      const lastPublish = publishMeta.completedAt || post.published_at || null;
+      const commit = publishMeta.commitSha || '-';
+      const targetPath = publishMeta.targetPath || `src/content/blog/${post.category ?? 'uncategorized'}/${post.slug}.md`;
+
+      releaseState.innerHTML = `
+        <li class="admin-list-row">
+          <div>
+            <p class="admin-item-title">현재 상태</p>
+            <p class="admin-item-meta">마지막 발행 ${lastPublish ? formatDate(lastPublish) : '없음'}</p>
+          </div>
+          <div><span class="admin-status ${publishStatusClass}">${post.status || 'draft'}</span></div>
+        </li>
+        <li class="admin-list-row">
+          <div>
+            <p class="admin-item-title">Canonical URL</p>
+            <p class="admin-item-meta">${canonical}</p>
+          </div>
+        </li>
+        <li class="admin-list-row">
+          <div>
+            <p class="admin-item-title">Target Path</p>
+            <p class="admin-item-meta admin-cell-mono">${targetPath}</p>
+          </div>
+        </li>
+        <li class="admin-list-row">
+          <div>
+            <p class="admin-item-title">Latest Commit</p>
+            <p class="admin-item-meta admin-cell-mono">${commit}</p>
+          </div>
+        </li>
+      `;
+    };
+
+    const fillPublishHistorySummary = (summary) => {
+      if (!publishHistorySummary) return;
+
+      if (!summary) {
+        publishHistorySummary.innerHTML = '<p class="admin-help">이력 없음</p>';
+        return;
+      }
+
+      const sha8 = summary.successCommit ? summary.successCommit.slice(0, 8) : null;
+      const failMsg = summary.failureMessage ? summary.failureMessage.split('\n')[0].slice(0, 60) : null;
+      const latestStatus = summary.latestStatus ?? 'draft';
+
+      publishHistorySummary.innerHTML = `
+        <div class="admin-change-row">
+          <span class="admin-cell-subtle">최근 job</span>
+          <span class="admin-cell-date admin-cell-subtle">${summary.latestAt ? formatDate(summary.latestAt) : '-'}</span>
+          <span class="admin-status ${latestStatus}">${latestStatus}</span>
+        </div>
+        <div class="admin-change-row">
+          <span class="admin-cell-subtle">Success${sha8 ? ` · <code>${sha8}</code>` : ': 없음'}</span>
+          <span></span>
+          ${summary.successCommit ? '<span class="admin-status success">ok</span>' : '<span class="admin-status draft">-</span>'}
+        </div>
+        <div class="admin-change-row">
+          <span class="admin-cell-subtle" title="${escapeHtml(summary.failureMessage ?? '')}">${failMsg ? escapeHtml(failMsg) : '실패 없음'}</span>
+          <span></span>
+          ${summary.failureMessage ? '<span class="admin-status failed">!</span><button type="button" class="admin-btn admin-btn-sm" data-admin-history-retry>Retry</button>' : '<span class="admin-status success">✓</span><span></span>'}
+        </div>
+      `;
+    };
+
+    const loadPublishHistorySummary = async () => {
+      if (!currentPostId) {
+        fillPublishHistorySummary(null);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('publish_jobs')
+        .select('status, commit_sha, error_message, created_at, completed_at, target_path')
+        .eq('post_id', currentPostId)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) {
+        fillPublishHistorySummary({
+          successCommit: null,
+          successAt: null,
+          failureMessage: `publish 이력 조회 실패: ${error.message}`,
+          failureAt: null,
+          latestStatus: 'failed',
+          latestAt: null,
+          latestTargetPath: null,
+        });
+        return;
+      }
+
+      const rows = data ?? [];
+      const latest = rows[0] ?? null;
+      const latestSuccess = rows.find((row) => row.status === 'success') ?? null;
+      const latestFailure = rows.find((row) => row.status === 'failed') ?? null;
+
+      fillPublishHistorySummary({
+        successCommit: latestSuccess?.commit_sha ?? null,
+        successAt: latestSuccess?.completed_at ?? latestSuccess?.created_at ?? null,
+        failureMessage: latestFailure?.error_message ?? null,
+        failureAt: latestFailure?.completed_at ?? latestFailure?.created_at ?? null,
+        latestStatus: latest?.status ?? null,
+        latestAt: latest?.created_at ?? null,
+        latestTargetPath: latest?.target_path ?? null,
+      });
+    };
+
+    const renderCurrentJob = (job, extraText) => {
+      if (!jobCard) return;
+      jobCard.hidden = false;
+      if (jobTitle) jobTitle.textContent = `Publish job ${job.id?.slice(0, 8) || ''}`.trim();
+      if (jobStatus) {
+        jobStatus.className = `admin-status ${job.status || 'pending'}`;
+        jobStatus.textContent = job.status || 'pending';
+      }
+      if (jobPath) jobPath.textContent = job.target_path || '-';
+      if (jobMeta) {
+        const parts = [
+          extraText || null,
+          job.commit_sha ? `commit ${job.commit_sha}` : null,
+          job.error_message || null,
+          job.completed_at ? formatDate(job.completed_at) : null,
+        ].filter(Boolean);
+        jobMeta.textContent = parts.join(' · ') || 'job 상태를 기다리는 중입니다.';
+      }
+    };
+
+    if (!supabaseUrl || !supabaseKey) {
+      setMessage('Supabase 환경 변수가 없어 편집 기능을 초기화할 수 없습니다.', 'error');
+    } else {
+      let supabase = null;
+
+      const loadPost = async () => {
+        const { data: post, error } = await supabase
+          .from('posts')
+          .select('id, title, description, slug, category, subcategory, tags, body_markdown, status, published_at, updated_at, thumbnail_url, seo_title, seo_description, canonical_url')
+          .eq('slug', currentSlug)
+          .single();
+
+        if (error || !post) {
+          setMessage(error?.message || '글을 찾을 수 없습니다.', 'error');
+          return null;
+        }
+
+        currentPostId = post.id;
+        form.elements.title.value = post.title || '';
+        form.elements.description.value = post.description || '';
+        form.elements.slug.value = post.slug || '';
+        form.elements.category.value = post.category || 'ai';
+        form.elements.tags.value = (post.tags || []).join(', ');
+        form.elements.body.value = post.body_markdown || '';
+        form.elements.status.value = post.status || 'draft';
+        form.elements.date.value = formatDateInput(post.published_at);
+        form.elements.thumbnail_url.value = post.thumbnail_url || '';
+        form.elements.seo_title.value = post.seo_title || '';
+        form.elements.seo_description.value = post.seo_description || '';
+        form.elements.canonical_url.value = post.canonical_url || '';
+        fillMeta(post);
+        fillReleaseState(post);
+        await loadPublishHistorySummary();
+        formSnapshot = serializeForm();
+        hasUnsavedChanges = false;
+        if (saveButton) saveButton.dataset.dirty = 'false';
+        return post;
+      };
+
+      const stopPublishPolling = () => {
+        if (publishPollTimer) {
+          window.clearInterval(publishPollTimer);
+          publishPollTimer = null;
+        }
+      };
+
+      const pollPublishJob = async (jobId) => {
+        const { data: job, error } = await supabase
+          .from('publish_jobs')
+          .select('id, status, target_path, commit_sha, error_message, completed_at')
+          .eq('id', jobId)
+          .single();
+
+        if (error || !job) {
+          setMessage(error?.message || 'publish job 상태를 읽을 수 없습니다.', 'error');
+          stopPublishPolling();
+          setActionBusy('publish', false);
+          return;
+        }
+
+        renderCurrentJob(job, '최신 상태 반영');
+
+        if (job.status === 'success') {
+          stopPublishPolling();
+          setActionBusy('publish', false);
+          const post = await loadPost();
+          if (post) {
+            fillReleaseState(post, {
+              completedAt: job.completed_at,
+              commitSha: job.commit_sha,
+              targetPath: job.target_path,
+            });
+            await loadPublishHistorySummary();
+          }
+          setMessage(`Publish 완료: ${job.target_path}. Jobs 화면에서도 이력이 보입니다.`, 'success');
+        }
+
+        if (job.status === 'failed') {
+          stopPublishPolling();
+          setActionBusy('publish', false);
+          await loadPublishHistorySummary();
+          setMessage(job.error_message || 'publish job이 실패했습니다.', 'error');
+        }
+      };
+
+      const startPublishPolling = (jobId) => {
+        stopPublishPolling();
+        pollPublishJob(jobId);
+        publishPollTimer = window.setInterval(() => {
+          if (document.hidden) return;
+          pollPublishJob(jobId);
+        }, 5000);
+      };
+
+      const requestPublish = async (requestedSlug, requestedBy, dryRun) => {
+        if (!getCurrentRole()) {
+          setMessage('admin_profiles 권한 확인이 끝나기 전에는 publish를 실행할 수 없습니다.', 'error');
+          return;
+        }
+        setActionBusy('publish', true);
+        setMessage(dryRun ? 'publish dry-run을 실행하는 중입니다...' : 'publish 요청을 실행하는 중입니다...', 'info');
+        const response = await fetch('/api/admin/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug: requestedSlug, requestedBy, dryRun }),
+        });
+
+        let payload = null;
+        try {
+          payload = await response.json();
+        } catch {
+          payload = null;
+        }
+
+        if (!response.ok) {
+          setActionBusy('publish', false);
+          if (payload?.jobId) {
+            renderCurrentJob({ id: payload.jobId, status: 'failed', target_path: payload.targetPath, error_message: payload.error }, 'publish 요청 실패');
+          }
+          const validationText = Array.isArray(payload?.validationIssues) && payload.validationIssues.length
+            ? ` (${payload.validationIssues.join(', ')})`
+            : '';
+          setMessage((payload?.error || 'publish 요청에 실패했습니다. Pages Functions 환경을 확인하세요.') + validationText, 'error');
+          return;
+        }
+
+        if (dryRun) {
+          setActionBusy('publish', false);
+          renderCurrentJob({ id: 'dry-run', status: 'success', target_path: payload.targetPath, commit_sha: null, completed_at: new Date().toISOString() }, `Dry run 완료 · status ${payload.postStatus || '-'}`);
+          fillReleaseState({
+            status: payload.postStatus || 'draft',
+            published_at: null,
+            canonical_url: form.elements.canonical_url?.value || null,
+            category: form.elements.category?.value || null,
+            slug: currentSlug,
+          }, {
+            completedAt: new Date().toISOString(),
+            targetPath: payload.targetPath,
+            commitSha: null,
+          });
+          setMessage(`Dry run 완료: ${payload.targetPath}`, 'success');
+          return;
+        }
+
+        renderCurrentJob({ id: payload.jobId, status: 'processing', target_path: payload.targetPath }, 'publish job 생성됨');
+        setMessage(`Publish 요청 완료: ${payload.targetPath}. job 상태를 추적합니다.`, 'info');
+        if (payload.jobId) {
+          startPublishPolling(payload.jobId);
+        }
+      };
+
+      document.addEventListener('admin:session-ready', async ({ detail }) => {
+        supabase = window.__adminSupabase;
+        currentUserId = detail.userId;
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('created') === '1') {
+          setMessage('draft가 생성되었습니다. 이어서 메타를 다듬거나 바로 발행할 수 있습니다.', 'success');
+        }
+        if (params.get('updated') === '1') {
+          setMessage('변경 사항이 저장되었습니다. 이어서 preview 또는 publish를 진행할 수 있습니다.', 'success');
+        }
+
+        await loadPost();
+
+        form?.elements?.slug?.addEventListener('input', (event) => {
+          updatePreviewHref(event.target.value.trim());
+        });
+        form?.addEventListener('input', updateDirtyState);
+        window.addEventListener('beforeunload', (event) => {
+          if (!hasUnsavedChanges) return;
+          event.preventDefault();
+          event.returnValue = '';
+        });
+
+        dryRunButton?.addEventListener('click', async () => {
+          if (!currentSlug) {
+            setMessage('먼저 글을 저장해 slug를 확정하세요.', 'error');
+            return;
+          }
+          if (hasUnsavedChanges) {
+            setMessage('미저장 변경이 있습니다. 먼저 저장한 뒤 dry run을 실행하세요.', 'error');
+            return;
+          }
+          await requestPublish(currentSlug, currentUserId, true);
+        });
+
+        livePublishButton?.addEventListener('click', async () => {
+          if (!currentSlug) {
+            setMessage('먼저 글을 저장해 slug를 확정하세요.', 'error');
+            return;
+          }
+          if (hasUnsavedChanges) {
+            setMessage('미저장 변경이 있습니다. 먼저 저장한 뒤 발행 요청을 실행하세요.', 'error');
+            return;
+          }
+          await requestPublish(currentSlug, currentUserId, false);
+        });
+
+        publishHistorySummary?.addEventListener('click', async (event) => {
+          const target = event.target.closest('[data-admin-history-retry]');
+          if (!target) return;
+          if (!currentSlug) {
+            setMessage('현재 slug를 확인할 수 없습니다.', 'error');
+            return;
+          }
+          if (hasUnsavedChanges) {
+            setMessage('미저장 변경이 있습니다. 먼저 저장한 뒤 재발행을 실행하세요.', 'error');
+            return;
+          }
+          await requestPublish(currentSlug, currentUserId, false);
+        });
+
+        form?.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          if (!getCurrentRole()) {
+            setMessage('admin_profiles 권한 확인이 끝나기 전에는 저장할 수 없습니다.', 'error');
+            return;
+          }
+          if (!currentPostId) {
+            setMessage('현재 글 ID를 확인할 수 없습니다.', 'error');
+            return;
+          }
+
+          setActionBusy('save', true);
+          setMessage('변경 사항을 저장하는 중입니다...', 'info');
+          const formData = new FormData(form);
+          const title = String(formData.get('title') || '').trim();
+          const description = String(formData.get('description') || '').trim();
+          const nextSlug = slugify(String(formData.get('slug') || '').trim() || title);
+          const body = String(formData.get('body') || '').trim();
+          const tags = String(formData.get('tags') || '').split(',').map((tag) => tag.trim()).filter(Boolean);
+          const status = String(formData.get('status') || 'draft');
+          const category = String(formData.get('category') || '') || null;
+          const publishedAt = String(formData.get('date') || '') || null;
+          const thumbnailUrl = String(formData.get('thumbnail_url') || '').trim() || null;
+          const seoTitle = String(formData.get('seo_title') || '').trim() || null;
+          const seoDescription = String(formData.get('seo_description') || '').trim() || null;
+          const canonicalUrl = String(formData.get('canonical_url') || '').trim() || null;
+
+          if (!title || !description || !body) {
+            setActionBusy('save', false);
+            setMessage('제목, 설명, 본문은 필수입니다.', 'error');
+            return;
+          }
+
+          if (!nextSlug) {
+            setActionBusy('save', false);
+            setMessage('유효한 slug를 생성할 수 없습니다. 제목 또는 slug를 확인하세요.', 'error');
+            return;
+          }
+
+          const { data: duplicatePost, error: duplicateError } = await supabase
+            .from('posts')
+            .select('id')
+            .eq('slug', nextSlug)
+            .neq('id', currentPostId)
+            .maybeSingle();
+
+          if (duplicateError) {
+            setActionBusy('save', false);
+            setMessage(`기존 slug 확인에 실패했습니다: ${duplicateError.message}`, 'error');
+            return;
+          }
+
+          if (duplicatePost) {
+            setActionBusy('save', false);
+            setMessage(`이미 사용 중인 slug입니다: ${nextSlug}`, 'error');
+            return;
+          }
+
+          const payload = {
+            title,
+            description,
+            slug: nextSlug,
+            body_markdown: body,
+            tags,
+            status,
+            category,
+            published_at: publishedAt,
+            thumbnail_url: thumbnailUrl,
+            seo_title: seoTitle,
+            seo_description: seoDescription,
+            canonical_url: canonicalUrl,
+            updated_by: currentUserId,
+          };
+
+          const { error: updateError } = await supabase.from('posts').update(payload).eq('id', currentPostId);
+          if (updateError) {
+            setActionBusy('save', false);
+            setMessage(updateError.message, 'error');
+            return;
+          }
+
+          const { error: revisionError } = await supabase.from('post_revisions').insert({
+            post_id: currentPostId,
+            body_markdown: body,
+            meta_snapshot: { title, description, slug: nextSlug, category, tags, status, thumbnail_url: thumbnailUrl, seo_title: seoTitle, seo_description: seoDescription, canonical_url: canonicalUrl },
+            created_by: currentUserId,
+          });
+          if (revisionError) {
+            setActionBusy('save', false);
+            setMessage(`수정은 저장됐지만 revision 생성에 실패했습니다: ${revisionError.message}`, 'error');
+            return;
+          }
+
+          await supabase.from('audit_logs').insert({
+            actor_id: currentUserId,
+            action: 'post_updated',
+            resource_type: 'post',
+            resource_id: currentPostId,
+            after_json: { title, slug: nextSlug, status },
+          });
+
+          setActionBusy('save', false);
+          formSnapshot = serializeForm();
+          hasUnsavedChanges = false;
+          if (saveButton) saveButton.dataset.dirty = 'false';
+          if (nextSlug && nextSlug !== currentSlug) {
+            window.location.replace(`/admin/posts/edit?slug=${encodeURIComponent(nextSlug)}&updated=1`);
+          } else {
+            window.location.replace('/admin/posts/edit?slug=' + encodeURIComponent(currentSlug) + '&updated=1');
+          }
+        });
+      });
+    }
+  </script>
+</AdminLayout>

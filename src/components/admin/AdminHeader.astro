@@ -1,0 +1,28 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+  status?: string;
+}
+
+const { title, description, status = 'Phase 1' } = Astro.props;
+---
+
+<header class="admin-topbar">
+  <div>
+    <h1 class="admin-topbar-title">{title}</h1>
+    {description && <p class="admin-topbar-desc">{description}</p>}
+    <p class="admin-topbar-role" data-admin-role-copy>권한을 확인하는 중입니다.</p>
+  </div>
+
+  <div class="admin-topbar-actions">
+    <span class="admin-status ready">{status}</span>
+    <span class="admin-user-pill" data-admin-user>Owner · 에스리본</span>
+    <button type="button" class="admin-btn" data-admin-logout>로그아웃</button>
+  </div>
+</header>
+
+<div class="admin-topbar-cta" data-admin-role-cta hidden>
+  <span class="admin-topbar-cta-label" data-admin-role-cta-label>다음 작업</span>
+  <a class="admin-btn primary" data-admin-role-cta-link href="/">대기 중</a>
+</div>

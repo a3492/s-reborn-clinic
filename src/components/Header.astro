@@ -1,0 +1,116 @@
+---
+import { NAV_LINKS, SITE_TITLE } from '../consts';
+
+const pathname = Astro.url.pathname;
+---
+
+<header class="site-header">
+  <div class="site-header-inner">
+    <a href="/" class="site-logo">
+      <div class="site-logo-mark" aria-hidden="true">S</div>
+      <span class="site-logo-text">{SITE_TITLE}</span>
+    </a>
+
+    <nav class="site-nav" aria-label="주요 메뉴">
+      {NAV_LINKS.map((link) => (
+        <a
+          href={link.href}
+          class:list={[
+            'site-nav-link',
+            { 'is-active': pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href)) }
+          ]}
+        >
+          {link.label}
+        </a>
+      ))}
+    </nav>
+
+    <div class="site-header-cta">
+      <a href="/consult" class="btn btn-primary btn-sm">온라인 상담</a>
+    </div>
+
+    <button class="site-mobile-menu-btn" aria-label="메뉴 열기" data-mobile-menu-toggle>
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+
+  <!-- 모바일 드롭다운 메뉴 -->
+  <div class="site-mobile-nav" data-mobile-nav hidden>
+    <nav aria-label="모바일 메뉴">
+      {NAV_LINKS.map((link) => (
+        <a href={link.href} class="site-mobile-nav-link">
+          {link.label}
+        </a>
+      ))}
+      <a href="/consult" class="btn btn-primary" style="margin-top:0.75rem;width:100%;justify-content:center;">온라인 상담</a>
+    </nav>
+  </div>
+</header>
+
+<style>
+  .site-mobile-menu-btn {
+    display: none;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 28px;
+    height: 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .site-mobile-menu-btn span {
+    display: block;
+    width: 100%;
+    height: 2px;
+    background: var(--text);
+    border-radius: 2px;
+    transition: transform 0.2s, opacity 0.2s;
+  }
+
+  .site-mobile-nav {
+    position: absolute;
+    top: var(--header-height);
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border-bottom: 1px solid var(--rule);
+    padding: 1rem 1.5rem 1.5rem;
+    box-shadow: var(--shadow-md);
+  }
+
+  .site-mobile-nav-link {
+    display: block;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--rule);
+    color: var(--t2);
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .site-mobile-nav-link:last-of-type {
+    border-bottom: none;
+  }
+
+  @media (max-width: 480px) {
+    .site-mobile-menu-btn {
+      display: flex;
+    }
+  }
+</style>
+
+<script>
+  const toggle = document.querySelector('[data-mobile-menu-toggle]');
+  const nav = document.querySelector('[data-mobile-nav]');
+
+  toggle?.addEventListener('click', () => {
+    const isHidden = nav?.hasAttribute('hidden');
+    if (isHidden) {
+      nav?.removeAttribute('hidden');
+    } else {
+      nav?.setAttribute('hidden', '');
+    }
+  });
+</script>

@@ -1,0 +1,268 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout
+  title="상담 요청"
+  pageTitle="상담 요청 관리"
+  pageDescription="온라인으로 접수된 상담 요청을 관리합니다."
+  status="Consults"
+>
+  <div class="admin-card pad-lg">
+    <div class="admin-actions-row">
+      <div>
+        <h2 class="admin-section-title">Consult Requests</h2>
+        <p class="admin-section-desc">온라인 상담 신청 목록 · 상태를 변경해 처리 흐름을 관리합니다.</p>
+      </div>
+      <div style="display:flex;gap:0.5rem;align-items:center;">
+        <select id="consults-status-filter" class="admin-select-sm">
+          <option value="">전체</option>
+          <option value="pending" selected>대기중</option>
+          <option value="reviewing">검토중</option>
+          <option value="contacted">연락완료</option>
+          <option value="done">완료</option>
+          <option value="rejected">거절</option>
+        </select>
+      </div>
+    </div>
+
+    <p class="admin-inline-note" data-consults-message hidden></p>
+
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>이름</th>
+            <th>연락처</th>
+            <th>관심 시술</th>
+            <th>접수일</th>
+            <th>상태</th>
+            <th>처리</th>
+          </tr>
+        </thead>
+        <tbody data-consults-body>
+          <tr>
+            <td colspan="6">불러오는 중...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 상세 보기 모달 -->
+  <div class="consult-detail-overlay" id="consult-detail-overlay" hidden>
+    <div class="consult-detail-modal">
+      <div class="consult-detail-head">
+        <h2 class="admin-section-title" id="consult-detail-name">상담 상세</h2>
+        <button type="button" class="admin-btn" id="consult-detail-close">닫기</button>
+      </div>
+      <div class="consult-detail-body" id="consult-detail-body"></div>
+    </div>
+  </div>
+
+  <script>
+    import { createClient } from '@supabase/supabase-js';
+    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+    const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+    const tbody = document.querySelector('[data-consults-body]');
+    const message = document.querySelector('[data-consults-message]');
+    const filterEl = document.getElementById('consults-status-filter');
+    const overlay = document.getElementById('consult-detail-overlay');
+    const detailClose = document.getElementById('consult-detail-close');
+    const detailName = document.getElementById('consult-detail-name');
+    const detailBody = document.getElementById('consult-detail-body');
+
+    const STATUS_LABEL = {
+      pending: '대기중',
+      reviewing: '검토중',
+      contacted: '연락완료',
+      done: '완료',
+      rejected: '거절',
+    };
+
+    const escapeHtml = (value) => String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+
+    const formatDate = (value) => {
+      if (!value) return '-';
+      return new Intl.DateTimeFormat('ko-KR', {
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+      }).format(new Date(value));
+    };
+
+    const setMessage = (text, state = 'info') => {
+      if (!message) return;
+      message.hidden = false;
+      message.textContent = text;
+      message.dataset.state = state;
+    };
+
+    const renderRows = (rows) => {
+      if (!tbody) return;
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="6">접수된 상담 요청이 없습니다.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map((row) => `
+        <tr data-consult-row="${escapeHtml(row.id)}">
+          <td>${escapeHtml(row.name)}</td>
+          <td>${escapeHtml(row.phone)}</td>
+          <td>${escapeHtml(row.interest ?? '-')}</td>
+          <td>${formatDate(row.created_at)}</td>
+          <td><span class="admin-status ${row.status === 'pending' ? 'warn' : row.status === 'done' ? 'ready' : 'draft'}">${escapeHtml(STATUS_LABEL[row.status] ?? row.status)}</span></td>
+          <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+            <button type="button" class="admin-btn admin-btn-sm" data-consult-detail="${escapeHtml(row.id)}">상세</button>
+            <select class="admin-select-sm consult-status-select" data-consult-id="${escapeHtml(row.id)}">
+              ${Object.entries(STATUS_LABEL).map(([k, v]) =>
+                `<option value="${k}"${k === row.status ? ' selected' : ''}>${v}</option>`
+              ).join('')}
+            </select>
+          </td>
+        </tr>
+      `).join('');
+    };
+
+    if (!supabaseUrl || !supabaseKey) {
+      renderRows([]);
+      setMessage('Supabase 환경 변수가 없어 상담 목록을 불러올 수 없습니다.', 'error');
+    } else {
+      let supabase = null;
+      let currentRows = [];
+
+      const loadConsults = async (statusFilter = '') => {
+        let query = supabase
+          .from('consult_requests')
+          .select('id, name, phone, email, interest, concern, preferred_time, status, created_at')
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        if (statusFilter) {
+          query = query.eq('status', statusFilter);
+        }
+
+        const { data, error } = await query;
+        if (error) {
+          renderRows([]);
+          setMessage(error.message, 'error');
+          return;
+        }
+        currentRows = data ?? [];
+        renderRows(currentRows);
+      };
+
+      document.addEventListener('admin:session-ready', async () => {
+        supabase = window.__adminSupabase;
+        await loadConsults(filterEl?.value ?? '');
+      });
+
+      filterEl?.addEventListener('change', () => {
+        loadConsults(filterEl.value);
+      });
+
+      // 상태 변경
+      document.addEventListener('change', async (e) => {
+        const sel = e.target.closest('.consult-status-select');
+        if (!sel) return;
+        const consultId = sel.dataset.consultId;
+        const newStatus = sel.value;
+
+        const { error } = await supabase
+          .from('consult_requests')
+          .update({ status: newStatus })
+          .eq('id', consultId);
+
+        if (error) {
+          setMessage(`상태 변경 실패: ${error.message}`, 'error');
+        } else {
+          setMessage(`상태가 "${STATUS_LABEL[newStatus]}"으로 변경되었습니다.`, 'success');
+          await loadConsults(filterEl?.value ?? '');
+        }
+      });
+
+      // 상세 보기
+      document.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-consult-detail]');
+        if (!btn) return;
+        const id = btn.dataset.consultDetail;
+        const row = currentRows.find(r => r.id === id);
+        if (!row || !overlay || !detailName || !detailBody) return;
+
+        detailName.textContent = `${row.name} 님의 상담 요청`;
+        detailBody.innerHTML = `
+          <ul class="admin-list">
+            <li class="admin-list-row"><div><p class="admin-item-title">연락처</p><p class="admin-item-meta">${escapeHtml(row.phone)}</p></div></li>
+            ${row.email ? `<li class="admin-list-row"><div><p class="admin-item-title">이메일</p><p class="admin-item-meta">${escapeHtml(row.email)}</p></div></li>` : ''}
+            ${row.interest ? `<li class="admin-list-row"><div><p class="admin-item-title">관심 시술</p><p class="admin-item-meta">${escapeHtml(row.interest)}</p></div></li>` : ''}
+            <li class="admin-list-row"><div><p class="admin-item-title">고민 사항</p><p class="admin-item-meta" style="white-space:pre-line;">${escapeHtml(row.concern)}</p></div></li>
+            ${row.preferred_time ? `<li class="admin-list-row"><div><p class="admin-item-title">희망 상담 시간</p><p class="admin-item-meta">${escapeHtml(row.preferred_time)}</p></div></li>` : ''}
+            <li class="admin-list-row"><div><p class="admin-item-title">접수일</p><p class="admin-item-meta">${formatDate(row.created_at)}</p></div></li>
+          </ul>
+        `;
+        overlay.hidden = false;
+      });
+
+      detailClose?.addEventListener('click', () => {
+        if (overlay) overlay.hidden = true;
+      });
+
+      overlay?.addEventListener('click', (e) => {
+        if (e.target === overlay) overlay.hidden = true;
+      });
+    }
+  </script>
+
+  <style>
+    .consult-detail-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(28, 25, 23, 0.45);
+      backdrop-filter: blur(4px);
+      display: grid;
+      place-items: center;
+      padding: 2rem;
+    }
+
+    .consult-detail-modal {
+      width: min(100%, 560px);
+      max-height: 80vh;
+      overflow-y: auto;
+      padding: 1.5rem;
+      border: 1px solid var(--admin-border);
+      border-radius: 24px;
+      background: var(--admin-surface);
+      box-shadow: 0 24px 56px rgba(28, 25, 23, 0.15);
+    }
+
+    .consult-detail-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+      gap: 1rem;
+    }
+
+    .admin-select-sm {
+      height: 34px;
+      padding: 0 0.6rem;
+      border: 1px solid var(--admin-border);
+      border-radius: 8px;
+      background: var(--admin-surface);
+      color: var(--admin-text);
+      font: inherit;
+      font-size: 0.78rem;
+    }
+
+    .admin-btn-sm {
+      min-height: 34px;
+      padding: 0 0.7rem;
+      font-size: 0.82rem;
+      border-radius: 8px;
+    }
+  </style>
+</AdminLayout>

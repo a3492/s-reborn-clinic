@@ -1,0 +1,565 @@
+---
+import '../../../styles/design.css';
+import '../../../styles/global.css';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+
+---
+
+<AdminLayout
+  title="Preview"
+  pageTitle="Preview"
+  pageDescription="저장된 글 또는 현재 작성 중인 draft를 Astro의 Markdown 파이프라인과 실제 메타 계산에 가깝게 미리 봅니다."
+  status="Preview"
+>
+  <div class="admin-panel-stack">
+    <div class="admin-card pad-lg">
+      <div class="admin-actions-row">
+        <div>
+          <h2 class="admin-section-title">Blog Preview</h2>
+          <p class="admin-section-desc">본문은 remark/rehype 파이프라인으로 렌더링하고, site settings를 반영해 SEO/OG 메타도 함께 계산합니다.</p>
+        </div>
+        <div class="admin-actions-cluster">
+          <a href="/admin/posts" class="admin-btn">목록으로</a>
+        </div>
+      </div>
+
+      <p class="admin-inline-note" data-admin-preview-message hidden></p>
+    </div>
+
+    <div class="admin-grid">
+      <section class="admin-card pad-md span-7">
+        <div class="admin-actions-row">
+          <div>
+            <h2 class="admin-section-title">SEO Preview</h2>
+            <p class="admin-section-desc">BaseHead 기준으로 계산되는 title, description, canonical, OG image를 확인합니다.</p>
+          </div>
+          <span class="admin-live-badge" data-admin-preview-settings-badge>Settings pending</span>
+        </div>
+
+        <div class="admin-seo-preview">
+          <strong class="admin-seo-title" data-admin-seo-title>(계산 중)</strong>
+          <span class="admin-seo-url" data-admin-seo-url>https://s-reborn-blog.pages.dev/...</span>
+          <p class="admin-seo-desc" data-admin-seo-desc></p>
+        </div>
+
+        <ul class="admin-list">
+          <li class="admin-list-row"><div><p class="admin-item-title">Canonical</p><p class="admin-item-meta" data-admin-seo-canonical>-</p></div></li>
+          <li class="admin-list-row"><div><p class="admin-item-title">OG Image</p><p class="admin-item-meta" data-admin-seo-image>-</p></div></li>
+          <li class="admin-list-row"><div><p class="admin-item-title">OG Site Name</p><p class="admin-item-meta" data-admin-seo-site>-</p></div></li>
+        </ul>
+      </section>
+
+      <section class="admin-card pad-md span-5">
+        <h2 class="admin-section-title">Resolved Inputs</h2>
+        <p class="admin-section-desc">frontmatter와 site settings가 합쳐진 최종 미리보기 입력입니다.</p>
+        <ul class="admin-list" data-admin-preview-resolved>
+          <li class="admin-list-row">
+            <div>
+              <p class="admin-item-title">불러오는 중...</p>
+              <p class="admin-item-meta">post data와 site settings를 계산합니다.</p>
+            </div>
+          </li>
+        </ul>
+      </section>
+    </div>
+
+    <article class="admin-post-preview-shell" data-admin-preview-root hidden>
+      <div class="admin-post-preview-main">
+        <div class="hero-image" data-admin-preview-hero hidden>
+          <img data-admin-preview-image alt="" />
+        </div>
+
+        <div class="prose admin-post-preview-prose">
+          <div class="title admin-post-preview-titleblock">
+            <div class="meta admin-post-preview-meta-row">
+              <span class="category-badge" data-admin-preview-category hidden></span>
+              <span data-admin-preview-date></span>
+            </div>
+
+            <h1 data-admin-preview-title></h1>
+            <p class="admin-post-preview-desc" data-admin-preview-desc hidden></p>
+
+            <div class="tags" data-admin-preview-tags hidden></div>
+
+            <div class="admin-post-preview-stats">
+              <span>조회수 미리보기</span>
+              <span>·</span>
+              <span>좋아요 미리보기</span>
+            </div>
+
+            <hr />
+          </div>
+
+          <div class="admin-preview-body" data-admin-preview-body></div>
+
+          <div class="share-section admin-post-preview-share">
+            <p>이 글이 도움이 됐나요? 공유해 주세요.</p>
+            <div class="share-buttons">
+              <button class="share-btn copy" type="button">링크 복사</button>
+              <button class="share-btn linkedin" type="button">LinkedIn</button>
+              <button class="share-btn twitter" type="button">𝕏 트위터</button>
+            </div>
+          </div>
+
+          <section class="admin-post-preview-comments">
+            <h2>댓글 영역 미리보기</h2>
+            <p>실제 배포 페이지에서는 Supabase OAuth 댓글(PublicComments)이 이 위치에 렌더링됩니다.</p>
+          </section>
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <style>
+    .admin-post-preview-shell {
+      border: 1px solid var(--admin-border);
+      border-radius: 30px;
+      background:
+        radial-gradient(circle at top, rgba(184, 149, 106, 0.1), transparent 24%),
+        rgba(255, 253, 252, 0.96);
+      box-shadow: 0 24px 56px rgba(28, 25, 23, 0.08);
+      overflow: hidden;
+    }
+
+    .admin-seo-preview {
+      display: grid;
+      gap: 0.32rem;
+      padding: 0.95rem 1rem;
+      border: 1px solid var(--admin-border-2);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.75);
+      margin-bottom: 1rem;
+    }
+
+    .admin-seo-title {
+      color: #1a0dab;
+      font-size: 1.05rem;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    .admin-seo-url {
+      color: #188038;
+      font-size: 0.85rem;
+      word-break: break-all;
+    }
+
+    .admin-seo-desc {
+      margin: 0;
+      color: var(--admin-text-2);
+      line-height: 1.6;
+      font-size: 0.9rem;
+    }
+
+    .admin-post-preview-main {
+      padding: 1.4rem;
+    }
+
+    .admin-post-preview-prose {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 1.2rem 1rem 1.8rem;
+      color: var(--text);
+    }
+
+    .admin-post-preview-titleblock {
+      padding-top: 0.5rem;
+    }
+
+    .admin-post-preview-desc {
+      margin: 0.9rem auto 0;
+      max-width: 640px;
+      color: var(--t2);
+      line-height: 1.8;
+      text-align: center;
+    }
+
+    .admin-post-preview-meta-row {
+      margin-bottom: 0.8rem;
+    }
+
+    .admin-post-preview-stats {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      color: var(--t3);
+      font-size: 0.88rem;
+      margin: 0.35rem 0 1rem;
+    }
+
+    .admin-preview-body {
+      line-height: 1.9;
+      word-break: keep-all;
+    }
+
+    .admin-preview-body p {
+      margin-bottom: 1.4rem;
+    }
+
+    .admin-preview-body ul,
+    .admin-preview-body ol {
+      padding-left: 1.4rem;
+      margin: 0 0 1.4rem;
+    }
+
+    .admin-preview-body li + li {
+      margin-top: 0.35rem;
+    }
+
+    .admin-preview-body pre {
+      background: #161311;
+      color: #f8f3ec;
+      border-radius: 18px;
+      padding: 1.1rem 1.2rem;
+      overflow-x: auto;
+      margin: 0 0 1.5rem;
+    }
+
+    .admin-preview-body code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .admin-preview-body pre code {
+      background: transparent;
+      padding: 0;
+      color: inherit;
+    }
+
+    .admin-preview-body blockquote {
+      margin: 0 0 1.5rem;
+      padding: 0.2rem 0 0.2rem 1rem;
+      border-left: 4px solid var(--accent);
+      color: var(--t2);
+      background: rgba(184, 149, 106, 0.08);
+      border-radius: 0 14px 14px 0;
+    }
+
+    .admin-preview-body img {
+      display: block;
+      max-width: 100%;
+      margin: 1.5rem auto 0.6rem;
+      border-radius: 18px;
+      box-shadow: 0 18px 42px rgba(28, 25, 23, 0.12);
+    }
+
+    .admin-preview-body table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0 0 1.5rem;
+      display: block;
+      overflow-x: auto;
+    }
+
+    .admin-preview-body th,
+    .admin-preview-body td {
+      padding: 0.72rem 0.85rem;
+      border: 1px solid var(--rule);
+      text-align: left;
+      vertical-align: top;
+      white-space: nowrap;
+    }
+
+    .admin-preview-body th {
+      background: rgba(184, 149, 106, 0.08);
+      font-weight: 700;
+    }
+
+    .admin-preview-body .image-caption {
+      display: block;
+      margin-bottom: 1.2rem;
+      color: var(--t3);
+      text-align: center;
+      font-size: 0.88rem;
+    }
+
+    .admin-preview-body .footnotes {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--rule);
+      color: var(--t2);
+      font-size: 0.95rem;
+    }
+
+    .admin-preview-body a[href] {
+      word-break: break-word;
+    }
+
+    .admin-post-preview-share {
+      margin-top: 3rem;
+    }
+
+    .admin-post-preview-comments {
+      margin-top: 2.2rem;
+      padding: 1.2rem 1.3rem;
+      border: 1px dashed var(--rule);
+      border-radius: 18px;
+      background: rgba(240, 237, 232, 0.55);
+    }
+
+    .admin-post-preview-comments h2 {
+      margin-bottom: 0.45rem;
+      font-size: 1.05rem;
+    }
+
+    @media (max-width: 720px) {
+      .admin-post-preview-main {
+        padding: 0.85rem;
+      }
+
+      .admin-post-preview-prose {
+        padding: 0.7rem 0.45rem 1.2rem;
+      }
+    }
+  </style>
+
+  <script>
+    import { createClient } from '@supabase/supabase-js';
+    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+    const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+    import { unified } from 'unified';
+    import remarkParse from 'remark-parse';
+    import remarkGfm from 'remark-gfm';
+    import remarkSmartypants from 'remark-smartypants';
+    import remarkRehype from 'remark-rehype';
+    import rehypeRaw from 'rehype-raw';
+    import rehypeStringify from 'rehype-stringify';
+
+    const params = new URLSearchParams(window.location.search);
+    const slug = params.get('slug');
+    const root = document.querySelector('[data-admin-preview-root]');
+    const message = document.querySelector('[data-admin-preview-message]');
+    const titleEl = document.querySelector('[data-admin-preview-title]');
+    const descEl = document.querySelector('[data-admin-preview-desc]');
+    const dateEl = document.querySelector('[data-admin-preview-date]');
+    const categoryEl = document.querySelector('[data-admin-preview-category]');
+    const tagsEl = document.querySelector('[data-admin-preview-tags]');
+    const bodyEl = document.querySelector('[data-admin-preview-body]');
+    const heroEl = document.querySelector('[data-admin-preview-hero]');
+    const imageEl = document.querySelector('[data-admin-preview-image]');
+    const seoTitleEl = document.querySelector('[data-admin-seo-title]');
+    const seoUrlEl = document.querySelector('[data-admin-seo-url]');
+    const seoDescEl = document.querySelector('[data-admin-seo-desc]');
+    const seoCanonicalEl = document.querySelector('[data-admin-seo-canonical]');
+    const seoImageEl = document.querySelector('[data-admin-seo-image]');
+    const seoSiteEl = document.querySelector('[data-admin-seo-site]');
+    const resolvedList = document.querySelector('[data-admin-preview-resolved]');
+    const settingsBadge = document.querySelector('[data-admin-preview-settings-badge]');
+
+    const processor = unified()
+      .use(remarkParse)
+      .use(remarkGfm)
+      .use(remarkSmartypants)
+      .use(remarkRehype, { allowDangerousHtml: true })
+      .use(rehypeRaw)
+      .use(rehypeStringify, { allowDangerousHtml: true });
+
+    const defaultSite = {
+      siteTitle: 'S-Reborn World',
+      siteDescription: 'S-Reborn World',
+      defaultOgImage: '/blog-og-default.jpg',
+    };
+
+    const setMessage = (text, state = 'info') => {
+      if (!message) return;
+      message.hidden = false;
+      message.textContent = text;
+      message.dataset.state = state;
+    };
+
+    const escapeHtml = (value) => String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+
+    const formatDate = (value) => {
+      if (!value) return '날짜 미지정';
+      return new Intl.DateTimeFormat('ko-KR', {
+        year: 'numeric', month: 'long', day: 'numeric'
+      }).format(new Date(value));
+    };
+
+    const absoluteUrl = (value, fallback = '/') => {
+      const input = value || fallback;
+      try {
+        return new URL(input, window.location.origin).href;
+      } catch {
+        return new URL(fallback, window.location.origin).href;
+      }
+    };
+
+    const resolveSiteSettings = (rows) => {
+      const map = new Map((rows || []).map((item) => [item.key, item.value_json || {}]));
+      const siteMeta = map.get('site_meta') || {};
+      return {
+        siteTitle: siteMeta.title || defaultSite.siteTitle,
+        siteDescription: siteMeta.description || defaultSite.siteDescription,
+        defaultOgImage: siteMeta.default_og_image || defaultSite.defaultOgImage,
+      };
+    };
+
+    const buildResolvedPreview = (post, settings) => {
+      const cleanSlug = String(post.slug || '').trim();
+      const canonicalPath = cleanSlug
+        ? `/blog/${post.category || 'uncategorized'}/${cleanSlug}/`
+        : '/blog/preview/';
+      const canonicalUrl = absoluteUrl(post.canonical_url || canonicalPath, canonicalPath);
+      const seoTitle = (post.seo_title || post.title || 'Untitled').trim();
+      const fullTitle = seoTitle.includes(settings.siteTitle) ? seoTitle : `${seoTitle} | ${settings.siteTitle}`;
+      const seoDescription = (post.seo_description || post.description || settings.siteDescription || '').trim();
+      const ogImage = absoluteUrl(post.thumbnail_url || post.thumbnail || settings.defaultOgImage, settings.defaultOgImage);
+      return {
+        ...post,
+        canonicalUrl,
+        seoTitle,
+        fullTitle,
+        seoDescription,
+        ogImage,
+        siteTitle: settings.siteTitle,
+      };
+    };
+
+    const renderResolved = (resolved) => {
+      if (!resolvedList) return;
+      resolvedList.innerHTML = [
+        { label: 'Title', value: resolved.fullTitle },
+        { label: 'Description', value: resolved.seoDescription || '-' },
+        { label: 'Canonical', value: resolved.canonicalUrl },
+        { label: 'Thumbnail / OG', value: resolved.ogImage },
+        { label: 'Site Name', value: resolved.siteTitle },
+      ].map((item) => `
+        <li class="admin-list-row">
+          <div>
+            <p class="admin-item-title">${escapeHtml(item.label)}</p>
+            <p class="admin-item-meta">${escapeHtml(item.value)}</p>
+          </div>
+        </li>
+      `).join('');
+    };
+
+    const renderSeo = (resolved, settingsLoaded) => {
+      if (seoTitleEl) seoTitleEl.textContent = resolved.fullTitle;
+      if (seoUrlEl) seoUrlEl.textContent = resolved.canonicalUrl;
+      if (seoDescEl) seoDescEl.textContent = resolved.seoDescription || defaultSite.siteDescription;
+      if (seoCanonicalEl) seoCanonicalEl.textContent = resolved.canonicalUrl;
+      if (seoImageEl) seoImageEl.textContent = resolved.ogImage;
+      if (seoSiteEl) seoSiteEl.textContent = resolved.siteTitle;
+      if (settingsBadge) {
+        settingsBadge.textContent = settingsLoaded ? 'Settings loaded' : 'Fallback defaults';
+        settingsBadge.dataset.active = settingsLoaded ? 'true' : 'false';
+      }
+    };
+
+    const decorateRenderedBody = () => {
+      if (!bodyEl) return;
+
+      bodyEl.querySelectorAll('a[href]').forEach((anchor) => {
+        anchor.setAttribute('target', '_blank');
+        anchor.setAttribute('rel', 'noreferrer');
+      });
+
+      bodyEl.querySelectorAll('img').forEach((image) => {
+        image.setAttribute('loading', 'lazy');
+      });
+    };
+
+    const renderMarkdown = async (markdown) => {
+      const source = String(markdown || '');
+      const file = await processor.process(source);
+      return String(file);
+    };
+
+    const renderPreview = async (resolved, settingsLoaded) => {
+      if (!root) return;
+      root.hidden = false;
+
+      renderSeo(resolved, settingsLoaded);
+      renderResolved(resolved);
+
+      if (titleEl) titleEl.textContent = resolved.title || '(제목 없음)';
+      if (descEl) {
+        const desc = resolved.description || '';
+        descEl.hidden = !desc;
+        descEl.textContent = desc;
+      }
+
+      if (dateEl) dateEl.textContent = formatDate(resolved.published_at || resolved.date);
+
+      if (categoryEl) {
+        const category = resolved.category || '';
+        categoryEl.hidden = !category;
+        categoryEl.textContent = category;
+      }
+
+      if (tagsEl) {
+        const tags = Array.isArray(resolved.tags) ? resolved.tags : [];
+        tagsEl.hidden = tags.length === 0;
+        tagsEl.innerHTML = tags.map((tag) => `<span class="tag">#${escapeHtml(tag)}</span>`).join('');
+      }
+
+      if (heroEl && imageEl) {
+        heroEl.hidden = !resolved.ogImage;
+        imageEl.src = resolved.ogImage;
+        imageEl.alt = resolved.title || 'preview image';
+      }
+
+      if (bodyEl) {
+        bodyEl.innerHTML = await renderMarkdown(resolved.body_markdown || resolved.body || '');
+        decorateRenderedBody();
+      }
+    };
+
+    const loadSettings = async (supabase) => {
+      const { data, error } = await supabase
+        .from('site_settings')
+        .select('key, value_json')
+        .in('key', ['site_meta']);
+
+      if (error) {
+        return { settings: defaultSite, loaded: false };
+      }
+
+      return {
+        settings: resolveSiteSettings(data || []),
+        loaded: true,
+      };
+    };
+
+    if (slug) {
+      if (!supabaseUrl || !supabaseKey) {
+        setMessage('Supabase 환경 변수가 없어 저장된 글 미리보기를 불러올 수 없습니다.', 'error');
+      } else {
+        const supabase = createClient(supabaseUrl, supabaseKey, {
+          auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+        });
+
+        const [{ data, error }, { settings, loaded }] = await Promise.all([
+          supabase
+            .from('posts')
+            .select('title, description, slug, category, tags, body_markdown, status, published_at, thumbnail_url, seo_title, seo_description, canonical_url')
+            .eq('slug', slug)
+            .single(),
+          loadSettings(supabase),
+        ]);
+
+        if (error || !data) {
+          setMessage(error?.message || '미리볼 글을 찾을 수 없습니다.', 'error');
+        } else {
+          const resolved = buildResolvedPreview(data, settings);
+          await renderPreview(resolved, loaded);
+        }
+      }
+    } else {
+      const raw = localStorage.getItem('admin_post_draft_preview');
+      if (!raw) {
+        setMessage('작성 중인 draft 미리보기 데이터가 없습니다.', 'warn');
+      } else {
+        const draft = JSON.parse(raw);
+        const resolved = buildResolvedPreview(draft, defaultSite);
+        await renderPreview(resolved, false);
+        setMessage('site_settings 저장본이 없으면 preview는 기본 site 메타를 사용합니다.', 'info');
+      }
+    }
+  </script>
+</AdminLayout>

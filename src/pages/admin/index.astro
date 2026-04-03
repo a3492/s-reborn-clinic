@@ -1,0 +1,227 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getCollection } from 'astro:content';
+
+const localDrafts = await getCollection('blog', ({ data }) => data.draft === true);
+const draftPreviews = localDrafts.map(post => {
+  const words = (post.body ?? '')
+    .replace(/^#+\s+/gm, '')
+    .replace(/[*_`\[\]()#>~\-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 3)
+    .join(' ');
+  return { title: post.data.title, slug: post.id, preview: words };
+});
+---
+
+<AdminLayout
+  title="Dashboard"
+  pageTitle="Dashboard"
+  pageDescription="에스리본 클리닉 관리자 패널의 핵심 상태를 빠르게 확인합니다."
+  status="Live Ops"
+>
+  <div class="admin-grid">
+    {draftPreviews.length > 0 && (
+      <section class="admin-card pad-lg span-12">
+        <h2 class="admin-section-title">Local Draft Files</h2>
+        <p class="admin-section-desc">로컬 마크다운에만 있고 아직 Supabase에 미등록된 비공개 글</p>
+        <ul class="admin-list">
+          {draftPreviews.map(p => (
+            <li class="admin-list-row">
+              <div>
+                <p class="admin-item-title">{p.title}</p>
+                <p class="admin-item-meta">{p.slug} · {p.preview} ...</p>
+              </div>
+              <span class="admin-status draft">local draft</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    <section class="admin-card pad-lg span-3">
+      <h2 class="admin-section-title">Draft Posts</h2>
+      <p class="admin-section-desc">임시 저장된 글 수</p>
+      <div class="admin-kpi">
+        <strong class="admin-kpi-value" data-admin-kpi-drafts>-</strong>
+        <span class="admin-kpi-label">현재 draft 상태 글 개수</span>
+      </div>
+    </section>
+
+    <section class="admin-card pad-lg span-3">
+      <h2 class="admin-section-title">Published Posts</h2>
+      <p class="admin-section-desc">현재 published 상태 글 수</p>
+      <div class="admin-kpi">
+        <strong class="admin-kpi-value" data-admin-kpi-published>-</strong>
+        <span class="admin-kpi-label">최신 게시 상태 기준</span>
+      </div>
+    </section>
+
+    <section class="admin-card pad-lg span-3">
+      <h2 class="admin-section-title">상담 신청</h2>
+      <p class="admin-section-desc">대기 중인 상담 요청</p>
+      <div class="admin-kpi">
+        <strong class="admin-kpi-value" data-admin-kpi-consults>-</strong>
+        <span class="admin-kpi-label">pending 상담 요청 수</span>
+      </div>
+    </section>
+
+    <section class="admin-card pad-lg span-3">
+      <h2 class="admin-section-title">Running Jobs</h2>
+      <p class="admin-section-desc">현재 처리 중인 publish job</p>
+      <div class="admin-kpi">
+        <strong class="admin-kpi-value" data-admin-kpi-jobs>-</strong>
+        <span class="admin-kpi-label">pending + processing</span>
+      </div>
+    </section>
+
+    <section class="admin-card pad-lg span-7">
+      <div class="admin-actions-row">
+        <div>
+          <h2 class="admin-section-title">Recent Drafts</h2>
+          <p class="admin-section-desc">최근 저장된 글과 최신 배포 상태를 함께 보여줍니다.</p>
+        </div>
+        <span class="admin-live-badge" data-admin-dashboard-live>Auto refresh</span>
+      </div>
+      <p class="admin-inline-note" data-admin-dashboard-message hidden></p>
+      <ul class="admin-list" data-admin-dashboard-drafts>
+        <li class="admin-list-row">
+          <div>
+            <p class="admin-item-title">불러오는 중...</p>
+            <p class="admin-item-meta">Supabase에서 최근 글을 가져옵니다.</p>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <section class="admin-card pad-lg span-5">
+      <h2 class="admin-section-title">최근 상담 신청</h2>
+      <p class="admin-section-desc">최근 접수된 상담 요청 5건을 표시합니다.</p>
+      <ul class="admin-list" data-admin-dashboard-consults>
+        <li class="admin-list-row">
+          <div>
+            <p class="admin-item-title">불러오는 중...</p>
+          </div>
+        </li>
+      </ul>
+      <div style="margin-top:1rem;">
+        <a href="/admin/consults" class="admin-btn">상담 관리 보기</a>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    import { createClient } from '@supabase/supabase-js';
+    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+    const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+    const draftsKpi = document.querySelector('[data-admin-kpi-drafts]');
+    const publishedKpi = document.querySelector('[data-admin-kpi-published]');
+    const consultsKpi = document.querySelector('[data-admin-kpi-consults]');
+    const jobsKpi = document.querySelector('[data-admin-kpi-jobs]');
+    const draftList = document.querySelector('[data-admin-dashboard-drafts]');
+    const consultList = document.querySelector('[data-admin-dashboard-consults]');
+    const message = document.querySelector('[data-admin-dashboard-message]');
+    let refreshTimer = null;
+
+    const escapeHtml = (value) => String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+
+    const formatDate = (value) => {
+      if (!value) return '-';
+      return new Intl.DateTimeFormat('ko-KR', {
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+      }).format(new Date(value));
+    };
+
+    const renderDrafts = (rows) => {
+      if (!draftList) return;
+      if (!rows.length) {
+        draftList.innerHTML = '<li class="admin-list-row"><div><p class="admin-item-title">저장된 draft가 없습니다.</p><p class="admin-item-meta">/admin/posts/new 에서 첫 글을 만들어 보세요.</p></div></li>';
+        return;
+      }
+      draftList.innerHTML = rows.map((row) => `
+        <li class="admin-list-row">
+          <div>
+            <p class="admin-item-title"><a class="admin-table-link" href="/admin/posts/edit?slug=${encodeURIComponent(row.slug)}">${escapeHtml(row.title)}</a></p>
+            <p class="admin-item-meta">${escapeHtml(row.slug)} · ${formatDate(row.updated_at)}</p>
+          </div>
+          <span class="admin-status ${escapeHtml(row.status)}">${escapeHtml(row.status)}</span>
+        </li>
+      `).join('');
+    };
+
+    const renderConsults = (rows) => {
+      if (!consultList) return;
+      if (!rows.length) {
+        consultList.innerHTML = '<li class="admin-list-row"><div><p class="admin-item-title">접수된 상담 요청이 없습니다.</p></div></li>';
+        return;
+      }
+      consultList.innerHTML = rows.map((row) => `
+        <li class="admin-list-row">
+          <div>
+            <p class="admin-item-title">${escapeHtml(row.name)} · ${escapeHtml(row.phone)}</p>
+            <p class="admin-item-meta">${formatDate(row.created_at)}${row.interest ? ` · ${escapeHtml(row.interest)}` : ''}</p>
+          </div>
+          <span class="admin-status ${row.status === 'pending' ? 'warn' : 'ready'}">${escapeHtml(row.status)}</span>
+        </li>
+      `).join('');
+    };
+
+    if (!supabaseUrl || !supabaseKey) {
+      if (message) {
+        message.hidden = false;
+        message.textContent = 'Supabase 환경 변수가 없어 대시보드를 불러올 수 없습니다.';
+        message.dataset.state = 'error';
+      }
+      renderDrafts([]);
+      renderConsults([]);
+    } else {
+      let supabase = null;
+
+      const loadDashboard = async (silent = false) => {
+        const [
+          { data: posts, error: postsError },
+          { data: jobs, error: jobsError },
+          { data: consults, error: consultsError },
+        ] = await Promise.all([
+          supabase.from('posts').select('id, title, slug, status, updated_at').order('updated_at', { ascending: false }).limit(5),
+          supabase.from('publish_jobs').select('status').in('status', ['pending', 'processing']),
+          supabase.from('consult_requests').select('id, name, phone, interest, status, created_at').order('created_at', { ascending: false }).limit(5),
+        ]);
+
+        if (postsError) {
+          renderDrafts([]);
+        } else {
+          const rows = posts ?? [];
+          if (draftsKpi) draftsKpi.textContent = String(rows.filter(r => r.status === 'draft').length);
+          if (publishedKpi) publishedKpi.textContent = String(rows.filter(r => r.status === 'published').length);
+          renderDrafts(rows);
+        }
+
+        if (jobsKpi) jobsKpi.textContent = String((jobs ?? []).length);
+
+        if (!consultsError) {
+          const pendingCount = (consults ?? []).filter(c => c.status === 'pending').length;
+          if (consultsKpi) consultsKpi.textContent = String(pendingCount);
+          renderConsults(consults ?? []);
+        }
+      };
+
+      document.addEventListener('admin:session-ready', async () => {
+        supabase = window.__adminSupabase;
+        await loadDashboard();
+        refreshTimer = window.setInterval(() => {
+          if (!document.hidden) loadDashboard(true);
+        }, 30000);
+      });
+    }
+  </script>
+</AdminLayout>

@@ -1,0 +1,300 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="클리닉 소개" description="에스리본 클리닉 소개 — 전문 의료진, 진료 철학, 클리닉 소식">
+  <div class="about-wrap">
+    <section class="about-hero">
+      <div class="about-hero-badge">About Us</div>
+      <h1 class="about-hero-title">에스리본 클리닉</h1>
+      <p class="about-hero-subtitle">당신의 아름다움을 다시 피우는 곳</p>
+    </section>
+
+    <section class="about-section">
+      <div class="about-grid">
+        <div class="about-intro">
+          <h2>진료 철학</h2>
+          <p>에스리본 클리닉은 모든 분의 고유한 아름다움을 존중합니다. 획일적인 기준이 아닌, 개인의 특성과 바람에 맞춘 맞춤형 시술 플랜을 제안합니다.</p>
+          <p>의학적 근거에 기반한 안전하고 효과적인 시술로 자연스러운 결과를 추구하며, 시술 전후 충분한 상담을 통해 기대치를 명확히 설정합니다.</p>
+        </div>
+        <div class="about-values">
+          <div class="value-card">
+            <div class="value-icon">✦</div>
+            <h3>안전</h3>
+            <p>FDA 승인 제품과 검증된 시술법만을 사용합니다.</p>
+          </div>
+          <div class="value-card">
+            <div class="value-icon">✦</div>
+            <h3>맞춤</h3>
+            <p>개인별 피부 타입과 원하는 결과에 최적화된 플랜.</p>
+          </div>
+          <div class="value-card">
+            <div class="value-icon">✦</div>
+            <h3>자연스러움</h3>
+            <p>과하지 않은, 당신답게 빛나는 결과를 지향합니다.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="about-section about-section-alt">
+      <h2>의료진 소개</h2>
+      <div class="doctor-grid">
+        <div class="doctor-card">
+          <div class="doctor-avatar" aria-hidden="true">👨‍⚕️</div>
+          <h3 class="doctor-name">원장 (미정)</h3>
+          <p class="doctor-spec">전문 분야: 피부과·미용의학</p>
+          <p class="doctor-bio">풍부한 임상 경험을 바탕으로 한 분 한 분의 피부 상태를 면밀히 분석하고, 최적의 시술 방향을 제안합니다.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="about-section">
+      <h2>오시는 길</h2>
+      <div class="location-info">
+        <div class="location-detail">
+          <div class="location-item">
+            <strong>주소</strong>
+            <span>서울특별시 강남구 (주소 미정)</span>
+          </div>
+          <div class="location-item">
+            <strong>전화</strong>
+            <span>000-0000-0000</span>
+          </div>
+          <div class="location-item">
+            <strong>진료시간</strong>
+            <div>
+              <p>월~금: 09:00 – 18:00</p>
+              <p>토: 09:00 – 13:00</p>
+              <p>일·공휴일: 휴진</p>
+            </div>
+          </div>
+        </div>
+        <div class="location-map">
+          <div class="map-placeholder">
+            <p>지도 (플레이스홀더)</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="about-cta">
+      <h2>궁금한 점이 있으신가요?</h2>
+      <p>전문 의료진이 직접 답변드립니다.</p>
+      <a href="/consult" class="btn btn-primary btn-lg">무료 온라인 상담 신청</a>
+    </section>
+  </div>
+</Layout>
+
+<style>
+  .about-wrap {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 0 3rem;
+  }
+
+  .about-hero {
+    text-align: center;
+    padding: 4rem 2rem 3rem;
+  }
+
+  .about-hero-badge {
+    display: inline-block;
+    margin-bottom: 1rem;
+    padding: 0.3rem 0.9rem;
+    border-radius: 999px;
+    background: rgba(201, 169, 110, 0.15);
+    border: 1px solid rgba(201, 169, 110, 0.3);
+    color: var(--accent-dark);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .about-hero-title {
+    font-size: clamp(2rem, 4vw, 2.8rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--text);
+    margin: 0 0 0.75rem;
+  }
+
+  .about-hero-subtitle {
+    font-size: 1.1rem;
+    color: var(--t2);
+    margin: 0;
+  }
+
+  .about-section {
+    padding: 3rem 2rem;
+    border-top: 1px solid var(--rule);
+  }
+
+  .about-section h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text);
+    margin: 0 0 1.5rem;
+    letter-spacing: -0.02em;
+  }
+
+  .about-section-alt {
+    background: var(--bg2);
+    border-radius: 20px;
+    margin: 0 1rem;
+  }
+
+  .about-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  .about-intro p {
+    color: var(--t2);
+    line-height: 1.8;
+    margin: 0 0 1rem;
+  }
+
+  .about-values {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .value-card {
+    padding: 1.25rem;
+    border: 1px solid var(--rule);
+    border-radius: 16px;
+    background: var(--surface);
+  }
+
+  .value-icon {
+    color: var(--accent);
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .value-card h3 {
+    margin: 0 0 0.35rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .value-card p {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--t2);
+    line-height: 1.6;
+  }
+
+  .doctor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .doctor-card {
+    padding: 2rem 1.5rem;
+    border: 1px solid var(--color-gold);
+    border-radius: 20px;
+    background: linear-gradient(135deg, var(--surface), var(--color-gold-light));
+    text-align: center;
+  }
+
+  .doctor-avatar {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .doctor-name {
+    margin: 0 0 0.35rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .doctor-spec {
+    margin: 0 0 0.75rem;
+    font-size: 0.82rem;
+    color: var(--accent-dark);
+    font-weight: 600;
+  }
+
+  .doctor-bio {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--t2);
+    line-height: 1.7;
+  }
+
+  .location-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  .location-item {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 0.5rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .location-item strong {
+    color: var(--text);
+    font-size: 0.88rem;
+  }
+
+  .location-item span,
+  .location-item p {
+    color: var(--t2);
+    font-size: 0.9rem;
+    margin: 0;
+    line-height: 1.7;
+  }
+
+  .map-placeholder {
+    width: 100%;
+    height: 240px;
+    background: var(--bg2);
+    border: 1px dashed var(--rule);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--t3);
+    font-size: 0.88rem;
+  }
+
+  .about-cta {
+    text-align: center;
+    padding: 3rem 2rem;
+    background: linear-gradient(135deg, var(--color-pink-light), var(--color-gold-light));
+    border-radius: 20px;
+    margin: 2rem;
+  }
+
+  .about-cta h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text);
+  }
+
+  .about-cta p {
+    margin: 0 0 1.5rem;
+    color: var(--t2);
+  }
+
+  @media (max-width: 768px) {
+    .about-grid,
+    .location-info {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

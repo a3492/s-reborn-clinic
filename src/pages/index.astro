@@ -1,0 +1,494 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+import { CATEGORIES } from '../consts';
+
+const allPosts = (await getCollection('blog', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+
+const latestPosts = allPosts.slice(0, 6);
+const doctorColumn = allPosts.filter(p => p.data.category === 'doctor-column').slice(0, 3);
+const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
+---
+
+<Layout>
+  <!-- 히어로 섹션 -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-badge">에스리본 클리닉</div>
+      <h1 class="hero-title">당신의 아름다움을<br/>다시 피우다</h1>
+      <p class="hero-desc">전문 의료진의 섬세한 손길로 당신만의 자연스러운 아름다움을 완성합니다.</p>
+      <div class="hero-actions">
+        <a href="/consult" class="btn btn-primary btn-lg">무료 상담 신청</a>
+        <a href="/procedures" class="btn btn-outline btn-lg">시술 안내 보기</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 시술 카드 섹션 -->
+  <section class="section">
+    <div class="section-header">
+      <h2 class="section-title">주요 시술</h2>
+      <p class="section-desc">에스리본 클리닉의 대표 시술을 소개합니다</p>
+    </div>
+    <div class="procedure-grid">
+      {CATEGORIES.filter(c => ['procedures', 'before-after'].includes(c.id)).map(cat => (
+        <a href={`/blog?category=${cat.id}`} class="procedure-card">
+          <div class="procedure-card-icon" aria-hidden="true">✦</div>
+          <h3 class="procedure-card-title">{cat.label}</h3>
+          <p class="procedure-card-desc">{cat.description}</p>
+          <span class="procedure-card-link">더 보기 →</span>
+        </a>
+      ))}
+      <a href="/procedures" class="procedure-card procedure-card-all">
+        <div class="procedure-card-icon" aria-hidden="true">⊞</div>
+        <h3 class="procedure-card-title">전체 시술 보기</h3>
+        <p class="procedure-card-desc">모든 시술 안내를 확인하세요</p>
+        <span class="procedure-card-link">바로가기 →</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- 최신 글 섹션 -->
+  {latestPosts.length > 0 && (
+    <section class="section">
+      <div class="section-header">
+        <h2 class="section-title">최신 콘텐츠</h2>
+        <a href="/blog" class="section-more">전체 보기 →</a>
+      </div>
+      <div class="post-grid">
+        {latestPosts.map(post => (
+          <a href={`/blog/${post.id}/`} class="post-card">
+            {post.data.thumbnail && (
+              <div class="post-card-thumb">
+                <img src={post.data.thumbnail} alt={post.data.title} loading="lazy" />
+              </div>
+            )}
+            <div class="post-card-body">
+              {post.data.category && (
+                <span class="post-card-cat">
+                  {CATEGORIES.find(c => c.id === post.data.category)?.label ?? post.data.category}
+                </span>
+              )}
+              <h3 class="post-card-title">{post.data.title}</h3>
+              <p class="post-card-desc">{post.data.description}</p>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+  )}
+
+  <!-- 원장 칼럼 -->
+  {doctorColumn.length > 0 && (
+    <section class="section section-alt">
+      <div class="section-header">
+        <h2 class="section-title">원장 칼럼</h2>
+        <a href="/blog?category=doctor-column" class="section-more">더 보기 →</a>
+      </div>
+      <div class="column-list">
+        {doctorColumn.map(post => (
+          <a href={`/blog/${post.id}/`} class="column-card">
+            <div class="column-card-kicker">원장 칼럼</div>
+            <h3 class="column-card-title">{post.data.title}</h3>
+            <p class="column-card-desc">{post.data.description}</p>
+          </a>
+        ))}
+      </div>
+    </section>
+  )}
+
+  <!-- FAQ -->
+  {faqPosts.length > 0 && (
+    <section class="section">
+      <div class="section-header">
+        <h2 class="section-title">자주 묻는 질문</h2>
+        <a href="/blog?category=faq" class="section-more">모두 보기 →</a>
+      </div>
+      <div class="faq-list">
+        {faqPosts.map(post => (
+          <a href={`/blog/${post.id}/`} class="faq-item">
+            <span class="faq-q">Q</span>
+            <div>
+              <p class="faq-title">{post.data.title}</p>
+              <p class="faq-desc">{post.data.description}</p>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+  )}
+
+  <!-- 상담 CTA 섹션 -->
+  <section class="cta-section">
+    <div class="cta-inner">
+      <h2 class="cta-title">지금 바로 상담해보세요</h2>
+      <p class="cta-desc">전문 의료진이 맞춤형 시술 플랜을 제안드립니다.</p>
+      <a href="/consult" class="btn btn-primary btn-lg">무료 온라인 상담 신청</a>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .hero {
+    background: linear-gradient(135deg, var(--color-soft-white) 0%, var(--color-cream) 40%, var(--color-gold-light) 100%);
+    padding: 5rem 2rem 4rem;
+    text-align: center;
+    margin: -1.5rem -2rem 0;
+  }
+
+  .hero-inner {
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  .hero-badge {
+    display: inline-block;
+    margin-bottom: 1.25rem;
+    padding: 0.35rem 1rem;
+    border-radius: 999px;
+    background: rgba(201, 169, 110, 0.15);
+    border: 1px solid rgba(201, 169, 110, 0.35);
+    color: var(--accent-dark);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+
+  .hero-title {
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--text);
+    line-height: 1.2;
+    margin: 0 0 1.25rem;
+  }
+
+  .hero-desc {
+    font-size: 1.1rem;
+    color: var(--t2);
+    line-height: 1.75;
+    margin: 0 0 2rem;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .section {
+    padding: 4rem 0;
+  }
+
+  .section-alt {
+    background: var(--bg2);
+    margin-inline: -2rem;
+    padding-inline: 2rem;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .section-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    margin: 0;
+  }
+
+  .section-desc {
+    color: var(--t2);
+    margin: 0.35rem 0 0;
+    font-size: 0.92rem;
+  }
+
+  .section-more {
+    color: var(--accent-dark);
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .procedure-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  .procedure-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1.5rem;
+    border: 1px solid var(--rule);
+    border-radius: 20px;
+    background: var(--surface);
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s;
+  }
+
+  .procedure-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(201, 169, 110, 0.15);
+    border-color: var(--color-gold);
+  }
+
+  .procedure-card-icon {
+    font-size: 1.5rem;
+    color: var(--accent);
+  }
+
+  .procedure-card-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .procedure-card-desc {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--t2);
+    line-height: 1.6;
+    flex: 1;
+  }
+
+  .procedure-card-link {
+    margin-top: auto;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--accent-dark);
+  }
+
+  .procedure-card-all {
+    background: linear-gradient(135deg, var(--color-gold-light), var(--color-cream));
+    border-color: var(--color-gold);
+  }
+
+  .post-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .post-card {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--rule);
+    border-radius: 18px;
+    overflow: hidden;
+    text-decoration: none;
+    background: var(--surface);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .post-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px rgba(28, 24, 20, 0.07);
+  }
+
+  .post-card-thumb {
+    height: 180px;
+    overflow: hidden;
+  }
+
+  .post-card-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 0;
+    transition: transform 0.3s ease;
+  }
+
+  .post-card:hover .post-card-thumb img {
+    transform: scale(1.03);
+  }
+
+  .post-card-body {
+    padding: 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    flex: 1;
+  }
+
+  .post-card-cat {
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--accent-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .post-card-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.4;
+  }
+
+  .post-card-desc {
+    margin: 0;
+    font-size: 0.84rem;
+    color: var(--t2);
+    line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .column-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+
+  .column-card {
+    padding: 1.5rem;
+    border: 1px solid var(--color-gold);
+    border-radius: 18px;
+    background: linear-gradient(135deg, var(--surface), var(--color-gold-light));
+    text-decoration: none;
+    transition: transform 0.2s;
+    display: block;
+  }
+
+  .column-card:hover {
+    transform: translateY(-2px);
+  }
+
+  .column-card-kicker {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--accent-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.6rem;
+  }
+
+  .column-card-title {
+    margin: 0 0 0.5rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .column-card-desc {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--t2);
+    line-height: 1.65;
+  }
+
+  .faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .faq-item {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid var(--rule);
+    border-radius: 16px;
+    background: var(--surface);
+    text-decoration: none;
+    transition: border-color 0.15s, transform 0.15s;
+  }
+
+  .faq-item:hover {
+    border-color: var(--accent);
+    transform: translateX(4px);
+  }
+
+  .faq-q {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    font-size: 0.8rem;
+    font-weight: 800;
+  }
+
+  .faq-title {
+    margin: 0 0 0.35rem;
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .faq-desc {
+    margin: 0;
+    font-size: 0.84rem;
+    color: var(--t2);
+  }
+
+  .cta-section {
+    background: linear-gradient(135deg, var(--color-charcoal), var(--color-brown-dark));
+    padding: 4rem 2rem;
+    text-align: center;
+    margin-inline: -2rem;
+  }
+
+  .cta-inner {
+    max-width: 560px;
+    margin: 0 auto;
+  }
+
+  .cta-title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: white;
+    margin: 0 0 0.75rem;
+  }
+
+  .cta-desc {
+    color: rgba(255,255,255,0.75);
+    margin: 0 0 2rem;
+    line-height: 1.7;
+  }
+
+  @media (max-width: 768px) {
+    .hero {
+      padding: 3.5rem 1.25rem 3rem;
+    }
+
+    .hero-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .section {
+      padding: 3rem 0;
+    }
+
+    .section-alt {
+      margin-inline: -1rem;
+      padding-inline: 1rem;
+    }
+
+    .cta-section {
+      margin-inline: -1rem;
+      padding: 3rem 1rem;
+    }
+  }
+</style>

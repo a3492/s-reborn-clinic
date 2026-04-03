@@ -1,0 +1,612 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+
+---
+
+<AdminLayout
+  title="Media"
+  pageTitle="Media"
+  pageDescription="외부 URL 또는 저장소 자산을 등록하고 Markdown 삽입 코드를 관리합니다."
+  status="Registry"
+>
+  <div class="admin-split">
+    <section class="admin-card pad-lg">
+      <div class="admin-actions-row">
+        <div>
+          <h2 class="admin-section-title">Asset Registry</h2>
+          <p class="admin-section-desc">수동 URL 등록과 Supabase Storage 업로드를 같은 UI에서 처리합니다.</p>
+        </div>
+        <button type="submit" form="admin-media-form" class="admin-btn primary">자산 등록</button>
+      </div>
+
+      <form id="admin-media-form" class="admin-form-grid" data-admin-media-form>
+        <div class="admin-field full">
+          <label class="admin-label" for="binary_file">Upload File</label>
+          <input id="binary_file" name="binary_file" class="admin-input" type="file" accept="image/*" />
+          <span class="admin-help">파일을 선택하면 Supabase Storage 업로드를 우선 시도합니다. 공개 URL만 등록할 수도 있습니다.</span>
+        </div>
+
+        <div class="admin-field">
+          <label class="admin-label" for="file_name">파일명</label>
+          <input id="file_name" name="file_name" class="admin-input" type="text" placeholder="hero-cover.webp" required />
+        </div>
+
+        <div class="admin-field">
+          <label class="admin-label" for="mime_type">MIME Type</label>
+          <input id="mime_type" name="mime_type" class="admin-input" type="text" placeholder="image/webp" />
+        </div>
+
+        <div class="admin-field full">
+          <label class="admin-label" for="public_url">Public URL</label>
+          <input id="public_url" name="public_url" class="admin-input" type="url" placeholder="https://cdn.example.com/blog/hero-cover.webp" />
+          <span class="admin-help">파일 업로드가 성공하면 공개 URL이 자동으로 채워집니다. 파일 없이 수동 URL만 등록해도 됩니다.</span>
+        </div>
+
+        <div class="admin-field">
+          <label class="admin-label" for="storage_provider">Storage Provider</label>
+          <select id="storage_provider" name="storage_provider" class="admin-select">
+            <option value="manual">manual</option>
+            <option value="r2">r2</option>
+            <option value="supabase-storage">supabase-storage</option>
+            <option value="external-cdn">external-cdn</option>
+          </select>
+        </div>
+
+        <div class="admin-field">
+          <label class="admin-label" for="storage_bucket">Bucket / Group</label>
+          <input id="storage_bucket" name="storage_bucket" class="admin-input" type="text" placeholder="blog-images" />
+        </div>
+
+        <div class="admin-field full">
+          <label class="admin-label" for="file_path">File Path</label>
+          <input id="file_path" name="file_path" class="admin-input" type="text" placeholder="2026/03/hero-cover.webp" />
+        </div>
+
+        <div class="admin-field full">
+          <label class="admin-label" for="alt_text">Alt Text</label>
+          <input id="alt_text" name="alt_text" class="admin-input" type="text" placeholder="대체 텍스트를 입력하세요." />
+        </div>
+
+        <div class="admin-field full">
+          <label class="admin-label" for="caption">Caption</label>
+          <input id="caption" name="caption" class="admin-input" type="text" placeholder="선택 사항" />
+        </div>
+
+        <div class="admin-field">
+          <label class="admin-label" for="width">Width</label>
+          <input id="width" name="width" class="admin-input" type="number" min="0" placeholder="1600" />
+        </div>
+
+        <div class="admin-field">
+          <label class="admin-label" for="height">Height</label>
+          <input id="height" name="height" class="admin-input" type="number" min="0" placeholder="900" />
+        </div>
+      </form>
+
+      <p class="admin-inline-note" data-admin-media-message hidden></p>
+
+      <section class="admin-card pad-md" style="margin-top: 1rem;">
+        <h3 class="admin-section-title">Markdown Helper</h3>
+        <p class="admin-section-desc">등록 직후 바로 본문이나 frontmatter에 붙여 넣을 수 있는 코드를 생성합니다.</p>
+        <div class="admin-panel-stack">
+          <label class="admin-field">
+            <span class="admin-label">본문용 이미지 코드</span>
+            <textarea class="admin-textarea" style="min-height: 88px;" readonly data-admin-media-markdown></textarea>
+          </label>
+          <button type="button" class="admin-btn" data-copy-target="markdown">Markdown 복사</button>
+          <label class="admin-field">
+            <span class="admin-label">frontmatter thumbnail 값</span>
+            <input class="admin-input" type="text" readonly data-admin-media-thumbnail />
+          </label>
+          <button type="button" class="admin-btn" data-copy-target="thumbnail">Thumbnail 복사</button>
+        </div>
+      </section>
+
+      <section class="admin-card pad-md" style="margin-top: 1rem;">
+        <h3 class="admin-section-title">Upload Preview</h3>
+        <p class="admin-section-desc">선택한 파일과 최종 경로를 업로드 전에 확인합니다.</p>
+        <div class="admin-media-preview">
+          <div class="admin-media-preview-frame" data-admin-media-preview-frame>
+            <span class="admin-help">미리볼 이미지가 없습니다.</span>
+          </div>
+          <div class="admin-panel-stack">
+            <p class="admin-item-title" data-admin-media-preview-name>선택된 파일 없음</p>
+            <p class="admin-item-meta" data-admin-media-preview-meta>PNG, JPG, WEBP 등 이미지 파일을 올릴 수 있습니다.</p>
+            <p class="admin-item-meta" data-admin-media-preview-path>업로드 경로 미지정</p>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <div class="admin-panel-stack">
+      <section class="admin-card pad-md">
+        <h2 class="admin-section-title">Current Flow</h2>
+        <p class="admin-section-desc">이제 Supabase Storage 업로드와 수동 URL 등록을 모두 지원합니다.</p>
+        <ul class="admin-list">
+          <li class="admin-list-row"><div><p class="admin-item-title">Asset registry</p><p class="admin-item-meta">public URL, alt text, mime type, size를 저장합니다.</p></div><div><span class="admin-status ready">Live</span></div></li>
+          <li class="admin-list-row"><div><p class="admin-item-title">Audit log</p><p class="admin-item-meta">등록 이력을 `audit_logs`에 남깁니다.</p></div><div><span class="admin-status ready">Live</span></div></li>
+          <li class="admin-list-row"><div><p class="admin-item-title">Supabase upload</p><p class="admin-item-meta">공개 버킷에 파일을 업로드하고 URL을 자동 등록합니다.</p></div><div><span class="admin-status ready">Live</span></div></li>
+        </ul>
+      </section>
+
+      <section class="admin-card pad-md">
+        <h2 class="admin-section-title">Recent Assets</h2>
+        <p class="admin-section-desc">최근 등록 자산을 바로 복사하거나 아카이브/복구할 수 있습니다.</p>
+        <div class="admin-assets-mini-grid" data-admin-media-list>
+          <p class="admin-help" style="grid-column:1/-1;">목록을 불러오는 중입니다.</p>
+        </div>
+      </section>
+
+      <section class="admin-card pad-md">
+        <h2 class="admin-section-title">Recent Upload Logs</h2>
+        <p class="admin-section-desc">최근 media 등록 이력을 함께 확인합니다.</p>
+        <ul class="admin-list" data-admin-media-history>
+          <li class="admin-list-row"><div><p class="admin-item-title">불러오는 중...</p><p class="admin-item-meta">최근 audit log를 조회합니다.</p></div></li>
+        </ul>
+      </section>
+
+      <section class="admin-card pad-md">
+        <h2 class="admin-section-title">Rule</h2>
+        <p class="admin-section-desc">당분간은 수동 URL 등록이 기본입니다.</p>
+        <ul class="admin-list">
+          <li class="admin-list-row"><div><p class="admin-item-title">Thumbnail</p><p class="admin-item-meta">frontmatter `thumbnail`에 public URL을 그대로 사용합니다.</p></div></li>
+          <li class="admin-list-row"><div><p class="admin-item-title">본문 이미지</p><p class="admin-item-meta">Markdown helper가 생성한 문법을 붙여 넣습니다.</p></div></li>
+          <li class="admin-list-row"><div><p class="admin-item-title">Alt text</p><p class="admin-item-meta">등록 단계에서 alt를 관리해 본문 품질을 일정하게 맞춥니다.</p></div></li>
+        </ul>
+      </section>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  import { createClient } from '@supabase/supabase-js';
+  const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+  const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+  const form = document.querySelector('[data-admin-media-form]');
+  const message = document.querySelector('[data-admin-media-message]');
+  const markdownField = document.querySelector('[data-admin-media-markdown]');
+  const thumbnailField = document.querySelector('[data-admin-media-thumbnail]');
+  const list = document.querySelector('[data-admin-media-list]');
+  const fileInput = document.querySelector('#binary_file');
+  const previewFrame = document.querySelector('[data-admin-media-preview-frame]');
+  const previewName = document.querySelector('[data-admin-media-preview-name]');
+  const previewMeta = document.querySelector('[data-admin-media-preview-meta]');
+  const previewPath = document.querySelector('[data-admin-media-preview-path]');
+  const historyList = document.querySelector('[data-admin-media-history]');
+  let localPreviewUrl = null;
+
+  const setMessage = (text, state = 'info') => {
+    if (!message) return;
+    message.hidden = false;
+    message.textContent = text;
+    message.dataset.state = state;
+  };
+
+  const escapeHtml = (value) =>
+    String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+  const buildMarkdown = ({ alt_text, public_url, caption }) => {
+    const alt = String(alt_text || '').trim() || 'image';
+    const url = String(public_url || '').trim();
+    const body = `![${alt}](${url})`;
+    return caption ? `${body}\n*${caption}*` : body;
+  };
+
+  const clearLocalPreview = () => {
+    if (localPreviewUrl) {
+      URL.revokeObjectURL(localPreviewUrl);
+      localPreviewUrl = null;
+    }
+  };
+
+  const renderPreview = ({ file = null, url = '', path = '', width = '', height = '' } = {}) => {
+    if (!previewFrame || !previewName || !previewMeta || !previewPath) return;
+
+    const meta = [];
+    if (file?.type) meta.push(file.type);
+    if (file?.size) meta.push(`${(file.size / 1024 / 1024).toFixed(2)} MB`);
+    if (width && height) meta.push(`${width}×${height}`);
+
+    previewName.textContent = file?.name || '선택된 파일 없음';
+    previewMeta.textContent = meta.join(' · ') || 'PNG, JPG, WEBP 등 이미지 파일을 올릴 수 있습니다.';
+    previewPath.textContent = path ? `target: ${path}` : '업로드 경로 미지정';
+
+    if (!url) {
+      previewFrame.innerHTML = '<span class="admin-help">미리볼 이미지가 없습니다.</span>';
+      return;
+    }
+
+    previewFrame.innerHTML = `<img src="${escapeHtml(url)}" alt="${escapeHtml(file?.name || 'media preview')}" />`;
+  };
+
+  const syncHelpers = () => {
+    if (!form) return;
+    const data = new FormData(form);
+    const asset = {
+      alt_text: String(data.get('alt_text') || ''),
+      public_url: String(data.get('public_url') || ''),
+      caption: String(data.get('caption') || ''),
+    };
+
+    if (markdownField) markdownField.value = buildMarkdown(asset);
+    if (thumbnailField) thumbnailField.value = asset.public_url;
+    renderPreview({
+      file: fileInput?.files?.[0] || null,
+      url: localPreviewUrl || asset.public_url,
+      path: String(data.get('file_path') || ''),
+      width: String(data.get('width') || ''),
+      height: String(data.get('height') || ''),
+    });
+  };
+
+  const buildStoragePath = (fileName) => {
+    const now = new Date();
+    const year = String(now.getFullYear());
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const safeName = String(fileName || 'upload')
+      .toLowerCase()
+      .replace(/[^a-z0-9.\-_]/g, '-')
+      .replace(/-+/g, '-');
+    return `${year}/${month}/${Date.now()}-${safeName}`;
+  };
+
+  const fillImageMetaFromFile = async (file) => {
+    if (!file || !form) return;
+    if (!form.file_name.value) form.file_name.value = file.name;
+    if (!form.mime_type.value) form.mime_type.value = file.type || '';
+    if (!form.file_path.value) form.file_path.value = buildStoragePath(file.name);
+    if (form.storage_provider.value === 'manual') form.storage_provider.value = 'supabase-storage';
+
+    clearLocalPreview();
+    localPreviewUrl = URL.createObjectURL(file);
+    renderPreview({ file, url: localPreviewUrl, path: form.file_path.value });
+
+    if (!file.type.startsWith('image/')) return;
+
+    try {
+      const image = new Image();
+      await new Promise((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = reject;
+        image.src = localPreviewUrl;
+      });
+      if (!form.width.value) form.width.value = String(image.naturalWidth || '');
+      if (!form.height.value) form.height.value = String(image.naturalHeight || '');
+      renderPreview({
+        file,
+        url: localPreviewUrl,
+        path: form.file_path.value,
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+      });
+    } catch {
+      // Ignore dimension detection failure; upload can still continue.
+    }
+  };
+
+    const renderAssetList = (assets) => {
+      if (!list) return;
+
+      if (!assets?.length) {
+        list.innerHTML = '<p class="admin-help" style="grid-column:1/-1;">아직 등록된 자산이 없습니다.</p>';
+        return;
+      }
+
+      list.innerHTML = assets
+        .map((asset) => {
+        const markdown = escapeHtml(buildMarkdown(asset));
+        const title = escapeHtml(asset.file_name);
+        const url = escapeHtml(asset.public_url || '');
+        const isArchived = Boolean(asset.deleted_at);
+
+        return `
+          <article class="admin-card pad-md" data-media-asset-card data-media-asset-id="${escapeHtml(asset.id)}" data-media-asset-archived="${isArchived ? 'true' : 'false'}" style="font-size:0.82rem;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:0.4rem;margin-bottom:0.45rem;">
+              <p class="admin-item-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;" title="${title}">${title}</p>
+              <span class="admin-status ${isArchived ? 'draft' : 'ready'}" style="flex-shrink:0;">${isArchived ? 'archived' : 'active'}</span>
+            </div>
+            <textarea class="admin-textarea" style="min-height:56px;font-size:0.76rem;" readonly data-asset-markdown>${markdown}</textarea>
+            <input class="admin-input" style="margin-top:0.35rem;font-size:0.76rem;" type="text" readonly value="${url}" data-asset-thumbnail />
+            <div class="admin-actions-inline" style="margin-top:0.4rem;flex-wrap:wrap;">
+              <button type="button" class="admin-btn admin-btn-sm" data-copy-asset="markdown">MD</button>
+              <button type="button" class="admin-btn admin-btn-sm" data-copy-asset="thumbnail">URL</button>
+              <a class="admin-btn admin-btn-sm" href="/admin/media/detail?id=${encodeURIComponent(asset.id)}">상세</a>
+              <button type="button" class="admin-btn admin-btn-sm" data-media-archive-action="${isArchived ? 'restore' : 'archive'}">${isArchived ? '복구' : '보관'}</button>
+            </div>
+          </article>
+        `;
+      })
+      .join('');
+  };
+
+  const copyText = async (value, label) => {
+    if (!value) {
+      setMessage(`${label} 값이 비어 있습니다.`, 'error');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(value);
+      setMessage(`${label}을(를) 클립보드에 복사했습니다.`, 'success');
+    } catch {
+      setMessage(`${label} 복사에 실패했습니다.`, 'error');
+    }
+  };
+
+  const formatDate = (value) => {
+    if (!value) return '-';
+    return new Intl.DateTimeFormat('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(value));
+  };
+
+  if (!supabaseUrl || !supabaseKey) {
+    setMessage('Supabase 환경 변수가 없어 media registry를 초기화할 수 없습니다.', 'error');
+  } else {
+    let currentSessionUserId = null;
+    document.addEventListener('admin:session-ready', ({ detail }) => {
+        supabase = window.__adminSupabase;
+      currentSessionUserId = detail.userId;
+    });
+
+    let supabase = null;
+
+    const loadAssets = async () => {
+      const { data, error } = await supabase
+        .from('media_assets')
+        .select('id, file_name, storage_provider, mime_type, public_url, alt_text, caption, width, height, deleted_at, created_at')
+        .order('created_at', { ascending: false })
+        .limit(12);
+
+      if (error) {
+        if (list) {
+          list.innerHTML = `<p class="admin-inline-note" data-state="error">${escapeHtml(error.message)}</p>`;
+        }
+        return;
+      }
+
+      renderAssetList(data || []);
+    };
+
+    const loadHistory = async () => {
+      if (!historyList) return;
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select('created_at, actor_id, after_json')
+        .eq('action', 'media_asset_created')
+        .eq('resource_type', 'media_asset')
+        .order('created_at', { ascending: false })
+        .limit(6);
+
+      if (error) {
+        historyList.innerHTML = `<li class="admin-list-row"><div><p class="admin-item-title">조회 실패</p><p class="admin-item-meta">${escapeHtml(error.message)}</p></div></li>`;
+        return;
+      }
+
+      if (!data?.length) {
+        historyList.innerHTML = '<li class="admin-list-row"><div><p class="admin-item-title">이력이 없습니다.</p><p class="admin-item-meta">첫 media 등록 후 여기에 표시됩니다.</p></div></li>';
+        return;
+      }
+
+      const shown = data.slice(0, 5);
+      const extra = data.length - shown.length;
+      historyList.innerHTML = shown.map((row) => `
+        <li class="admin-list-row">
+          <div>
+            <p class="admin-item-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px;" title="${escapeHtml(row.after_json?.file_name || '')}">${escapeHtml(row.after_json?.file_name || 'media asset')}</p>
+            <p class="admin-item-meta admin-cell-date">${formatDate(row.created_at)} · ${escapeHtml(row.after_json?.storage_provider || '-')}</p>
+          </div>
+        </li>
+      `).join('') + (extra > 0 ? `<li class="admin-list-row"><div><a class="admin-cell-subtle" href="/admin/media">+${extra}개 더 보기</a></div></li>` : '');
+    };
+
+    form?.addEventListener('input', syncHelpers);
+    form?.addEventListener('click', async (event) => {
+      const button = event.target.closest('[data-copy-target]');
+      if (!button) return;
+
+      if (button.dataset.copyTarget === 'markdown') {
+        await copyText(markdownField?.value || '', 'Markdown');
+      }
+
+      if (button.dataset.copyTarget === 'thumbnail') {
+        await copyText(thumbnailField?.value || '', 'Thumbnail URL');
+      }
+    });
+
+    list?.addEventListener('click', async (event) => {
+      const button = event.target.closest('[data-copy-asset]');
+      if (!button) return;
+
+      const card = button.closest('.admin-card');
+      if (!card) return;
+
+      if (button.dataset.copyAsset === 'markdown') {
+        await copyText(card.querySelector('[data-asset-markdown]')?.value || '', 'Markdown');
+      }
+
+      if (button.dataset.copyAsset === 'thumbnail') {
+        await copyText(card.querySelector('[data-asset-thumbnail]')?.value || '', 'Thumbnail URL');
+      }
+    });
+
+    list?.addEventListener('click', async (event) => {
+      const button = event.target.closest('[data-media-archive-action]');
+      if (!button) return;
+
+      const card = button.closest('[data-media-asset-card]');
+      if (!card) return;
+
+      const assetId = card.dataset.mediaAssetId;
+      const action = button.dataset.mediaArchiveAction;
+      if (!assetId || !action) return;
+
+      const isRestore = action === 'restore';
+      const { data: asset, error: assetError } = await supabase
+        .from('media_assets')
+        .update({ deleted_at: isRestore ? null : new Date().toISOString() })
+        .eq('id', assetId)
+        .select('id, file_name, public_url, storage_provider, deleted_at')
+        .single();
+
+      if (assetError) {
+        setMessage(assetError.message, 'error');
+        return;
+      }
+
+      await supabase.from('audit_logs').insert({
+        actor_id: currentSessionUserId,
+        action: isRestore ? 'media_asset_restored' : 'media_asset_archived',
+        resource_type: 'media_asset',
+        resource_id: asset.id,
+        after_json: {
+          file_name: asset.file_name,
+          public_url: asset.public_url,
+          storage_provider: asset.storage_provider,
+          deleted_at: asset.deleted_at,
+        },
+      });
+
+      setMessage(isRestore ? '미디어 자산을 복구했습니다.' : '미디어 자산을 아카이브했습니다.', 'success');
+      loadAssets();
+      loadHistory();
+    });
+
+    fileInput?.addEventListener('change', async (event) => {
+      const file = event.target.files?.[0];
+      await fillImageMetaFromFile(file);
+      syncHelpers();
+    });
+    syncHelpers();
+    loadAssets();
+    loadHistory();
+
+    form?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      setMessage('media asset를 등록하는 중입니다...', 'info');
+
+      const formData = new FormData(form);
+      let publicUrl = String(formData.get('public_url') || '').trim();
+      const fileName = String(formData.get('file_name') || '').trim();
+      const binaryFile = fileInput?.files?.[0] || null;
+      const storageProvider = String(formData.get('storage_provider') || 'manual');
+      const storageBucket = String(formData.get('storage_bucket') || '').trim() || 'blog-images';
+      const filePath = String(formData.get('file_path') || '').trim() || (binaryFile ? buildStoragePath(binaryFile.name) : null);
+
+      if (!fileName) {
+        setMessage('파일명은 필수입니다.', 'error');
+        return;
+      }
+
+      if (!publicUrl && !binaryFile) {
+        setMessage('파일 업로드 또는 Public URL 중 하나는 필요합니다.', 'error');
+        return;
+      }
+
+      if (binaryFile) {
+        if (storageProvider !== 'supabase-storage') {
+          setMessage('현재 실제 업로드는 `supabase-storage` provider만 지원합니다.', 'error');
+          return;
+        }
+
+        let resolvedPath = filePath;
+        let { error: uploadError } = await supabase.storage
+          .from(storageBucket)
+          .upload(resolvedPath, binaryFile, {
+            upsert: false,
+            contentType: binaryFile.type || undefined,
+          });
+
+        if (uploadError && /exists|duplicate|already/i.test(uploadError.message || '')) {
+          resolvedPath = buildStoragePath(binaryFile.name);
+          form.file_path.value = resolvedPath;
+          ({ error: uploadError } = await supabase.storage
+            .from(storageBucket)
+            .upload(resolvedPath, binaryFile, {
+              upsert: false,
+              contentType: binaryFile.type || undefined,
+            }));
+        }
+
+        if (uploadError) {
+          setMessage(`스토리지 업로드에 실패했습니다: ${uploadError.message}`, 'error');
+          return;
+        }
+
+        const { data: publicData } = supabase.storage.from(storageBucket).getPublicUrl(resolvedPath);
+        publicUrl = publicData?.publicUrl || '';
+
+        if (!publicUrl) {
+          setMessage('업로드는 완료됐지만 public URL을 생성하지 못했습니다. 버킷 공개 설정을 확인하세요.', 'error');
+          return;
+        }
+
+        form.public_url.value = publicUrl;
+        form.file_path.value = resolvedPath;
+        renderPreview({
+          file: binaryFile,
+          url: publicUrl,
+          path: resolvedPath,
+          width: form.width.value,
+          height: form.height.value,
+        });
+      }
+
+      const payload = {
+        file_name: fileName,
+        storage_provider: storageProvider,
+        storage_bucket: storageBucket,
+        file_path: filePath,
+        public_url: publicUrl,
+        mime_type: String(formData.get('mime_type') || '').trim() || binaryFile?.type || null,
+        alt_text: String(formData.get('alt_text') || '').trim() || null,
+        caption: String(formData.get('caption') || '').trim() || null,
+        width: Number(formData.get('width') || 0) || null,
+        height: Number(formData.get('height') || 0) || null,
+        uploaded_by: currentSessionUserId,
+      };
+
+      const { data: asset, error: assetError } = await supabase
+        .from('media_assets')
+        .insert(payload)
+        .select('id')
+        .single();
+
+      if (assetError) {
+        setMessage(assetError.message, 'error');
+        return;
+      }
+
+      await supabase.from('audit_logs').insert({
+        actor_id: currentSessionUserId,
+        action: 'media_asset_created',
+        resource_type: 'media_asset',
+        resource_id: asset.id,
+        after_json: {
+          file_name: payload.file_name,
+          public_url: payload.public_url,
+          storage_provider: payload.storage_provider,
+        },
+      });
+
+      setMessage('자산을 등록했습니다. 아래 목록과 Markdown helper를 바로 사용할 수 있습니다.', 'success');
+      form.reset();
+      if (fileInput) fileInput.value = '';
+      clearLocalPreview();
+      syncHelpers();
+      loadAssets();
+      loadHistory();
+    });
+  }
+</script>
+

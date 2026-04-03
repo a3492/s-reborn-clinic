@@ -1,0 +1,180 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+
+---
+
+<AdminLayout
+  title="Pipeline"
+  pageTitle="Pipeline"
+  pageDescription="publish pipeline 환경 변수, owner bootstrap, GitHub 연결 상태를 한 번에 점검합니다."
+  status="Health Check"
+  requiredRole="owner"
+>
+  <div class="admin-grid">
+    <section class="admin-card pad-lg span-7">
+      <div class="admin-actions-row">
+        <div>
+          <h2 class="admin-section-title">Pipeline Health</h2>
+          <p class="admin-section-desc">Cloudflare Pages Functions 기준 서버 검증과 현재 로그인 계정의 bootstrap 상태를 함께 확인합니다.</p>
+        </div>
+        <button type="button" class="admin-btn primary" data-admin-pipeline-run>검증 실행</button>
+      </div>
+
+      <p class="admin-inline-note" data-admin-pipeline-message hidden></p>
+
+      <div class="admin-panel-stack" data-admin-pipeline-results>
+        <p class="admin-help">검증 실행 전입니다.</p>
+      </div>
+    </section>
+
+    <section class="admin-card pad-lg span-5">
+      <h2 class="admin-section-title">Bootstrap Checklist</h2>
+      <p class="admin-section-desc">운영 전 최소 확인 항목입니다.</p>
+      <ul class="admin-list" data-admin-bootstrap-checks>
+        <li class="admin-list-row">
+          <div>
+            <p class="admin-item-title">세션 확인 전</p>
+            <p class="admin-item-meta">현재 로그인 계정과 admin_profiles를 확인합니다.</p>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <section class="admin-card pad-lg span-12">
+      <h2 class="admin-section-title">Next Actions</h2>
+      <p class="admin-section-desc">검증 결과에 따라 아래 순서로 진행하면 됩니다.</p>
+      <ul class="admin-list">
+        <li class="admin-list-row"><div><p class="admin-item-title">1. owner bootstrap</p><p class="admin-item-meta">`admin_profiles`에 현재 로그인 계정을 owner 또는 editor로 먼저 등록합니다.</p></div></li>
+        <li class="admin-list-row"><div><p class="admin-item-title">2. Pages env 연결</p><p class="admin-item-meta">`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `GITHUB_TOKEN`, `GITHUB_REPO`, `GITHUB_BRANCH`를 배포 환경에 넣습니다.</p></div></li>
+        <li class="admin-list-row"><div><p class="admin-item-title">3. dry run</p><p class="admin-item-meta">편집 화면에서 `Publish Dry Run`으로 target path와 frontmatter 구성을 먼저 확인합니다.</p></div></li>
+        <li class="admin-list-row"><div><p class="admin-item-title">4. live publish</p><p class="admin-item-meta">`/admin/jobs`와 `/admin` 대시보드에서 success/failed 전환을 확인합니다.</p></div></li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    import { createClient } from '@supabase/supabase-js';
+    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+    const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+    const message = document.querySelector('[data-admin-pipeline-message]');
+    const results = document.querySelector('[data-admin-pipeline-results]');
+    const bootstrap = document.querySelector('[data-admin-bootstrap-checks]');
+    const runButton = document.querySelector('[data-admin-pipeline-run]');
+
+    const setMessage = (text, state = 'info') => {
+      if (!message) return;
+      message.hidden = false;
+      message.textContent = text;
+      message.dataset.state = state;
+    };
+
+    const escapeHtml = (value) => String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+
+    const renderBootstrapChecks = (items) => {
+      if (!bootstrap) return;
+      bootstrap.innerHTML = items.map((item) => `
+        <li class="admin-list-row">
+          <div>
+            <p class="admin-item-title">${escapeHtml(item.label)}</p>
+            <p class="admin-item-meta">${escapeHtml(item.detail)}</p>
+          </div>
+          <div><span class="admin-status ${escapeHtml(item.variant)}">${escapeHtml(item.variant)}</span></div>
+        </li>
+      `).join('');
+    };
+
+    const renderResults = (checks) => {
+      if (!results) return;
+      if (!checks?.length) {
+        results.innerHTML = '<p class="admin-help">표시할 검증 결과가 없습니다.</p>';
+        return;
+      }
+
+      results.innerHTML = checks.map((check) => {
+        const card = `
+          <article class="admin-check-card admin-check-${escapeHtml(check.status)}">
+            <div class="admin-check-card-head">
+              <h3 class="admin-section-title">${escapeHtml(check.label)}</h3>
+              <span class="admin-status ${check.status === 'ok' ? 'success' : check.status === 'warn' ? 'warn' : 'failed'}">${escapeHtml(check.status)}</span>
+            </div>
+            <p class="admin-item-meta">${escapeHtml(check.detail)}</p>
+          </article>
+        `;
+        if (check.status === 'ok') {
+          return `<details style="margin-bottom:0.3rem;"><summary style="cursor:pointer;font-size:0.82rem;color:var(--admin-text-3);">${escapeHtml(check.label)} · ok</summary>${card}</details>`;
+        }
+        return card;
+      }).join('');
+    };
+
+    if (!supabaseUrl || !supabaseKey) {
+      setMessage('PUBLIC_SUPABASE_URL 또는 PUBLIC_SUPABASE_ANON_KEY가 없어 bootstrap 검증을 시작할 수 없습니다.', 'error');
+      renderBootstrapChecks([
+        { label: 'Public env', detail: 'PUBLIC_SUPABASE_URL / PUBLIC_SUPABASE_ANON_KEY를 먼저 설정해야 합니다.', variant: 'failed' },
+      ]);
+    } else {
+      let supabase = null;
+      let _sessionEmail = null;
+      let _sessionUserId = null;
+      document.addEventListener('admin:session-ready', ({ detail }) => {
+        supabase = window.__adminSupabase;
+        _sessionEmail = detail.email;
+        _sessionUserId = detail.userId;
+      });
+
+      const loadBootstrapState = async () => {
+        const checks = [
+          { label: '현재 로그인 계정', detail: _sessionEmail || 'email 없음', variant: 'success' },
+        ];
+
+        const { data: profile, error } = await supabase
+          .from('admin_profiles')
+          .select('email, role, display_name')
+          .eq('id', _sessionUserId || '')
+          .maybeSingle();
+
+        if (error) {
+          checks.push({ label: 'admin_profiles 조회', detail: error.message, variant: 'failed' });
+        } else if (!profile) {
+          checks.push({ label: 'owner bootstrap', detail: '현재 계정이 admin_profiles에 없습니다. owner/editor 등록이 먼저 필요합니다.', variant: 'warn' });
+        } else {
+          checks.push({ label: 'admin_profiles 연결', detail: `${profile.display_name || profile.email} · ${profile.role}`, variant: 'success' });
+        }
+
+        renderBootstrapChecks(checks);
+        return session;
+      };
+
+      const runHealthCheck = async () => {
+        setMessage('pipeline 검증을 실행하는 중입니다...', 'info');
+        renderResults([]);
+
+        const response = await fetch('/api/admin/publish-health');
+        let payload = null;
+        try {
+          payload = await response.json();
+        } catch {
+          payload = null;
+        }
+
+        if (!response.ok) {
+          renderResults(payload?.checks || []);
+          setMessage(payload?.checks?.some((check) => check.status === 'error') ? '실패한 검증 항목이 있습니다.' : (payload?.error || 'pipeline 검증에 실패했습니다.'), 'error');
+          return;
+        }
+
+        renderResults(payload?.checks || []);
+        setMessage(payload?.ok ? 'pipeline 검증이 모두 통과했습니다.' : '경고 또는 실패 항목이 있습니다.', payload?.ok ? 'success' : 'error');
+      };
+
+      await loadBootstrapState();
+      runButton?.addEventListener('click', runHealthCheck);
+    }
+  </script>
+</AdminLayout>

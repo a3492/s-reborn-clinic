@@ -1,0 +1,109 @@
+---
+interface NavItem {
+  href: string;
+  label: string;
+  badge?: string;
+  requiresOwner?: boolean;
+}
+
+interface NavSection {
+  label: string;
+  items: NavItem[];
+}
+
+interface Props {
+  pathname: string;
+}
+
+const { pathname } = Astro.props;
+
+const sections: NavSection[] = [
+  {
+    label: 'Overview',
+    items: [
+      { href: '/admin', label: '대시보드' },
+      { href: '/admin/posts', label: '글 관리' },
+      { href: '/admin/consults', label: '상담 요청' },
+    ],
+  },
+  {
+    label: 'Assets & Config',
+    items: [
+      { href: '/admin/media', label: '미디어' },
+      { href: '/admin/settings', label: '설정', requiresOwner: true },
+      { href: '/admin/pipeline', label: 'Pipeline', requiresOwner: true },
+    ],
+  },
+];
+---
+
+<button class="admin-sidebar-toggle" data-admin-sidebar-toggle aria-label="메뉴 열기/닫기">
+  <span></span><span></span><span></span>
+</button>
+<div class="admin-sidebar-backdrop" data-admin-sidebar-backdrop></div>
+
+<aside class="admin-sidebar" data-admin-sidebar>
+  <a href="/admin" class="admin-brand">
+    <span class="admin-brand-kicker">Admin</span>
+    <span class="admin-brand-title">에스리본 클리닉</span>
+    <span class="admin-brand-subtitle">관리자 패널</span>
+  </a>
+
+  {sections.map((section) => (
+    <section class="admin-nav-section">
+      <h2 class="admin-nav-label">{section.label}</h2>
+      <ul class="admin-nav-list">
+        {section.items.map((item) => {
+          const active = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
+          return (
+            <li>
+              <a
+                href={item.href}
+                class:list={['admin-nav-link', { 'is-active': active }]}
+                data-owner-only={item.requiresOwner ? 'true' : undefined}
+              >
+                <span>{item.label}</span>
+                {item.badge && <span class="admin-nav-badge">{item.badge}</span>}
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  ))}
+
+  <div class="admin-aside-note">
+    <p class="admin-aside-note-title">에스리본 클리닉</p>
+    <p class="admin-aside-note-text">
+      블로그 글 관리, 상담 요청 처리, 미디어 자산 등록을 이 패널에서 합니다.
+    </p>
+    <a href="/consult" class="admin-aside-note-link" target="_blank">상담 페이지 보기 →</a>
+  </div>
+</aside>
+
+<script>
+  const toggle = document.querySelector('[data-admin-sidebar-toggle]');
+  const sidebar = document.querySelector('[data-admin-sidebar]');
+  const backdrop = document.querySelector('[data-admin-sidebar-backdrop]');
+  const body = document.body;
+
+  const open = () => {
+    body.classList.add('sidebar-open');
+    toggle?.setAttribute('aria-expanded', 'true');
+  };
+  const close = () => {
+    body.classList.remove('sidebar-open');
+    toggle?.setAttribute('aria-expanded', 'false');
+  };
+
+  toggle?.addEventListener('click', () => {
+    body.classList.contains('sidebar-open') ? close() : open();
+  });
+  backdrop?.addEventListener('click', close);
+
+  sidebar?.querySelectorAll('.admin-nav-link').forEach((link) => {
+    link.addEventListener('click', () => {
+      if (window.innerWidth <= 1080) close();
+    });
+  });
+</script>
