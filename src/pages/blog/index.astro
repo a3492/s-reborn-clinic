@@ -251,7 +251,11 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
         if (!t.includes(ql) && !d.includes(ql) && !tags.includes(ql)) show = false;
       } else {
         if (state.category && el.getAttribute('data-category') !== state.category) show = false;
-        if (state.pillar && el.getAttribute('data-pillar') !== state.pillar) show = false;
+        // pillar 미지정 글(data-pillar="")은 어떤 영역 필터에서도 계속 노출 — 모바일에서 pill 탭·스크롤 오동작 시 목록이 통째로 비는 문제 방지
+        if (state.pillar) {
+          const dp = el.getAttribute('data-pillar') || '';
+          if (dp !== '' && dp !== state.pillar) show = false;
+        }
       }
       el.classList.toggle('is-filter-hidden', !show);
       if (show) n++;
@@ -501,6 +505,12 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
     align-items: center;
   }
 
+  .blog-empty[hidden],
+  #blog-no-matches[hidden] {
+    display: none !important;
+    pointer-events: none !important;
+  }
+
   .blog-empty-hint {
     margin: 0;
     max-width: 28rem;
@@ -536,6 +546,9 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
     overflow: hidden;
     text-decoration: none;
     background: var(--surface);
+    color: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: rgba(184, 138, 94, 0.15);
     transition:
       transform 0.2s,
       box-shadow 0.2s;
@@ -657,6 +670,7 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
       overscroll-behavior-x: contain;
+      touch-action: pan-x;
       padding-bottom: 0.25rem;
       scrollbar-gutter: stable;
     }

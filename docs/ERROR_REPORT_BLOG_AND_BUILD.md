@@ -16,6 +16,7 @@
 | B-04 | P1 | 포스트 페이지 사이드바 `js-blog-merge` 링크가 쿼리 병합 없이 고정 `/blog/` | 목록 페이지와 달리 merge 스크립트 미실행 | `BlogPost.astro`에 `mergeBlogHrefFromSearch` + `applyBlogSidebarMergeLinks` 인라인 스크립트 추가 | 해결 |
 | B-05 | P1 | 모바일에서 블로그 상단 필터 pill이 뷰포트를 넘침 | 한 줄에 많은 pill, 줄바꿈/스크롤 부족 | `640px` 이하에서 `.blog-menu-pills` 가로 스크롤, pill `flex-shrink` 조정 | 해결 |
 | B-06 | P1 | 「필링」MYTH 글이 영역 필터 선택 시 목록에서 사라짐 | 글 frontmatter에 **`pillar` 없음** → `data-pillar=""`로 필터와 불일치 | `peeling-not-filler-myth.md`에 `pillar: topical` 부여, 필러 안내 글에 교차 링크 | 해결 |
+| B-07 | P1 | 모바일에서 블로그 글(카드)이 안 보이거나 눌러도 목록이 비어 있음 | 시술 영역 pill 선택 시 **`pillar` 미지정 글 전부 숨김** + 가로 스크롤 중 오탭으로 `?pillar=` 유입 | 필터: `data-pillar`가 비어 있으면 영역 필터와 무관하게 표시. pill 행에 `touch-action: pan-x`, 숨김 empty 블록 `pointer-events` 정리 | 해결 |
 | F-01 | P2 | `npm run build` 시 Atkinson woff **미해결** 경고, 런타임 폰트 404 가능 | `public/fonts/`에 파일 없이 `@font-face`·preload만 존재 | Atkinson `@font-face`·preload 제거, 본문 폰트 스택을 Pretendard·system-ui로 정리 | 해결 |
 
 ---
