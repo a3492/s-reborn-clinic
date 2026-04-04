@@ -86,38 +86,41 @@ p {
 	margin-bottom: 1.25em;
 }
 
-/* 블로그 포스트: 사이드바 + 본문 (인라인 flex 금지 — 모바일에서 column 전환) */
+/* 블로그 포스트: 사이드바 + 본문 — !important 로 HTML 인라인 style 강제 오버라이드 */
 .blog-post-shell .site-main.blog-with-sidebar {
-	display: flex;
+	display: flex !important;
 	gap: 2rem;
 	padding-top: 1.5rem;
 	align-items: flex-start;
 }
 
 .blog-post-shell .site-main.blog-with-sidebar .blog-post-main {
-	flex: 1;
-	min-width: 0;
-	/* global main { padding } 이중 패딩 제거 — .blog-post-prose 가 자체 패딩 보유 */
-	padding: 0;
-	width: auto;
-	max-width: 100%;
-	margin: 0;
+	flex: 1 !important;
+	min-width: 0 !important;
+	padding: 0 !important;
+	width: auto !important;
+	max-width: 100% !important;
+	margin: 0 !important;
 }
 
+/* 모바일 900px 이하: 세로 배치 + 사이드바 숨김 */
 @media (max-width: 900px) {
 	.blog-post-shell .site-main.blog-with-sidebar {
-		flex-direction: column;
-		gap: 0;
+		flex-direction: column !important;
+		gap: 0 !important;
+		padding-top: 0.75rem !important;
 	}
 
 	.blog-post-shell .site-main.blog-with-sidebar .blog-sidebar {
-		display: none;
+		display: none !important;
+		width: 0 !important;
 	}
 
 	.blog-post-shell .site-main.blog-with-sidebar .blog-post-main {
-		width: 100%;
-		max-width: 100%;
-		padding: 0;
+		width: 100% !important;
+		max-width: 100% !important;
+		padding: 0 !important;
+		flex: none !important;
 	}
 }
 
