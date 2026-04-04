@@ -48,10 +48,10 @@
 - **기타**: 시술 카탈로그·`procedures.astro`, 네이버 지도 CTA, 상담 스키마/카피 문서(`docs/CONSULT_INTAKE_COPY.md` 등).
 
 ### 빌드
-- `npm run build` — **통과** (폰트 woff 경고만 있음, 기능 무관).
+- `npm run build` — **통과** (Atkinson 미포함 폰트 참조는 제거됨. Astro 내부 Vite 경고는 업스트림).
 
 ### 알려둘 이슈
-- `@font-face` atkinson woff 빌드 시 미해결 경고.
+- 블로그·빌드 관련 정리된 결함 목록: `docs/ERROR_REPORT_BLOG_AND_BUILD.md`.
 - 실제 도메인 전환 시 `astro.config` `site`, `security.txt` Canonical, `llms.txt` 등 origin 정합 맞출 것.
 - `design.css` `.hero-inner` grid는 **다른 페이지에서 2열 히어로 쓸 때** 클래스 분리(`hero-inner--split` 등) 검토 권장.
 
@@ -71,4 +71,5 @@
 | 카테고리 정의 | `src/consts.ts` |
 | 블로그 메뉴 헬퍼 | `src/data/blog-nav.ts` |
 | 콘텐츠 스키마 | `src/content.config.ts` |
+| **Doctor AI Academy 글 작성 규칙** | `docs/DOCTOR_AI_ACADEMY_CONTENT.md` |
 | 구조화 데이터 | `src/lib/structured-data.ts` |
