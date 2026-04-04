@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
 import { CATEGORIES, CLINIC_INFO } from '../consts';
+import { PROCEDURE_PILLAR_SUMMARIES } from '../data/procedure-catalog';
 
 const allPosts = (await getCollection('blog', ({ data }) => !data.draft))
   .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
@@ -53,22 +54,22 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
   <!-- 시술 카드 섹션 -->
   <section class="section">
     <div class="section-header">
-      <h2 class="section-title">주요 시술</h2>
-      <p class="section-desc">시술 안내와 콘텐츠를 카테고리별로 모았습니다</p>
+      <h2 class="section-title">시술 안내</h2>
+      <p class="section-desc">블로그와 별도 페이지에서, 영역별로 정리해 두었습니다</p>
     </div>
     <div class="procedure-grid">
-      {CATEGORIES.filter(c => ['procedures', 'before-after'].includes(c.id)).map(cat => (
-        <a href={`/blog?category=${cat.id}`} class="procedure-card">
+      {PROCEDURE_PILLAR_SUMMARIES.map((p) => (
+        <a href={`/procedures#${p.id}`} class="procedure-card">
           <div class="procedure-card-icon" aria-hidden="true">✦</div>
-          <h3 class="procedure-card-title">{cat.label}</h3>
-          <p class="procedure-card-desc">{cat.description}</p>
-          <span class="procedure-card-link">더 보기 →</span>
+          <h3 class="procedure-card-title">{p.label}</h3>
+          <p class="procedure-card-desc">{p.description}</p>
+          <span class="procedure-card-link">{p.short} · 자세히 →</span>
         </a>
       ))}
       <a href="/procedures" class="procedure-card procedure-card-all">
         <div class="procedure-card-icon" aria-hidden="true">⊞</div>
-        <h3 class="procedure-card-title">전체 시술 보기</h3>
-        <p class="procedure-card-desc">글 목록에서 시술 안내를 한곳에 볼 수 있어요</p>
+        <h3 class="procedure-card-title">전체 시술 안내</h3>
+        <p class="procedure-card-desc">EBD·주사·경구·외용제 목록을 한 페이지에서 보기</p>
         <span class="procedure-card-link">바로가기 →</span>
       </a>
     </div>
