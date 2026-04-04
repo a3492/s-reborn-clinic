@@ -1,0 +1,71 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+import { ACADEMY_SECTIONS, isAcademyBlogPost, postPermalink } from '../../lib/academy';
+import '../../styles/academy.css';
+
+const all = await getCollection('blog', ({ data }) => !data.draft);
+const academyPosts = all.filter(isAcademyBlogPost).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+const recent = academyPosts.slice(0, 5);
+---
+
+<Layout
+	title="Doctor AI Academy"
+	description="임상 현장에서 AI를 안전하게 이해·활용하기 위한 Fundamentals, Prompts, Cases, Tools 시리즈."
+>
+	<div class="academy-hub">
+		<header class="academy-hero">
+			<span class="academy-eyebrow">Doctor AI Academy</span>
+			<h1>의사를 위한 AI 실무 허브</h1>
+			<p class="academy-lead">
+				개념·프롬프트·증례·도구를 한곳에 모았습니다. 클리닉 블로그와 별도 경로이며, 글마다 출처·검수 전제를
+				명시합니다.
+			</p>
+		</header>
+
+		<h2 class="academy-block-title">시작하기</h2>
+		<div class="academy-section-grid">
+			{ACADEMY_SECTIONS.map((s) => (
+				<a class="academy-section-card" href={`/doctor-ai/${s.id}/`}>
+					<span class="academy-section-card-icon" aria-hidden="true">
+						{s.icon}
+					</span>
+					<h2>{s.label}</h2>
+					<p>{s.blurb}</p>
+					<span class="academy-section-card-cta">{s.label} 목록 →</span>
+				</a>
+			))}
+		</div>
+
+		<h2 class="academy-block-title">최근 글</h2>
+		{
+			recent.length === 0 ? (
+				<p class="academy-empty">아직 공개된 아카데미 글이 없습니다. 콘텐츠를 추가하면 여기에 표시됩니다.</p>
+			) : (
+				<div class="academy-post-list">
+					{recent.map((post) => {
+						const sec = post.data.academy_section;
+						const label = sec ? ACADEMY_SECTIONS.find((x) => x.id === sec)?.label ?? sec : 'Academy';
+						return (
+							<a class="academy-post-row" href={postPermalink(post)}>
+								<span class="academy-badge">{label}</span>
+								<p class="academy-post-row-title">{post.data.title}</p>
+								<time class="academy-post-row-meta" datetime={post.data.date.toISOString()}>
+									{new Intl.DateTimeFormat('ko-KR', {
+										year: 'numeric',
+										month: 'short',
+										day: 'numeric',
+									}).format(post.data.date)}
+								</time>
+							</a>
+						);
+					})}
+				</div>
+			)
+		}
+
+		<p class="academy-footer-note">
+			클리닉 일반 글은 <a href="/blog/">블로그</a>에서 보실 수 있습니다.
+		</p>
+	</div>
+</Layout>

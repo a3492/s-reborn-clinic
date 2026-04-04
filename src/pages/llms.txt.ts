@@ -26,12 +26,13 @@ export const GET: APIRoute = ({ site }) => {
 ## 주요 URL
 
 - [홈](${base}/)
-- [시술 안내](${base}/procedures)
-- [블로그](${base}/blog)
-- [온라인 상담](${base}/consult)
-- [클리닉 소개](${base}/about)
-- [개인정보처리방침](${base}/privacy)
-- [이용약관](${base}/terms)
+- [시술 안내](${base}/procedures/)
+- [블로그](${base}/blog/)
+- [Doctor AI Academy](${base}/doctor-ai/) (의료진용 AI 학습 시리즈)
+- [온라인 상담](${base}/consult/)
+- [클리닉 소개](${base}/about/)
+- [개인정보처리방침](${base}/privacy/)
+- [이용약관](${base}/terms/)
 
 ## 기계가 읽기 좋은 데이터
 

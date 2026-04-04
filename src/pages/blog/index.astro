@@ -4,8 +4,10 @@ import Sidebar from '../../components/Sidebar.astro';
 import { getCollection } from 'astro:content';
 import { CATEGORIES, SITE_TITLE } from '../../consts';
 import { BLOG_PILLAR_NAV, BLOG_TYPE_SHORTCUTS, blogPillarLabel } from '../../data/blog-nav';
+import { isAcademyBlogPost, postPermalink } from '../../lib/academy';
 
 const allPosts = (await getCollection('blog', ({ data }) => !data.draft))
+  .filter((p) => !isAcademyBlogPost(p))
   .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
 
 const pillarLabels = Object.fromEntries(BLOG_PILLAR_NAV.map((p) => [p.id, p.label]));
@@ -25,7 +27,7 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
             <span class="blog-menu-label">시술 영역 (심화·FAQ)</span>
             <div class="blog-menu-pills">
               <a
-                href="/blog"
+                href="/blog/"
                 class="blog-menu-pill js-blog-merge"
                 data-blog-pillar=""
                 data-blog-merge={JSON.stringify({ pillar: null })}
@@ -34,7 +36,7 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
               </a>
               {BLOG_PILLAR_NAV.map((p) => (
                 <a
-                  href="/blog"
+                  href="/blog/"
                   class="blog-menu-pill js-blog-merge"
                   data-blog-pillar={p.id}
                   data-blog-merge={JSON.stringify({ pillar: p.id })}
@@ -49,7 +51,7 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
             <span class="blog-menu-label">글 유형</span>
             <div class="blog-menu-pills">
               <a
-                href="/blog"
+                href="/blog/"
                 class="blog-menu-pill blog-menu-pill--type js-blog-merge"
                 data-blog-cat=""
                 data-blog-merge={JSON.stringify({ category: null })}
@@ -58,7 +60,7 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
               </a>
               {BLOG_TYPE_SHORTCUTS.map((t) => (
                 <a
-                  href="/blog"
+                  href="/blog/"
                   class="blog-menu-pill blog-menu-pill--type js-blog-merge"
                   data-blog-cat={t.category}
                   data-blog-merge={JSON.stringify({ category: t.category })}
@@ -71,20 +73,21 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
           </div>
           <p class="blog-menu-hint">
             영역과 유형을 함께 고르면 해당 조합의 글만 보입니다.
-            <a href="/procedures">시술 안내 전체</a>에서 4축 개요를 확인할 수 있습니다.
+            <a href="/procedures/">시술 안내 전체</a>에서 4축 개요를 확인할 수 있습니다.
+            의료진용 AI 시리즈는 <a href="/doctor-ai/">Doctor AI Academy</a>에서 보실 수 있습니다.
           </p>
         </nav>
 
         <p id="blog-meta-search" class="blog-search-meta" hidden>
           총 <span id="blog-count-search">0</span>개의 결과 ·
-          <a href="/blog" class="js-blog-merge" data-blog-merge={JSON.stringify({ q: null })}>검색만 지우기</a>
+          <a href="/blog/" class="js-blog-merge" data-blog-merge={JSON.stringify({ q: null })}>검색만 지우기</a>
           <span class="blog-meta-sep"> · </span>
-          <a href="/blog">전체 초기화</a>
+          <a href="/blog/">전체 초기화</a>
         </p>
         <p id="blog-meta-filter" class="blog-cat-meta" hidden>
           <span id="blog-meta-filter-chips"></span>
           <span id="blog-count-filter" class="blog-filter-count"></span>
-          <a href="/blog" class="blog-filter-reset">필터 초기화</a>
+          <a href="/blog/" class="blog-filter-reset">필터 초기화</a>
         </p>
       </div>
 
@@ -98,14 +101,14 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
             <div id="blog-no-matches" class="blog-empty" hidden>
               <p>필터에 맞는 글이 없습니다.</p>
               <p id="blog-no-matches-hint" class="blog-empty-hint" hidden />
-              <a href="/blog" class="btn btn-outline btn-sm">
+              <a href="/blog/" class="btn btn-outline btn-sm">
                 전체 글 보기
               </a>
             </div>
             <div class="blog-grid" id="blog-grid">
               {allPosts.map((post) => (
                 <a
-                  href={`/blog/${post.id}/`}
+                  href={postPermalink(post)}
                   class="blog-post-card"
                   data-blog-card
                   data-category={post.data.category ?? ''}
@@ -186,7 +189,7 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
       else p.set(key, String(v));
     }
     const s = p.toString();
-    return s ? `/blog?${s}` : '/blog';
+    return s ? `/blog/?${s}` : '/blog/';
   }
 
   function applyMergeLinks() {
@@ -225,7 +228,7 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
       el.classList.toggle('is-active', active);
     });
     document.querySelectorAll('#blog-sidebar .sidebar-cat-list a:not([data-blog-merge])').forEach((el) => {
-      if (el.getAttribute('href') === '/blog') el.classList.toggle('is-active', allClear);
+      if (el.getAttribute('href') === '/blog/') el.classList.toggle('is-active', allClear);
     });
   }
 

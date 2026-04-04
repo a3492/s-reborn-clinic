@@ -38,11 +38,11 @@ const hoursLine = CLINIC_INFO.hours.map((h) => `${h.days} ${h.time}`).join(' · 
       </div>
 
       <div class="site-footer-links">
-        <a href="/about" class="site-footer-link">클리닉 소개</a>
-        <a href="/procedures" class="site-footer-link">시술 안내</a>
-        <a href="/blog" class="site-footer-link">블로그</a>
+        <a href="/about/" class="site-footer-link">클리닉 소개</a>
+        <a href="/procedures/" class="site-footer-link">시술 안내</a>
+        <a href="/blog/" class="site-footer-link">블로그</a>
         <a href="/llms.txt" class="site-footer-link">AI·검색용 요약 (llms.txt)</a>
-        <a href="/consult" class="site-footer-link">온라인 상담</a>
+        <a href="/consult/" class="site-footer-link">온라인 상담</a>
         {socialEntries.map(([label, href]) => (
           <a href={href} target="_blank" rel="noreferrer" class="site-footer-link">
             {label}
@@ -54,8 +54,8 @@ const hoursLine = CLINIC_INFO.hours.map((h) => `${h.days} ${h.time}`).join(' · 
     <div class="site-footer-bottom">
       <span>© {new Date().getFullYear()} {CLINIC_INFO.name}. All rights reserved.</span>
       <div style="display:flex;gap:1rem;">
-        <a href="/privacy" class="site-footer-link">개인정보처리방침</a>
-        <a href="/terms" class="site-footer-link">이용약관</a>
+        <a href="/privacy/" class="site-footer-link">개인정보처리방침</a>
+        <a href="/terms/" class="site-footer-link">이용약관</a>
       </div>
     </div>
   </div>

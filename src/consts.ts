@@ -39,14 +39,18 @@ export const CATEGORIES = [
   { id: 'faq',           label: 'FAQ',         description: 'Frequently Asked Questions — 자주 묻는 질문' },
   { id: 'myth',          label: 'MYTH',        description: 'Common misconceptions — 자주하는 오해' },
   { id: 'doctor-column', label: '원장 칼럼',   description: '원장의 전문 칼럼' },
+  /** 블로그 필터·배지용 — 목록은 /doctor-ai 로 분리, 사이드바에서는 별도 링크만 노출 */
+  { id: 'doctor-ai', label: 'Doctor AI Academy', description: '의료진용 AI 학습 시리즈 (/doctor-ai)' },
 ] as const;
 
 export type CategoryId = typeof CATEGORIES[number]['id'];
 
+/** trailingSlash: 'always' 와 동일하게 끝 슬래시 유지 (검색·캐논 URL 불일치 방지) */
 export const NAV_LINKS = [
   { label: '홈',         href: '/' },
-  { label: '시술 안내',  href: '/procedures' },
-  { label: '블로그',     href: '/blog' },
-  { label: '온라인 상담', href: '/consult' },
-  { label: '소개',       href: '/about' },
+  { label: '시술 안내',  href: '/procedures/' },
+  { label: '블로그',     href: '/blog/' },
+  { label: 'Doctor AI',  href: '/doctor-ai/' },
+  { label: '온라인 상담', href: '/consult/' },
+  { label: '소개',       href: '/about/' },
 ];

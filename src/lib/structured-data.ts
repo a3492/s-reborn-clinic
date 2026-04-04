@@ -40,7 +40,13 @@ export function buildOrganizationAndWebSiteJsonLd(site: string | URL | undefined
     publisher: { '@id': `${origin}/#organization` },
     potentialAction: {
       '@type': 'ReadAction',
-      target: [`${origin}/`, `${origin}/procedures`, `${origin}/blog`, `${origin}/consult`],
+      target: [
+        `${origin}/`,
+        `${origin}/procedures/`,
+        `${origin}/blog/`,
+        `${origin}/doctor-ai/`,
+        `${origin}/consult/`,
+      ],
     },
   };
 

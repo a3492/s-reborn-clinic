@@ -3,11 +3,14 @@ import Layout from '../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
 import { CATEGORIES, CLINIC_INFO } from '../consts';
 import { PROCEDURE_PILLAR_SUMMARIES } from '../data/procedure-catalog';
+import { isAcademyBlogPost, postPermalink } from '../lib/academy';
 
 const allPosts = (await getCollection('blog', ({ data }) => !data.draft))
   .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
 
-const latestPosts = allPosts.slice(0, 6);
+const clinicPosts = allPosts.filter((p) => !isAcademyBlogPost(p));
+const latestPosts = clinicPosts.slice(0, 6);
+const academyPreview = allPosts.filter(isAcademyBlogPost).slice(0, 3);
 const doctorColumn = allPosts.filter(p => p.data.category === 'doctor-column').slice(0, 3);
 const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
 const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
@@ -21,8 +24,8 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
       <h1 class="hero-title">자연스러운 아름다움을 함께 만듭니다</h1>
       <p class="hero-desc">가정의학과 전문의 진료를 바탕으로, 과하지 않은 시술만 차분히 제안합니다.</p>
       <div class="hero-actions">
-        <a href="/procedures" class="btn btn-primary btn-lg">시술 안내 보기</a>
-        <a href="/consult" class="hero-consult-link">온라인 문의</a>
+        <a href="/procedures/" class="btn btn-primary btn-lg">시술 안내 보기</a>
+        <a href="/consult/" class="hero-consult-link">온라인 문의</a>
       </div>
     </div>
   </section>
@@ -60,14 +63,14 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
     </div>
     <div class="procedure-grid">
       {PROCEDURE_PILLAR_SUMMARIES.map((p) => (
-        <a href={`/procedures#${p.id}`} class="procedure-card">
+        <a href={`/procedures/#${p.id}`} class="procedure-card">
           <div class="procedure-card-icon" aria-hidden="true">✦</div>
           <h3 class="procedure-card-title">{p.label}</h3>
           <p class="procedure-card-desc">{p.description}</p>
           <span class="procedure-card-link">{p.short} · 자세히 →</span>
         </a>
       ))}
-      <a href="/procedures" class="procedure-card procedure-card-all">
+      <a href="/procedures/" class="procedure-card procedure-card-all">
         <div class="procedure-card-icon" aria-hidden="true">⊞</div>
         <h3 class="procedure-card-title">전체 시술 안내</h3>
         <p class="procedure-card-desc">EBD·주사·경구·외용제 목록을 한 페이지에서 보기</p>
@@ -81,11 +84,11 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
     <section class="section">
       <div class="section-header">
         <h2 class="section-title">최신 콘텐츠</h2>
-        <a href="/blog" class="section-more">전체 보기 →</a>
+        <a href="/blog/" class="section-more">전체 보기 →</a>
       </div>
       <div class="post-grid">
         {latestPosts.map(post => (
-          <a href={`/blog/${post.id}/`} class="post-card">
+          <a href={postPermalink(post)} class="post-card">
             {post.data.thumbnail && (
               <div class="post-card-thumb">
                 <img src={post.data.thumbnail} alt={post.data.title} loading="lazy" />
@@ -111,11 +114,11 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
     <section class="section section-alt">
       <div class="section-header">
         <h2 class="section-title">원장 칼럼</h2>
-        <a href="/blog?category=doctor-column" class="section-more">더 보기 →</a>
+        <a href="/blog/?category=doctor-column" class="section-more">더 보기 →</a>
       </div>
       <div class="column-list">
         {doctorColumn.map(post => (
-          <a href={`/blog/${post.id}/`} class="column-card">
+          <a href={postPermalink(post)} class="column-card">
             <div class="column-card-kicker">원장 칼럼</div>
             <h3 class="column-card-title">{post.data.title}</h3>
             <p class="column-card-desc">{post.data.description}</p>
@@ -130,11 +133,11 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
     <section class="section">
       <div class="section-header">
         <h2 class="section-title">FAQ · 자주 묻는 질문</h2>
-        <a href="/blog?category=faq" class="section-more">모두 보기 →</a>
+        <a href="/blog/?category=faq" class="section-more">모두 보기 →</a>
       </div>
       <div class="faq-list">
         {faqPosts.map(post => (
-          <a href={`/blog/${post.id}/`} class="faq-item">
+          <a href={postPermalink(post)} class="faq-item">
             <span class="faq-q">Q</span>
             <div>
               <p class="faq-title">{post.data.title}</p>
@@ -151,15 +154,41 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
     <section class="section section-alt">
       <div class="section-header">
         <h2 class="section-title">MYTH · 자주하는 오해</h2>
-        <a href="/blog?category=myth" class="section-more">모두 보기 →</a>
+        <a href="/blog/?category=myth" class="section-more">모두 보기 →</a>
       </div>
       <div class="myth-list">
         {mythPosts.map(post => (
-          <a href={`/blog/${post.id}/`} class="myth-item">
+          <a href={postPermalink(post)} class="myth-item">
             <span class="myth-mark" aria-hidden="true">M</span>
             <div>
               <p class="myth-title">{post.data.title}</p>
               <p class="myth-desc">{post.data.description}</p>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+  )}
+
+  <!-- Doctor AI Academy -->
+  {academyPreview.length > 0 && (
+    <section class="section">
+      <div class="section-header">
+        <h2 class="section-title">Doctor AI Academy</h2>
+        <a href="/doctor-ai/" class="section-more">Academy 전체 →</a>
+      </div>
+      <div class="post-grid">
+        {academyPreview.map((post) => (
+          <a href={postPermalink(post)} class="post-card">
+            {post.data.thumbnail && (
+              <div class="post-card-thumb">
+                <img src={post.data.thumbnail} alt={post.data.title} loading="lazy" />
+              </div>
+            )}
+            <div class="post-card-body">
+              <span class="post-card-cat">Doctor AI Academy</span>
+              <h3 class="post-card-title">{post.data.title}</h3>
+              <p class="post-card-desc">{post.data.description}</p>
             </div>
           </a>
         ))}

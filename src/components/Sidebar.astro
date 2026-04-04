@@ -7,7 +7,7 @@ const sp = Astro.url.searchParams;
 const currentCat = sp.get('category') ?? '';
 const currentPillar = sp.get('pillar') ?? '';
 const currentQ = sp.get('q') ?? '';
-const onBlogRoot = pathname === '/blog';
+const onBlogRoot = pathname === '/blog' || pathname === '/blog/';
 const allClear = onBlogRoot && !currentCat && !currentPillar && !currentQ;
 ---
 
@@ -18,7 +18,7 @@ const allClear = onBlogRoot && !currentCat && !currentPillar && !currentQ;
     <ul class="sidebar-pillar-list">
       <li>
         <a
-          href="/blog"
+          href="/blog/"
           class:list={['sidebar-cat-link', 'js-blog-merge', { 'is-active': !currentPillar }]}
           data-blog-merge={JSON.stringify({ pillar: null })}
         >
@@ -28,7 +28,7 @@ const allClear = onBlogRoot && !currentCat && !currentPillar && !currentQ;
       {BLOG_PILLAR_NAV.map((p) => (
         <li>
           <a
-            href="/blog"
+            href="/blog/"
             class:list={['sidebar-cat-link', 'js-blog-merge', { 'is-active': currentPillar === p.id }]}
             data-blog-merge={JSON.stringify({ pillar: p.id })}
             title={p.short}
@@ -38,21 +38,27 @@ const allClear = onBlogRoot && !currentCat && !currentPillar && !currentQ;
         </li>
       ))}
     </ul>
-    <a class="sidebar-procedures-link" href="/procedures">시술 안내 페이지 →</a>
+    <a class="sidebar-procedures-link" href="/procedures/">시술 안내 페이지 →</a>
+  </div>
+
+  <div class="sidebar-widget">
+    <h2 class="sidebar-title">Doctor AI Academy</h2>
+    <p class="sidebar-lead">의료진용 AI 시리즈(Fundamentals·Prompts·Cases·Tools). 일반 블로그 글과 URL이 다릅니다.</p>
+    <a class="sidebar-procedures-link" href="/doctor-ai/">Academy 허브로 이동 →</a>
   </div>
 
   <div class="sidebar-widget">
     <h2 class="sidebar-title">글 유형</h2>
     <ul class="sidebar-cat-list">
       <li>
-        <a href="/blog" class:list={['sidebar-cat-link', { 'is-active': allClear }]}>
+        <a href="/blog/" class:list={['sidebar-cat-link', { 'is-active': allClear }]}>
           <span>전체 글</span>
         </a>
       </li>
-      {CATEGORIES.map((cat) => (
+      {CATEGORIES.filter((cat) => cat.id !== 'doctor-ai').map((cat) => (
         <li>
           <a
-            href="/blog"
+            href="/blog/"
             class:list={['sidebar-cat-link', 'js-blog-merge', { 'is-active': currentCat === cat.id }]}
             data-blog-merge={JSON.stringify({ category: cat.id })}
             title={cat.description}

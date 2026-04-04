@@ -17,7 +17,13 @@ const pathname = Astro.url.pathname;
           href={link.href}
           class:list={[
             'site-nav-link',
-            { 'is-active': pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href)) }
+            {
+              'is-active':
+                pathname === link.href ||
+                (link.href !== '/' &&
+                  (pathname.startsWith(link.href) ||
+                    pathname === link.href.replace(/\/$/, ''))),
+            },
           ]}
         >
           {link.label}
