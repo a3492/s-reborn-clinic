@@ -5,6 +5,7 @@ import type { CollectionEntry } from 'astro:content';
 import { getCollection } from 'astro:content';
 import BaseHead from '../components/BaseHead.astro';
 import Header from '../components/Header.astro';
+import Topbar from '../components/Topbar.astro';
 import Footer from '../components/Footer.astro';
 import Sidebar from '../components/Sidebar.astro';
 import { CATEGORIES, SITE_TITLE } from '../consts';
@@ -51,6 +52,7 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
   <body class="blog-post-shell">
     <div class="site-wrap">
       <Header />
+      <Topbar />
 
       <div class="site-main blog-with-sidebar" style="display:flex;gap:2rem;padding-top:1.5rem;">
         <Sidebar />

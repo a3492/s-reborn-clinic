@@ -83,3 +83,14 @@
   }
 
 </style>
+
+<script is:inline>
+  (function () {
+    var path = location.pathname.replace(/\/$/, '') || '/';
+    if (path !== '/blog') return;
+    var q = new URLSearchParams(location.search).get('q');
+    if (q == null || q === '') return;
+    var input = document.querySelector('.topbar-search-input');
+    if (input) input.value = q;
+  })();
+</script>

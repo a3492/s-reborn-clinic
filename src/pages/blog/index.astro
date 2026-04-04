@@ -297,7 +297,7 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
       if (noHint) {
         if (empty && state.pillar && pillarLabels[state.pillar]) {
           const id = state.pillar;
-          noHint.innerHTML = `이 영역의 심화 글·FAQ는 순차적으로 올릴 예정입니다. <a href="/procedures#${id}">${pillarLabels[state.pillar]} 시술 안내 보기</a>`;
+          noHint.innerHTML = `이 영역의 심화 글·FAQ는 순차적으로 올릴 예정입니다. <a href="/procedures/#${id}">${pillarLabels[state.pillar]} 시술 안내 보기</a>`;
           noHint.hidden = false;
         } else {
           noHint.innerHTML = '';
