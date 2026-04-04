@@ -59,7 +59,10 @@ import { CATEGORIES, CLINIC_INFO } from '../consts';
           <div class="consult-agree">
             <label class="consult-agree-label">
               <input type="checkbox" name="privacy_agree" required />
-              <span>개인정보 수집 및 이용에 동의합니다. (필수)</span>
+              <span>
+                개인정보 수집 및 이용에 동의합니다. (필수){' '}
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" class="consult-privacy-link">전문 보기</a>
+              </span>
             </label>
             <p class="consult-agree-desc">수집 항목: 이름, 연락처, 이메일 / 목적: 상담 답변 / 보유기간: 상담 완료 후 3년</p>
           </div>
@@ -138,7 +141,7 @@ import { CATEGORIES, CLINIC_INFO } from '../consts';
 
   .consult-hero {
     text-align: center;
-    padding: 3.5rem 2rem 2.5rem;
+    padding: 3.5rem 0 2.5rem;
   }
 
   .consult-badge {
@@ -174,7 +177,7 @@ import { CATEGORIES, CLINIC_INFO } from '../consts';
     display: grid;
     grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
     gap: 2rem;
-    padding: 0 2rem;
+    padding: 0;
     align-items: start;
   }
 
@@ -264,6 +267,17 @@ import { CATEGORIES, CLINIC_INFO } from '../consts';
     font-weight: 600;
     color: var(--text);
     cursor: pointer;
+  }
+
+  .consult-privacy-link {
+    font-weight: 700;
+    color: var(--accent-dark);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .consult-privacy-link:hover {
+    text-decoration: underline;
   }
 
   .consult-agree-desc {
@@ -389,7 +403,7 @@ import { CATEGORIES, CLINIC_INFO } from '../consts';
   @media (max-width: 768px) {
     .consult-layout {
       grid-template-columns: 1fr;
-      padding: 0 1rem;
+      padding: 0;
     }
 
     .consult-fields {

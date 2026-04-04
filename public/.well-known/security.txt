@@ -1,0 +1,7 @@
+Contact: mailto:a01034920591@gmail.com
+Expires: 2027-12-31T23:59:59.000Z
+Preferred-Languages: ko, en
+Canonical: https://s-reborn-clinic.pages.dev/.well-known/security.txt
+
+# 에스리본 클리닉 — 보안 취약점 신고
+# 서비스 거부(DDoS), 스팸, 콘텐츠 무단 복제 신고는 이 메일이 아닌 호스팅·법무 절차를 이용해 주세요.

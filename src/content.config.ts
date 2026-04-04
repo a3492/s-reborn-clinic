@@ -8,6 +8,8 @@ const blog = defineCollection({
 		title: z.string(),
 		description: z.string(),
 		date: z.coerce.date(),
+		/** 시술 안내 4축과 매칭 — 심화·FAQ 등 영역별 필터용 (선택) */
+		pillar: z.enum(['ebd', 'injection', 'oral', 'topical']).optional(),
 		category: z.string().optional(),
 		subcategory: z.string().optional(),
 		tags: z.array(z.string()).optional().default([]),

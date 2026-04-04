@@ -1,5 +1,5 @@
 ---
-import { SITE_TITLE } from '../consts';
+import { CLINIC_INFO, SITE_TITLE } from '../consts';
 
 interface Props {
 	title: string;
@@ -8,11 +8,15 @@ interface Props {
 	siteTitle?: string;
 	/** 미지정 시 URL로 추론: `/blog/분류/slug` 형태만 article, 나머지 website */
 	ogType?: 'website' | 'article';
+	/** schema.org JSON-LD (Organization, BlogPosting 등) */
+	jsonLd?: Record<string, unknown>;
+	/** 관리자 등 비공개 페이지 — 검색·AI 인덱싱 제외 */
+	noindex?: boolean;
 }
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
-const { title, description, image, siteTitle = SITE_TITLE, ogType: ogTypeProp } = Astro.props;
+const { title, description, image, siteTitle = SITE_TITLE, ogType: ogTypeProp, jsonLd, noindex } = Astro.props;
 
 const pathNorm = Astro.url.pathname.replace(/\/$/, '') || '/';
 const afterBlog = pathNorm.startsWith('/blog/') ? pathNorm.slice(6) : '';
@@ -26,7 +30,7 @@ const ogImage = image
 
 <!-- Global Metadata -->
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="icon" href="/favicon.ico" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -37,7 +41,17 @@ const ogImage = image
 	title={siteTitle}
 	href={new URL('rss.xml', Astro.site)}
 />
+<link rel="alternate" type="text/plain" title="LLM · 사이트 요약" href={new URL('llms.txt', Astro.site).href} />
 <meta name="generator" content={Astro.generator} />
+{noindex && <meta name="robots" content="noindex, nofollow" />}
+{!noindex && (
+	<meta
+		name="robots"
+		content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
+	/>
+)}
+<meta name="copyright" content={`© ${new Date().getFullYear()} ${CLINIC_INFO.name}. 무단 전재 및 상업적 복제 금지.`} />
+<meta name="referrer" content="strict-origin-when-cross-origin" />
 
 <!-- Font preloads -->
 <link rel="preload" href="/fonts/atkinson-regular.woff" as="font" type="font/woff" crossorigin />
@@ -66,3 +80,7 @@ const ogImage = image
 <meta property="twitter:title" content={title} />
 <meta property="twitter:description" content={description} />
 <meta property="twitter:image" content={ogImage} />
+
+{jsonLd && (
+	<script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+)}

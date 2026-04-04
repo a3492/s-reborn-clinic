@@ -2,6 +2,7 @@
 title: "보톡스 시술 안내 — 자연스러운 동안 만들기"
 description: "에스리본 클리닉의 보톡스 시술 개요, 적용 부위, 회복 기간을 안내합니다."
 date: 2026-04-03
+pillar: "injection"
 category: "procedures"
 tags: ["보톡스", "주름개선", "시술안내"]
 ---

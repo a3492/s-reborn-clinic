@@ -1,0 +1,81 @@
+/* 공통: 약관·개인정보처리방침 */
+.legal-doc {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 2rem 0 4rem;
+}
+
+.legal-doc__badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--t3, #8a827a);
+  margin-bottom: 0.5rem;
+}
+
+.legal-doc h1 {
+  font-size: 1.65rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text, #1c1814);
+  margin: 0 0 0.35rem;
+}
+
+.legal-doc__updated {
+  font-size: 0.85rem;
+  color: var(--t3, #8a827a);
+  margin: 0 0 2rem;
+}
+
+.legal-doc h2 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text, #1c1814);
+  margin: 2rem 0 0.65rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--rule, #e8e4df);
+}
+
+.legal-doc h2:first-of-type {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+
+.legal-doc p,
+.legal-doc li {
+  font-size: 0.92rem;
+  line-height: 1.75;
+  color: var(--t2, #5c534c);
+}
+
+.legal-doc ul {
+  margin: 0.5rem 0 1rem;
+  padding-left: 1.25rem;
+}
+
+.legal-doc li + li {
+  margin-top: 0.35rem;
+}
+
+.legal-doc__note {
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--t3, #8a827a);
+  padding: 0.85rem 1rem;
+  background: var(--bg2, #f7f4f0);
+  border-radius: 12px;
+  border: 1px solid var(--rule, #e8e4df);
+  margin-top: 2rem;
+}
+
+.legal-doc a {
+  color: var(--accent-dark, #8b5a2b);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.legal-doc a:hover {
+  text-decoration: underline;
+}

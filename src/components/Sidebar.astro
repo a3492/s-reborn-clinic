@@ -1,31 +1,63 @@
 ---
 import { CATEGORIES } from '../consts';
+import { BLOG_PILLAR_NAV, blogCategoryShortcutLabel } from '../data/blog-nav';
 
 const pathname = Astro.url.pathname;
-const searchParams = Astro.url.searchParams;
-const currentCat = searchParams.get('category') ?? '';
+const sp = Astro.url.searchParams;
+const currentCat = sp.get('category') ?? '';
+const currentPillar = sp.get('pillar') ?? '';
+const currentQ = sp.get('q') ?? '';
+const onBlogRoot = pathname === '/blog';
+const allClear = onBlogRoot && !currentCat && !currentPillar && !currentQ;
 ---
 
-<aside class="blog-sidebar">
+<aside class="blog-sidebar" id="blog-sidebar">
   <div class="sidebar-widget">
-    <h2 class="sidebar-title">카테고리</h2>
-    <ul class="sidebar-cat-list">
+    <h2 class="sidebar-title">시술 영역 (심화·FAQ)</h2>
+    <p class="sidebar-lead">시술 안내 4축과 같은 기준으로 글을 묶었습니다.</p>
+    <ul class="sidebar-pillar-list">
       <li>
         <a
           href="/blog"
-          class:list={['sidebar-cat-link', { 'is-active': pathname === '/blog' && !currentCat }]}
+          class:list={['sidebar-cat-link', 'js-blog-merge', { 'is-active': !currentPillar }]}
+          data-blog-merge={JSON.stringify({ pillar: null })}
         >
+          <span>영역 전체</span>
+        </a>
+      </li>
+      {BLOG_PILLAR_NAV.map((p) => (
+        <li>
+          <a
+            href="/blog"
+            class:list={['sidebar-cat-link', 'js-blog-merge', { 'is-active': currentPillar === p.id }]}
+            data-blog-merge={JSON.stringify({ pillar: p.id })}
+            title={p.short}
+          >
+            <span>{p.label}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+    <a class="sidebar-procedures-link" href="/procedures">시술 안내 페이지 →</a>
+  </div>
+
+  <div class="sidebar-widget">
+    <h2 class="sidebar-title">글 유형</h2>
+    <ul class="sidebar-cat-list">
+      <li>
+        <a href="/blog" class:list={['sidebar-cat-link', { 'is-active': allClear }]}>
           <span>전체 글</span>
         </a>
       </li>
       {CATEGORIES.map((cat) => (
         <li>
           <a
-            href={`/blog?category=${cat.id}`}
-            class:list={['sidebar-cat-link', { 'is-active': currentCat === cat.id }]}
+            href="/blog"
+            class:list={['sidebar-cat-link', 'js-blog-merge', { 'is-active': currentCat === cat.id }]}
+            data-blog-merge={JSON.stringify({ category: cat.id })}
             title={cat.description}
           >
-            <span>{cat.label}</span>
+            <span>{blogCategoryShortcutLabel(cat.id)}</span>
           </a>
         </li>
       ))}
@@ -39,13 +71,80 @@ const currentCat = searchParams.get('category') ?? '';
     flex-shrink: 0;
   }
 
+  .sidebar-widget + .sidebar-widget {
+    margin-top: 1.75rem;
+    padding-top: 1.75rem;
+    border-top: 1px solid var(--rule);
+  }
+
+  .sidebar-title {
+    margin: 0 0 0.35rem;
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--text);
+  }
+
+  .sidebar-lead {
+    margin: 0 0 0.65rem;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: var(--t3);
+  }
+
+  .sidebar-procedures-link {
+    display: inline-block;
+    margin-top: 0.65rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--accent-dark);
+    text-decoration: none;
+  }
+
+  .sidebar-procedures-link:hover {
+    text-decoration: underline;
+  }
+
+  .sidebar-pillar-list,
+  .sidebar-cat-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .sidebar-cat-link {
+    display: block;
+    padding: 0.45rem 0.5rem;
+    border-radius: 8px;
+    font-size: 0.86rem;
+    color: var(--t2);
+    text-decoration: none;
+    transition:
+      background 0.15s,
+      color 0.15s;
+  }
+
+  .sidebar-cat-link:hover {
+    background: var(--bg2);
+    color: var(--text);
+  }
+
+  .sidebar-cat-link.is-active {
+    background: rgba(184, 138, 94, 0.14);
+    color: var(--accent-dark);
+    font-weight: 700;
+  }
+
   @media (max-width: 900px) {
     .blog-sidebar {
       width: 100%;
     }
 
+    .sidebar-pillar-list,
     .sidebar-cat-list {
-      display: flex;
+      flex-direction: row;
       flex-wrap: wrap;
       gap: 0.4rem;
     }

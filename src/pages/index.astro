@@ -10,6 +10,7 @@ const allPosts = (await getCollection('blog', ({ data }) => !data.draft))
 const latestPosts = allPosts.slice(0, 6);
 const doctorColumn = allPosts.filter(p => p.data.category === 'doctor-column').slice(0, 3);
 const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
+const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
 ---
 
 <Layout>
@@ -128,7 +129,7 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
   {faqPosts.length > 0 && (
     <section class="section">
       <div class="section-header">
-        <h2 class="section-title">자주 묻는 질문</h2>
+        <h2 class="section-title">FAQ · 자주 묻는 질문</h2>
         <a href="/blog?category=faq" class="section-more">모두 보기 →</a>
       </div>
       <div class="faq-list">
@@ -138,6 +139,27 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
             <div>
               <p class="faq-title">{post.data.title}</p>
               <p class="faq-desc">{post.data.description}</p>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+  )}
+
+  <!-- MYTH · 자주하는 오해 -->
+  {mythPosts.length > 0 && (
+    <section class="section section-alt">
+      <div class="section-header">
+        <h2 class="section-title">MYTH · 자주하는 오해</h2>
+        <a href="/blog?category=myth" class="section-more">모두 보기 →</a>
+      </div>
+      <div class="myth-list">
+        {mythPosts.map(post => (
+          <a href={`/blog/${post.id}/`} class="myth-item">
+            <span class="myth-mark" aria-hidden="true">M</span>
+            <div>
+              <p class="myth-title">{post.data.title}</p>
+              <p class="myth-desc">{post.data.description}</p>
             </div>
           </a>
         ))}
@@ -159,15 +181,16 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
 <style>
   .hero {
     background: linear-gradient(135deg, var(--color-soft-white) 0%, var(--color-cream) 40%, var(--color-gold-light) 100%);
-    padding: 5rem 2rem 4rem;
+    padding: clamp(3.25rem, 8vw, 5rem) var(--page-inline) clamp(2.75rem, 6vw, 4rem);
     text-align: center;
-    margin: -1.5rem -2rem 0;
+    margin-inline: calc(-1 * var(--page-inline));
+    box-sizing: border-box;
   }
 
   .hero-inner {
     max-width: min(700px, 100%);
     margin: 0 auto;
-    padding-inline: clamp(0.25rem, 2vw, 0.5rem);
+    padding-inline: 0;
     box-sizing: border-box;
   }
 
@@ -232,8 +255,9 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
 
   .section-alt {
     background: var(--bg2);
-    margin-inline: -2rem;
-    padding-inline: 2rem;
+    margin-inline: calc(-1 * var(--page-inline));
+    padding-inline: var(--page-inline);
+    box-sizing: border-box;
   }
 
   .section-header {
@@ -490,13 +514,64 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
     color: var(--t2);
   }
 
+  .myth-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .myth-item {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid var(--rule);
+    border-radius: 16px;
+    background: var(--surface);
+    text-decoration: none;
+    transition: border-color 0.15s, transform 0.15s;
+  }
+
+  .myth-item:hover {
+    border-color: var(--color-rose);
+    transform: translateX(4px);
+  }
+
+  .myth-mark {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-pink-mid), var(--color-rose));
+    color: white;
+    font-size: 0.72rem;
+    font-weight: 800;
+  }
+
+  .myth-title {
+    margin: 0 0 0.35rem;
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .myth-desc {
+    margin: 0;
+    font-size: 0.84rem;
+    color: var(--t2);
+  }
+
   /* 신뢰 지표 바 */
   .trust-bar {
     background: var(--surface);
     border-top: 1px solid var(--rule);
     border-bottom: 1px solid var(--rule);
-    padding: 1rem 2rem;
-    margin-inline: -2rem;
+    padding: 1rem var(--page-inline);
+    margin-inline: calc(-1 * var(--page-inline));
+    box-sizing: border-box;
   }
 
   .trust-bar-inner {
@@ -537,8 +612,8 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
   /* 플로팅 버튼 */
   .floating-contact {
     position: fixed;
-    bottom: 1.75rem;
-    right: 1.5rem;
+    bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+    right: max(var(--page-inline), env(safe-area-inset-right, 0px));
     display: flex;
     flex-direction: column;
     gap: 0.6rem;
@@ -564,10 +639,6 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
   .floating-btn.kakao { background: #fee500; color: #3a1d1d; }
 
   @media (max-width: 768px) {
-    .hero {
-      padding: 3.5rem 1.25rem 3rem;
-    }
-
     .hero-actions {
       flex-direction: column;
       align-items: stretch;
@@ -576,11 +647,5 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
     .section {
       padding: 3rem 0;
     }
-
-    .section-alt {
-      margin-inline: -1rem;
-      padding-inline: 1rem;
-    }
-
   }
 </style>

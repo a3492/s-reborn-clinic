@@ -2,88 +2,313 @@
 import Layout from '../../layouts/Layout.astro';
 import Sidebar from '../../components/Sidebar.astro';
 import { getCollection } from 'astro:content';
-import { CATEGORIES } from '../../consts';
-
-const category = Astro.url.searchParams.get('category') ?? '';
-const q = Astro.url.searchParams.get('q') ?? '';
+import { CATEGORIES, SITE_TITLE } from '../../consts';
+import { BLOG_PILLAR_NAV, BLOG_TYPE_SHORTCUTS, blogPillarLabel } from '../../data/blog-nav';
 
 const allPosts = (await getCollection('blog', ({ data }) => !data.draft))
   .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
 
-let filteredPosts = allPosts;
-if (category) {
-  filteredPosts = filteredPosts.filter(p => p.data.category === category);
-}
-if (q) {
-  const ql = q.toLowerCase();
-  filteredPosts = filteredPosts.filter(p =>
-    p.data.title.toLowerCase().includes(ql) ||
-    p.data.description?.toLowerCase().includes(ql) ||
-    (p.data.tags ?? []).some(t => t.toLowerCase().includes(ql))
-  );
-}
-
-const currentCatLabel = CATEGORIES.find(c => c.id === category)?.label;
-const pageTitle = q ? `"${q}" 검색 결과` : currentCatLabel ? currentCatLabel : '블로그';
+const pillarLabels = Object.fromEntries(BLOG_PILLAR_NAV.map((p) => [p.id, p.label]));
+const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label]));
 ---
 
-<Layout title={pageTitle} description="에스리본 클리닉 블로그 — 시술 안내, 건강 정보, 원장 칼럼">
+<Layout title="블로그" description="에스리본 클리닉 블로그 — 시술 안내, 건강 정보, 원장 칼럼">
   <div class="blog-layout">
     <Sidebar />
 
     <div class="blog-main">
       <div class="blog-header">
-        <h1 class="blog-header-title">{pageTitle}</h1>
-        {q && (
-          <p class="blog-search-meta">
-            총 {filteredPosts.length}개의 결과 · <a href="/blog">검색 지우기</a>
+        <h1 class="blog-header-title" id="blog-page-title">블로그</h1>
+
+        <nav class="blog-menu" aria-label="블로그 영역·유형 필터">
+          <div class="blog-menu-block">
+            <span class="blog-menu-label">시술 영역 (심화·FAQ)</span>
+            <div class="blog-menu-pills">
+              <a
+                href="/blog"
+                class="blog-menu-pill js-blog-merge"
+                data-blog-pillar=""
+                data-blog-merge={JSON.stringify({ pillar: null })}
+              >
+                전체 영역
+              </a>
+              {BLOG_PILLAR_NAV.map((p) => (
+                <a
+                  href="/blog"
+                  class="blog-menu-pill js-blog-merge"
+                  data-blog-pillar={p.id}
+                  data-blog-merge={JSON.stringify({ pillar: p.id })}
+                  title={p.short}
+                >
+                  {p.label}
+                </a>
+              ))}
+            </div>
+          </div>
+          <div class="blog-menu-block">
+            <span class="blog-menu-label">글 유형</span>
+            <div class="blog-menu-pills">
+              <a
+                href="/blog"
+                class="blog-menu-pill blog-menu-pill--type js-blog-merge"
+                data-blog-cat=""
+                data-blog-merge={JSON.stringify({ category: null })}
+              >
+                전체 유형
+              </a>
+              {BLOG_TYPE_SHORTCUTS.map((t) => (
+                <a
+                  href="/blog"
+                  class="blog-menu-pill blog-menu-pill--type js-blog-merge"
+                  data-blog-cat={t.category}
+                  data-blog-merge={JSON.stringify({ category: t.category })}
+                  title={t.description}
+                >
+                  {t.label}
+                </a>
+              ))}
+            </div>
+          </div>
+          <p class="blog-menu-hint">
+            영역과 유형을 함께 고르면 해당 조합의 글만 보입니다.
+            <a href="/procedures">시술 안내 전체</a>에서 4축 개요를 확인할 수 있습니다.
           </p>
-        )}
-        {category && !q && (
-          <p class="blog-cat-meta">
-            {filteredPosts.length}개의 글
-          </p>
-        )}
+        </nav>
+
+        <p id="blog-meta-search" class="blog-search-meta" hidden>
+          총 <span id="blog-count-search">0</span>개의 결과 ·
+          <a href="/blog" class="js-blog-merge" data-blog-merge={JSON.stringify({ q: null })}>검색만 지우기</a>
+          <span class="blog-meta-sep"> · </span>
+          <a href="/blog">전체 초기화</a>
+        </p>
+        <p id="blog-meta-filter" class="blog-cat-meta" hidden>
+          <span id="blog-meta-filter-chips"></span>
+          <span id="blog-count-filter" class="blog-filter-count"></span>
+          <a href="/blog" class="blog-filter-reset">필터 초기화</a>
+        </p>
       </div>
 
-      {filteredPosts.length === 0 ? (
-        <div class="blog-empty">
-          <p>아직 작성된 글이 없거나 검색 결과가 없습니다.</p>
-          {(q || category) && <a href="/blog" class="btn btn-outline btn-sm">전체 글 보기</a>}
-        </div>
-      ) : (
-        <div class="blog-grid">
-          {filteredPosts.map(post => (
-            <a href={`/blog/${post.id}/`} class="blog-post-card">
-              {post.data.thumbnail && (
-                <div class="blog-post-card-thumb">
-                  <img src={post.data.thumbnail} alt={post.data.title} loading="lazy" />
-                </div>
-              )}
-              <div class="blog-post-card-body">
-                {post.data.category && (
-                  <span class="blog-post-card-cat">
-                    {CATEGORIES.find(c => c.id === post.data.category)?.label ?? post.data.category}
-                  </span>
-                )}
-                <h2 class="blog-post-card-title">{post.data.title}</h2>
-                <p class="blog-post-card-desc">{post.data.description}</p>
-                <div class="blog-post-card-footer">
-                  <time class="blog-post-card-date" datetime={post.data.date.toISOString()}>
-                    {new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' }).format(post.data.date)}
-                  </time>
-                  {post.data.tags && post.data.tags.slice(0, 2).map(tag => (
-                    <span class="blog-post-card-tag">#{tag}</span>
-                  ))}
-                </div>
-              </div>
-            </a>
-          ))}
-        </div>
-      )}
+      {
+        allPosts.length === 0 ? (
+          <div class="blog-empty">
+            <p>아직 공개된 글이 없습니다.</p>
+          </div>
+        ) : (
+          <>
+            <div id="blog-no-matches" class="blog-empty" hidden>
+              <p>필터에 맞는 글이 없습니다.</p>
+              <p id="blog-no-matches-hint" class="blog-empty-hint" hidden />
+              <a href="/blog" class="btn btn-outline btn-sm">
+                전체 글 보기
+              </a>
+            </div>
+            <div class="blog-grid" id="blog-grid">
+              {allPosts.map((post) => (
+                <a
+                  href={`/blog/${post.id}/`}
+                  class="blog-post-card"
+                  data-blog-card
+                  data-category={post.data.category ?? ''}
+                  data-pillar={post.data.pillar ?? ''}
+                  data-title={post.data.title}
+                  data-description={post.data.description ?? ''}
+                  data-tags={(post.data.tags ?? []).join(' ')}
+                >
+                  {post.data.thumbnail && (
+                    <div class="blog-post-card-thumb">
+                      <img src={post.data.thumbnail} alt={post.data.title} loading="lazy" />
+                    </div>
+                  )}
+                  <div class="blog-post-card-body">
+                    <div class="blog-post-card-badges">
+                      {post.data.pillar && (
+                        <span class="blog-post-card-pillar">{blogPillarLabel(post.data.pillar)}</span>
+                      )}
+                      {post.data.category && (
+                        <span class="blog-post-card-cat">
+                          {CATEGORIES.find((c) => c.id === post.data.category)?.label ?? post.data.category}
+                        </span>
+                      )}
+                    </div>
+                    <h2 class="blog-post-card-title">{post.data.title}</h2>
+                    <p class="blog-post-card-desc">{post.data.description}</p>
+                    <div class="blog-post-card-footer">
+                      <time class="blog-post-card-date" datetime={post.data.date.toISOString()}>
+                        {
+                          new Intl.DateTimeFormat('ko-KR', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                          }).format(post.data.date)
+                        }
+                      </time>
+                      {post.data.tags &&
+                        post.data.tags.slice(0, 2).map((tag) => (
+                          <span class="blog-post-card-tag">#{tag}</span>
+                        ))}
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </>
+        )
+      }
     </div>
   </div>
 </Layout>
+
+<script is:inline define:vars={{ pillarLabels, categoryLabels, siteTitle: SITE_TITLE }}>
+  function readBlogState() {
+    const p = new URLSearchParams(location.search);
+    return {
+      category: p.get('category') || '',
+      pillar: p.get('pillar') || '',
+      q: p.get('q') || '',
+    };
+  }
+
+  function titleFor(state) {
+    const pl = state.pillar ? pillarLabels[state.pillar] : '';
+    const cl = state.category ? categoryLabels[state.category] : '';
+    const qt = state.q.trim();
+    if (qt) return `"${qt}" 검색 결과`;
+    if (state.pillar && state.category && pl && cl) return `${pl} · ${cl}`;
+    if (state.pillar && pl) return `${pl} — 심화·글 모음`;
+    if (state.category && cl) return cl;
+    return '블로그';
+  }
+
+  function mergeBlogHrefFromSearch(search, patch) {
+    const p = new URLSearchParams(search);
+    for (const [key, v] of Object.entries(patch)) {
+      if (v === null || v === '') p.delete(key);
+      else p.set(key, String(v));
+    }
+    const s = p.toString();
+    return s ? `/blog?${s}` : '/blog';
+  }
+
+  function applyMergeLinks() {
+    document.querySelectorAll('a.js-blog-merge[data-blog-merge]').forEach((a) => {
+      let patch = {};
+      try {
+        patch = JSON.parse(a.getAttribute('data-blog-merge') || '{}');
+      } catch (_) {}
+      a.setAttribute('href', mergeBlogHrefFromSearch(location.search, patch));
+    });
+  }
+
+  function setPillAndSidebarActive(state) {
+    document.querySelectorAll('[data-blog-pillar]').forEach((el) => {
+      const want = el.getAttribute('data-blog-pillar') ?? '';
+      el.classList.toggle('is-active', want === (state.pillar || ''));
+    });
+    document.querySelectorAll('[data-blog-cat]').forEach((el) => {
+      const want = el.getAttribute('data-blog-cat') ?? '';
+      el.classList.toggle('is-active', want === (state.category || ''));
+    });
+
+    const allClear = !state.pillar && !state.category && !state.q.trim();
+    document.querySelectorAll('#blog-sidebar a[data-blog-merge]').forEach((el) => {
+      let patch = {};
+      try {
+        patch = JSON.parse(el.getAttribute('data-blog-merge') || '{}');
+      } catch (_) {}
+      let active = false;
+      if (Object.prototype.hasOwnProperty.call(patch, 'pillar')) {
+        const v = patch.pillar;
+        active = v === null || v === undefined ? !state.pillar : state.pillar === v;
+      } else if (Object.prototype.hasOwnProperty.call(patch, 'category')) {
+        active = patch.category != null && state.category === patch.category;
+      }
+      el.classList.toggle('is-active', active);
+    });
+    document.querySelectorAll('#blog-sidebar .sidebar-cat-list a:not([data-blog-merge])').forEach((el) => {
+      if (el.getAttribute('href') === '/blog') el.classList.toggle('is-active', allClear);
+    });
+  }
+
+  function applyBlogFilters() {
+    applyMergeLinks();
+
+    const state = readBlogState();
+    const ql = state.q.trim().toLowerCase();
+    let n = 0;
+
+    document.querySelectorAll('[data-blog-card]').forEach((el) => {
+      let show = true;
+      if (state.category && el.getAttribute('data-category') !== state.category) show = false;
+      if (state.pillar && el.getAttribute('data-pillar') !== state.pillar) show = false;
+      if (ql) {
+        const t = (el.getAttribute('data-title') || '').toLowerCase();
+        const d = (el.getAttribute('data-description') || '').toLowerCase();
+        const tags = (el.getAttribute('data-tags') || '').toLowerCase();
+        if (!t.includes(ql) && !d.includes(ql) && !tags.includes(ql)) show = false;
+      }
+      el.classList.toggle('is-filter-hidden', !show);
+      if (show) n++;
+    });
+
+    const pageTitle = titleFor(state);
+    const titleEl = document.getElementById('blog-page-title');
+    if (titleEl) titleEl.textContent = pageTitle;
+    document.title = `${pageTitle} | ${siteTitle}`;
+
+    const metaSearch = document.getElementById('blog-meta-search');
+    const metaFilter = document.getElementById('blog-meta-filter');
+    const countSearch = document.getElementById('blog-count-search');
+    const chips = document.getElementById('blog-meta-filter-chips');
+    const countFilter = document.getElementById('blog-count-filter');
+    const noMatches = document.getElementById('blog-no-matches');
+    const noHint = document.getElementById('blog-no-matches-hint');
+    const grid = document.getElementById('blog-grid');
+
+    const hasQ = !!state.q.trim();
+    const hasPC = !!(state.pillar || state.category);
+
+    if (metaSearch) {
+      metaSearch.hidden = !hasQ;
+      if (countSearch) countSearch.textContent = String(n);
+    }
+    if (metaFilter) {
+      metaFilter.hidden = hasQ || !hasPC;
+      if (chips && countFilter) {
+        const parts = [];
+        if (state.pillar && pillarLabels[state.pillar]) {
+          parts.push(`<span class="blog-filter-chip">${pillarLabels[state.pillar]}</span>`);
+        }
+        if (state.pillar && state.category) parts.push('<span class="blog-filter-sep">·</span>');
+        if (state.category && categoryLabels[state.category]) {
+          parts.push(`<span class="blog-filter-chip">${categoryLabels[state.category]}</span>`);
+        }
+        chips.innerHTML = parts.join(' ');
+        countFilter.textContent = `${n}개`;
+      }
+    }
+
+    if (noMatches && grid) {
+      const empty = n === 0;
+      noMatches.hidden = !empty;
+      grid.classList.toggle('is-grid-empty', empty);
+      if (noHint) {
+        if (empty && state.pillar && pillarLabels[state.pillar]) {
+          const id = state.pillar;
+          noHint.innerHTML = `이 영역의 심화 글·FAQ는 순차적으로 올릴 예정입니다. <a href="/procedures#${id}">${pillarLabels[state.pillar]} 시술 안내 보기</a>`;
+          noHint.hidden = false;
+        } else {
+          noHint.innerHTML = '';
+          noHint.hidden = true;
+        }
+      }
+    }
+
+    setPillAndSidebarActive(state);
+  }
+
+  applyBlogFilters();
+  window.addEventListener('popstate', applyBlogFilters);
+</script>
 
 <style>
   .blog-layout {
@@ -107,7 +332,82 @@ const pageTitle = q ? `"${q}" 검색 결과` : currentCatLabel ? currentCatLabel
     font-weight: 800;
     letter-spacing: -0.02em;
     color: var(--text);
-    margin: 0 0 0.35rem;
+    margin: 0 0 1rem;
+  }
+
+  .blog-menu {
+    margin-bottom: 1.25rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--rule);
+    border-radius: 16px;
+    background: var(--surface);
+  }
+
+  .blog-menu-block + .blog-menu-block {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+  }
+
+  .blog-menu-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--t3);
+    margin-bottom: 0.5rem;
+  }
+
+  .blog-menu-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  .blog-menu-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--t2);
+    text-decoration: none;
+    border-radius: 999px;
+    border: 1px solid var(--rule);
+    background: var(--bg2);
+    transition:
+      background 0.15s,
+      color 0.15s,
+      border-color 0.15s;
+  }
+
+  .blog-menu-pill:hover {
+    color: var(--text);
+    border-color: var(--t3);
+  }
+
+  .blog-menu-pill.is-active {
+    color: var(--accent-dark);
+    border-color: var(--accent);
+    background: rgba(184, 138, 94, 0.12);
+  }
+
+  .blog-menu-pill--type {
+    font-size: 0.78rem;
+  }
+
+  .blog-menu-hint {
+    margin: 0.85rem 0 0;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: var(--t3);
+  }
+
+  .blog-menu-hint a {
+    color: var(--accent-dark);
+    font-weight: 700;
+    text-decoration: none;
   }
 
   .blog-search-meta,
@@ -115,12 +415,34 @@ const pageTitle = q ? `"${q}" 검색 결과` : currentCatLabel ? currentCatLabel
     margin: 0;
     font-size: 0.88rem;
     color: var(--t3);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.6rem;
   }
 
-  .blog-search-meta a {
+  .blog-meta-sep {
+    color: var(--t3);
+  }
+
+  .blog-search-meta a,
+  .blog-filter-reset {
     color: var(--accent-dark);
     font-weight: 700;
     text-decoration: none;
+  }
+
+  .blog-filter-chip {
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .blog-filter-sep {
+    color: var(--t3);
+  }
+
+  .blog-filter-count {
+    color: var(--t3);
   }
 
   .blog-empty {
@@ -133,10 +455,31 @@ const pageTitle = q ? `"${q}" 검색 결과` : currentCatLabel ? currentCatLabel
     align-items: center;
   }
 
+  .blog-empty-hint {
+    margin: 0;
+    max-width: 28rem;
+    line-height: 1.6;
+    font-size: 0.9rem;
+  }
+
+  .blog-empty-hint a {
+    color: var(--accent-dark);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
   .blog-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 1.25rem;
+  }
+
+  .blog-grid.is-grid-empty {
+    display: none;
+  }
+
+  .blog-post-card.is-filter-hidden {
+    display: none !important;
   }
 
   .blog-post-card {
@@ -147,7 +490,9 @@ const pageTitle = q ? `"${q}" 검색 결과` : currentCatLabel ? currentCatLabel
     overflow: hidden;
     text-decoration: none;
     background: var(--surface);
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition:
+      transform 0.2s,
+      box-shadow 0.2s;
   }
 
   .blog-post-card:hover {
@@ -178,6 +523,23 @@ const pageTitle = q ? `"${q}" 검색 결과` : currentCatLabel ? currentCatLabel
     flex-direction: column;
     gap: 0.4rem;
     flex: 1;
+  }
+
+  .blog-post-card-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    align-items: center;
+  }
+
+  .blog-post-card-pillar {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--text);
+    background: var(--bg2);
+    padding: 0.2rem 0.45rem;
+    border-radius: 6px;
+    border: 1px solid var(--rule);
   }
 
   .blog-post-card-cat {

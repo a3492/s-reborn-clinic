@@ -1,5 +1,5 @@
 ---
-import { SITE_TITLE } from '../consts';
+import { CLINIC_INFO, SITE_TITLE } from '../consts';
 
 interface Props {
   siteTitle?: string;
@@ -8,6 +8,7 @@ interface Props {
 
 const { siteTitle = SITE_TITLE, socialLinks = {} } = Astro.props;
 const socialEntries = Object.entries(socialLinks).filter(([, value]) => value);
+const hoursLine = CLINIC_INFO.hours.map((h) => `${h.days} ${h.time}`).join(' · ');
 ---
 
 <footer class="site-footer">
@@ -15,10 +16,24 @@ const socialEntries = Object.entries(socialLinks).filter(([, value]) => value);
     <div class="site-footer-top">
       <div>
         <p class="site-footer-brand">{siteTitle}</p>
+        <p class="site-footer-legal">
+          본 사이트의 텍스트·이미지·디자인은 저작권법에 의해 보호됩니다. 출처(링크)를 밝힌 인용·요약은 허용하나,
+          <strong>무단 전재·복제·미러(전체 복제) 및 상업적 재이용은 금지</strong>합니다.
+        </p>
         <div class="site-footer-info">
-          <p>주소: 서울특별시 강남구 (주소 미정)</p>
-          <p>전화: 000-0000-0000 | 이메일: info@s-reborn-clinic.com</p>
-          <p>진료시간: 월–금 09:00–18:00 | 토 09:00–13:00 | 일·공휴일 휴진</p>
+          <p>
+            {CLINIC_INFO.name} · 대표원장 {CLINIC_INFO.director}
+          </p>
+          <p>
+            주소: {CLINIC_INFO.address} {CLINIC_INFO.addressDetail}
+          </p>
+          <p>
+            전화: {CLINIC_INFO.phone} | 공식 웹:{' '}
+            <a href={CLINIC_INFO.website} target="_blank" rel="noopener noreferrer">
+              {CLINIC_INFO.website.replace(/^https?:\/\//, '')}
+            </a>
+          </p>
+          <p>진료: {hoursLine}</p>
         </div>
       </div>
 
@@ -26,19 +41,37 @@ const socialEntries = Object.entries(socialLinks).filter(([, value]) => value);
         <a href="/about" class="site-footer-link">클리닉 소개</a>
         <a href="/procedures" class="site-footer-link">시술 안내</a>
         <a href="/blog" class="site-footer-link">블로그</a>
+        <a href="/llms.txt" class="site-footer-link">AI·검색용 요약 (llms.txt)</a>
         <a href="/consult" class="site-footer-link">온라인 상담</a>
         {socialEntries.map(([label, href]) => (
-          <a href={href} target="_blank" rel="noreferrer" class="site-footer-link">{label}</a>
+          <a href={href} target="_blank" rel="noreferrer" class="site-footer-link">
+            {label}
+          </a>
         ))}
       </div>
     </div>
 
     <div class="site-footer-bottom">
-      <span>© 2026 {siteTitle}. All rights reserved.</span>
+      <span>© {new Date().getFullYear()} {CLINIC_INFO.name}. All rights reserved.</span>
       <div style="display:flex;gap:1rem;">
-        <a href="#" class="site-footer-link">개인정보처리방침</a>
-        <a href="#" class="site-footer-link">이용약관</a>
+        <a href="/privacy" class="site-footer-link">개인정보처리방침</a>
+        <a href="/terms" class="site-footer-link">이용약관</a>
       </div>
     </div>
   </div>
 </footer>
+
+<style>
+  .site-footer-legal {
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: var(--t2, #5c534c);
+    max-width: 36rem;
+    margin: 0 0 0.75rem;
+  }
+
+  .site-footer-legal strong {
+    color: var(--text, #1c1814);
+    font-weight: 700;
+  }
+</style>

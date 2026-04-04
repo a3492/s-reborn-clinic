@@ -28,7 +28,7 @@ const pathname = Astro.url.pathname;
 <!doctype html>
 <html lang="ko" class="admin-shell">
   <head>
-    <BaseHead title={`${title} | Admin`} description={description} />
+    <BaseHead title={`${title} | Admin`} description={description} noindex />
   </head>
   <body class="admin-shell admin-guarded" data-required-role={requiredRole}>
     <div class="admin-auth-loading" data-admin-auth-loading>

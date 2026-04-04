@@ -35,7 +35,9 @@ export const CATEGORIES = [
   { id: 'patient-story', label: '환자 이야기', description: '환자분들의 실제 경험담' },
   { id: 'health-tips',   label: '건강 정보',   description: '일상에서 실천하는 건강 관리 팁' },
   { id: 'clinic-news',   label: '클리닉 소식', description: '이벤트, 공지 및 클리닉 뉴스' },
-  { id: 'faq',           label: 'FAQ',         description: '자주 묻는 질문' },
+  /** 블로그·필터 메뉴: 영문 약자 라벨 */
+  { id: 'faq',           label: 'FAQ',         description: 'Frequently Asked Questions — 자주 묻는 질문' },
+  { id: 'myth',          label: 'MYTH',        description: 'Common misconceptions — 자주하는 오해' },
   { id: 'doctor-column', label: '원장 칼럼',   description: '원장의 전문 칼럼' },
 ] as const;
 

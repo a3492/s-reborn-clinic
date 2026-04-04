@@ -65,6 +65,11 @@
   --content-width:  760px;
   --sidebar-width:  280px;
   --header-height:  68px;
+  /**
+   * 페이지 좌우 gutter — 모바일은 좁게, 넓은 화면에서만 상한(1.5rem)까지 확대
+   * 풀블리드 섹션은 margin-inline: calc(-1 * var(--page-inline)) 와 짝을 맞출 것
+   */
+  --page-inline: clamp(0.65rem, 0.5rem + 1.8vw, 1.5rem);
 }
 
 /* ── 기본 리셋 & 전역 ──────────────────────────────────────────── */
@@ -87,20 +92,29 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* 본문 영역 — 헤더·푸터와 동일한 좌우 리듬 + 노치 대응 */
+.site-main {
+  padding-left: max(var(--page-inline), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--page-inline), env(safe-area-inset-right, 0px));
+  padding-bottom: calc(var(--space-xl) + env(safe-area-inset-bottom, 0px));
+}
+
 /* ── 레이아웃 컨테이너 ──────────────────────────────────────────── */
 
 .container {
   width: 100%;
   max-width: var(--max-width);
   margin-inline: auto;
-  padding-inline: var(--space-lg);
+  padding-left: max(var(--page-inline), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--page-inline), env(safe-area-inset-right, 0px));
 }
 
 .container-narrow {
   width: 100%;
   max-width: var(--content-width);
   margin-inline: auto;
-  padding-inline: var(--space-md);
+  padding-left: max(var(--page-inline), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--page-inline), env(safe-area-inset-right, 0px));
 }
 
 /* ── 헤더 & 네비게이션 ──────────────────────────────────────────── */
@@ -126,7 +140,8 @@ body {
   width: 100%;
   max-width: var(--max-width);
   margin-inline: auto;
-  padding-inline: var(--space-lg);
+  padding-left: max(var(--page-inline), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--page-inline), env(safe-area-inset-right, 0px));
 }
 
 .site-logo {
@@ -328,7 +343,8 @@ body {
   position: relative;
   max-width: var(--max-width);
   margin-inline: auto;
-  padding-inline: var(--space-lg);
+  padding-left: max(var(--page-inline), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--page-inline), env(safe-area-inset-right, 0px));
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-2xl);
@@ -510,7 +526,8 @@ body {
 .site-footer-inner {
   max-width: var(--max-width);
   margin-inline: auto;
-  padding-inline: var(--space-lg);
+  padding-left: max(var(--page-inline), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--page-inline), env(safe-area-inset-right, 0px));
 }
 
 .site-footer-top {
@@ -702,11 +719,6 @@ body {
 @media (max-width: 768px) {
   :root {
     --header-height: 56px;
-  }
-
-  .container,
-  .container-narrow {
-    padding-inline: var(--space-md);
   }
 
   .hero {

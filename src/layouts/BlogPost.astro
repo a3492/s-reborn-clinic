@@ -8,6 +8,7 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import Sidebar from '../components/Sidebar.astro';
 import { CATEGORIES, SITE_TITLE } from '../consts';
+import { buildArticlePageGraph } from '../lib/structured-data';
 
 type Props = CollectionEntry<'blog'>['data'] & { slug?: string };
 
@@ -24,11 +25,27 @@ const shareLinks = {
 };
 
 const allPosts = await getCollection('blog', ({ data }) => !data.draft);
+
+const articleJsonLd = buildArticlePageGraph(Astro.site, {
+  title,
+  description,
+  url: pageUrl,
+  datePublished: date,
+  image: thumbnail,
+  category,
+});
 ---
 
 <html lang="ko">
   <head>
-    <BaseHead title={title} description={description} image={thumbnail} siteTitle={SITE_TITLE} />
+    <BaseHead
+      title={title}
+      description={description}
+      image={thumbnail}
+      siteTitle={SITE_TITLE}
+      ogType="article"
+      jsonLd={articleJsonLd}
+    />
   </head>
 
   <body class="blog-post-shell">
