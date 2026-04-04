@@ -54,10 +54,10 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
       <Header />
       <Topbar />
 
-      <div class="site-main blog-with-sidebar" style="display:flex;gap:2rem;padding-top:1.5rem;">
+      <div class="site-main blog-with-sidebar">
         <Sidebar />
 
-        <main class="blog-content blog-post-main" style="flex:1;min-width:0;">
+        <main class="blog-content blog-post-main">
           <article class="blog-post-article">
             {thumbnail && (
               <div class="blog-post-hero">
@@ -116,6 +116,29 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
 
       <Footer />
     </div>
+
+    <script is:inline>
+      function mergeBlogHrefFromSearch(search, patch) {
+        const p = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+        for (const [key, v] of Object.entries(patch)) {
+          if (v === null || v === '') p.delete(key);
+          else p.set(key, String(v));
+        }
+        const s = p.toString();
+        return s ? `/blog/?${s}` : '/blog/';
+      }
+      function applyBlogSidebarMergeLinks() {
+        document.querySelectorAll('a.js-blog-merge[data-blog-merge]').forEach((a) => {
+          let patch = {};
+          try {
+            patch = JSON.parse(a.getAttribute('data-blog-merge') || '{}');
+          } catch (_) {}
+          a.setAttribute('href', mergeBlogHrefFromSearch(location.search, patch));
+        });
+      }
+      applyBlogSidebarMergeLinks();
+      window.addEventListener('popstate', applyBlogSidebarMergeLinks);
+    </script>
 
     <script define:vars={{ pageUrl }}>
       const copyButton = document.getElementById('copy-link-btn');

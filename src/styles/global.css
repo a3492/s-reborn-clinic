@@ -99,6 +99,104 @@ p {
 .prose p {
 	margin-bottom: 1.25em;
 }
+
+/* 블로그 포스트: 사이드바 + 본문 (인라인 flex 금지 — 모바일에서 column 전환) */
+.blog-post-shell .site-main.blog-with-sidebar {
+	display: flex;
+	gap: 2rem;
+	padding-top: 1.5rem;
+	align-items: flex-start;
+}
+
+.blog-post-shell .site-main.blog-with-sidebar .blog-post-main {
+	flex: 1;
+	min-width: 0;
+}
+
+@media (max-width: 900px) {
+	.blog-post-shell .site-main.blog-with-sidebar {
+		flex-direction: column;
+	}
+}
+
+/*
+ * .prose 단독으로 감싸진 본문에도 타이포 적용 (MD 출력 구조 변경 대비).
+ * 실제 스타일은 .blog-post-prose와 동일 계열로 맞춤.
+ */
+.blog-post-shell .prose {
+	line-height: 1.78;
+	color: var(--text);
+}
+
+.blog-post-shell .prose :where(h1, h2, h3, h4, h5, h6) {
+	line-height: 1.3;
+	color: var(--text);
+}
+
+.blog-post-shell .prose :where(h2, h3, h4, h5) {
+	margin-bottom: 0.9em;
+	padding-top: 0.4em;
+}
+
+.blog-post-shell .prose :where(ul, ol) {
+	padding-left: 1.5em;
+	margin: 0.5em 0 1em;
+}
+
+.blog-post-shell .prose li {
+	margin-bottom: 0.35em;
+	line-height: 1.7;
+}
+
+.blog-post-shell .prose li + li {
+	margin-top: 0.2em;
+}
+
+.blog-post-shell .prose :where(p) {
+	margin-bottom: 1.25em;
+}
+
+.blog-post-shell .prose :where(a) {
+	color: var(--accent);
+	word-break: break-word;
+	text-decoration-thickness: 0.08em;
+	text-underline-offset: 0.18em;
+}
+
+.blog-post-shell .prose :where(pre) {
+	overflow-x: auto;
+	white-space: pre-wrap;
+	word-break: break-word;
+	margin: 1.25em 0;
+}
+
+.blog-post-shell .prose :where(img) {
+	max-width: 100%;
+	height: auto;
+	display: block;
+	margin: 1.25em 0;
+}
+
+.blog-post-shell .prose :where(table) {
+	display: block;
+	overflow-x: auto;
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.92rem;
+	margin: 1.5em 0;
+}
+
+.blog-post-shell .prose :where(th, td) {
+	border: 1px solid var(--rule, #e0d8cc);
+	padding: 0.55em 0.85em;
+	text-align: left;
+	vertical-align: top;
+}
+
+.blog-post-shell .prose :where(th) {
+	background: rgba(184, 149, 106, 0.1);
+	font-weight: 600;
+}
 textarea {
 	width: 100%;
 	font-size: 16px;

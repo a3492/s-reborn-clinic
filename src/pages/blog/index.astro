@@ -395,12 +395,18 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
     display: flex;
     flex-wrap: wrap;
     gap: 0.45rem;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .blog-menu-pill {
     display: inline-flex;
     align-items: center;
     padding: 0.35rem 0.75rem;
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+    justify-content: center;
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--t2);
@@ -634,6 +640,37 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
   @media (max-width: 900px) {
     .blog-layout {
       flex-direction: column;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .blog-menu {
+      padding: 0.85rem 0.75rem;
+    }
+
+    .blog-menu-block {
+      min-width: 0;
+    }
+
+    .blog-menu-pills {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-x: contain;
+      padding-bottom: 0.25rem;
+      scrollbar-gutter: stable;
+    }
+
+    .blog-menu-pill {
+      flex: 0 0 auto;
+      font-size: 0.74rem;
+      padding: 0.32rem 0.65rem;
+      white-space: nowrap;
+      max-width: none;
+    }
+
+    .blog-menu-pill--type {
+      font-size: 0.72rem;
     }
   }
 </style>
