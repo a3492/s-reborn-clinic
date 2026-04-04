@@ -4,7 +4,7 @@ description: "히알루론산 필러 '이동설'의 진실. 실제로 어떤 경
 date: 2026-04-05
 pillar: "injection"
 category: "myth"
-tags: ["MYTH", "필러", "히알루론산", "이동", "오해"]
+tags: ["MYTH", "필러", "히알루론산", "이동", "오해", "작성-20260405"]
 draft: false
 ---
 

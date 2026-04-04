@@ -4,7 +4,7 @@ description: "필러의 기본 개념, 적절한 부위, 자연스러운 볼륨 
 date: 2026-04-03
 pillar: "injection"
 category: "procedures"
-tags: ["필러", "볼륨개선", "시술안내", "주름", "볼륨"]
+tags: ["필러", "볼륨개선", "시술안내", "주름", "볼륨", "작성-20260405"]
 draft: false
 ---
 

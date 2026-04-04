@@ -3,7 +3,7 @@ title: "오해 예시: ○○ 시술은 누구에게나 동일하게 맞는다?"
 description: "잘못 퍼진 상식을 의료진 관점에서 정리한 MYTH 글 템플릿입니다. 제목·본문을 바꾼 뒤 draft를 해제하세요."
 date: 2026-04-04
 category: "myth"
-tags: ["MYTH", "오해", "시술안내"]
+tags: ["MYTH", "오해", "시술안내", "작성-20260405"]
 draft: true
 ---
 

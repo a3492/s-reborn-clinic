@@ -4,7 +4,7 @@ description: "카페에서 한 번은 꼭 나오는 그 문장, ‘이제 약이
 date: 2026-04-04
 pillar: "injection"
 category: "myth"
-tags: ["MYTH", "보톡스", "오해", "내성"]
+tags: ["MYTH", "보톡스", "오해", "내성", "작성-20260405"]
 ---
 
 [앞선 MYTH 글](/blog/myth/botox-frozen-face-myth/)에서 **“표정이 굳는다”**는 말을 짚었을 때, 댓글이 아니라 **현실 대화**로 이어지는 후속 질문이 하나 있었어요.

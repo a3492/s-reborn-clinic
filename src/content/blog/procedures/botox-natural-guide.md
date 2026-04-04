@@ -4,7 +4,7 @@ description: "에스리본 클리닉의 보톡스 시술 개요, 적용 부위, 
 date: 2026-04-03
 pillar: "injection"
 category: "procedures"
-tags: ["보톡스", "주름개선", "시술안내"]
+tags: ["보톡스", "주름개선", "시술안내", "작성-20260405"]
 ---
 
 ## 시술 개요
