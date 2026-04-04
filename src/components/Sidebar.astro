@@ -2,6 +2,13 @@
 import { CATEGORIES } from '../consts';
 import { BLOG_PILLAR_NAV, blogCategoryShortcutLabel } from '../data/blog-nav';
 
+interface Props {
+  /** 블로그 목록에서 키워드 검색 중일 때 사이드 메뉴 전체 숨김 */
+  blogSearchFocus?: boolean;
+}
+
+const { blogSearchFocus = false } = Astro.props;
+
 const pathname = Astro.url.pathname;
 const sp = Astro.url.searchParams;
 const currentCat = sp.get('category') ?? '';
@@ -11,8 +18,13 @@ const onBlogRoot = pathname === '/blog' || pathname === '/blog/';
 const allClear = onBlogRoot && !currentCat && !currentPillar && !currentQ;
 ---
 
-<aside class="blog-sidebar" id="blog-sidebar">
-  <div class="sidebar-widget" id="sidebar-widget-pillars">
+<aside
+  class="blog-sidebar"
+  id="blog-sidebar"
+  hidden={blogSearchFocus}
+  aria-hidden={blogSearchFocus ? 'true' : undefined}
+>
+  <div class="sidebar-widget">
     <h2 class="sidebar-title">시술 영역 (심화·FAQ)</h2>
     <p class="sidebar-lead">시술 안내 4축과 같은 기준으로 글을 묶었습니다.</p>
     <ul class="sidebar-pillar-list">
@@ -47,7 +59,7 @@ const allClear = onBlogRoot && !currentCat && !currentPillar && !currentQ;
     <a class="sidebar-procedures-link" href="/doctor-ai/">Academy 허브로 이동 →</a>
   </div>
 
-  <div class="sidebar-widget" id="sidebar-widget-types">
+  <div class="sidebar-widget">
     <h2 class="sidebar-title">글 유형</h2>
     <ul class="sidebar-cat-list">
       <li>

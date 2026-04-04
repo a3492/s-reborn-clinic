@@ -12,11 +12,13 @@ const allPosts = (await getCollection('blog', ({ data }) => !data.draft))
 
 const pillarLabels = Object.fromEntries(BLOG_PILLAR_NAV.map((p) => [p.id, p.label]));
 const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label]));
+
+const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
 ---
 
 <Layout title="블로그" description="에스리본 클리닉 블로그 — 시술 안내, 건강 정보, 원장 칼럼">
-  <div class="blog-layout">
-    <Sidebar />
+  <div class:list={['blog-layout', { 'blog-layout--search': blogSearchFocus }]}>
+    <Sidebar blogSearchFocus={blogSearchFocus} />
 
     <div class="blog-main">
       <div class="blog-header">
@@ -313,11 +315,15 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
     }
 
     const filterNav = document.getElementById('blog-filter-nav');
-    const swPill = document.getElementById('sidebar-widget-pillars');
-    const swType = document.getElementById('sidebar-widget-types');
+    const side = document.getElementById('blog-sidebar');
+    const layout = document.querySelector('.blog-layout');
     if (filterNav) filterNav.hidden = hasQ;
-    if (swPill) swPill.hidden = hasQ;
-    if (swType) swType.hidden = hasQ;
+    if (side) {
+      side.hidden = hasQ;
+      if (hasQ) side.setAttribute('aria-hidden', 'true');
+      else side.removeAttribute('aria-hidden');
+    }
+    layout?.classList.toggle('blog-layout--search', hasQ);
 
     setPillAndSidebarActive(state);
   }
@@ -332,6 +338,16 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
     gap: 2.5rem;
     align-items: flex-start;
     padding: 1.5rem 0 3rem;
+  }
+
+  .blog-layout--search {
+    gap: 0;
+  }
+
+  .blog-layout--search .blog-main {
+    max-width: 920px;
+    margin-inline: auto;
+    width: 100%;
   }
 
   .blog-main {
