@@ -16,8 +16,8 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
   <section class="hero">
     <div class="hero-inner">
       <div class="hero-badge">에스리본 클리닉</div>
-      <h1 class="hero-title">당신의 아름다움을<br/>다시 피우다</h1>
-      <p class="hero-desc">전문 의료진의 섬세한 손길로 당신만의 자연스러운 아름다움을 완성합니다.</p>
+      <h1 class="hero-title">자연스러운 아름다움을<br/>함께 만듭니다</h1>
+      <p class="hero-desc">가정의학과 전문의 진료를 바탕으로, 과하지 않은 시술만 차분히 제안합니다.</p>
       <div class="hero-actions">
         <a href="/procedures" class="btn btn-primary btn-lg">시술 안내 보기</a>
         <a href="/consult" class="hero-consult-link">온라인 문의</a>
@@ -35,7 +35,7 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
       <div class="trust-divider"></div>
       <div class="trust-item">
         <span class="trust-icon">✦</span>
-        <span class="trust-label">FDA 승인 제품만 사용</span>
+        <span class="trust-label">검증된 제품 사용</span>
       </div>
       <div class="trust-divider"></div>
       <div class="trust-item">
@@ -45,7 +45,7 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
       <div class="trust-divider"></div>
       <div class="trust-item">
         <span class="trust-icon">📍</span>
-        <span class="trust-label">홍대입구역 도보 2분</span>
+        <span class="trust-label">홍대입구역 도보 2~3분</span>
       </div>
     </div>
   </section>
@@ -54,7 +54,7 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
   <section class="section">
     <div class="section-header">
       <h2 class="section-title">주요 시술</h2>
-      <p class="section-desc">에스리본 클리닉의 대표 시술을 소개합니다</p>
+      <p class="section-desc">시술 안내와 콘텐츠를 카테고리별로 모았습니다</p>
     </div>
     <div class="procedure-grid">
       {CATEGORIES.filter(c => ['procedures', 'before-after'].includes(c.id)).map(cat => (
@@ -68,7 +68,7 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
       <a href="/procedures" class="procedure-card procedure-card-all">
         <div class="procedure-card-icon" aria-hidden="true">⊞</div>
         <h3 class="procedure-card-title">전체 시술 보기</h3>
-        <p class="procedure-card-desc">모든 시술 안내를 확인하세요</p>
+        <p class="procedure-card-desc">글 목록에서 시술 안내를 한곳에 볼 수 있어요</p>
         <span class="procedure-card-link">바로가기 →</span>
       </a>
     </div>
