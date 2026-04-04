@@ -22,7 +22,7 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
       <div class="blog-header">
         <h1 class="blog-header-title" id="blog-page-title">블로그</h1>
 
-        <nav class="blog-menu" aria-label="블로그 영역·유형 필터">
+        <nav class="blog-menu" id="blog-filter-nav" aria-label="블로그 영역·유형 필터">
           <div class="blog-menu-block">
             <span class="blog-menu-label">시술 영역 (심화·FAQ)</span>
             <div class="blog-menu-pills">
@@ -79,10 +79,11 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
         </nav>
 
         <p id="blog-meta-search" class="blog-search-meta" hidden>
-          총 <span id="blog-count-search">0</span>개의 결과 ·
-          <a href="/blog/" class="js-blog-merge" data-blog-merge={JSON.stringify({ q: null })}>검색만 지우기</a>
+          <span class="blog-search-mode-label">키워드 검색 결과만 표시 중입니다.</span>
+          총 <span id="blog-count-search">0</span>개 ·
+          <a href="/blog/" class="js-blog-merge" data-blog-merge={JSON.stringify({ q: null })}>검색 지우기</a>
           <span class="blog-meta-sep"> · </span>
-          <a href="/blog/">전체 초기화</a>
+          <a href="/blog/">필터·검색 전체 초기화</a>
         </p>
         <p id="blog-meta-filter" class="blog-cat-meta" hidden>
           <span id="blog-meta-filter-chips"></span>
@@ -241,13 +242,14 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
 
     document.querySelectorAll('[data-blog-card]').forEach((el) => {
       let show = true;
-      if (state.category && el.getAttribute('data-category') !== state.category) show = false;
-      if (state.pillar && el.getAttribute('data-pillar') !== state.pillar) show = false;
       if (ql) {
         const t = (el.getAttribute('data-title') || '').toLowerCase();
         const d = (el.getAttribute('data-description') || '').toLowerCase();
         const tags = (el.getAttribute('data-tags') || '').toLowerCase();
         if (!t.includes(ql) && !d.includes(ql) && !tags.includes(ql)) show = false;
+      } else {
+        if (state.category && el.getAttribute('data-category') !== state.category) show = false;
+        if (state.pillar && el.getAttribute('data-pillar') !== state.pillar) show = false;
       }
       el.classList.toggle('is-filter-hidden', !show);
       if (show) n++;
@@ -295,7 +297,11 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
       noMatches.hidden = !empty;
       grid.classList.toggle('is-grid-empty', empty);
       if (noHint) {
-        if (empty && state.pillar && pillarLabels[state.pillar]) {
+        if (empty && ql) {
+          noHint.innerHTML = `이 검색어에 맞는 글이 없습니다. 다른 키워드를 써 보시거나 <a href="/blog/" class="js-blog-merge" data-blog-merge='${JSON.stringify({ q: null })}'>검색 지우기</a> 후 목록을 둘러보세요.`;
+          noHint.hidden = false;
+          applyMergeLinks();
+        } else if (empty && state.pillar && pillarLabels[state.pillar]) {
           const id = state.pillar;
           noHint.innerHTML = `이 영역의 심화 글·FAQ는 순차적으로 올릴 예정입니다. <a href="/procedures/#${id}">${pillarLabels[state.pillar]} 시술 안내 보기</a>`;
           noHint.hidden = false;
@@ -305,6 +311,13 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
         }
       }
     }
+
+    const filterNav = document.getElementById('blog-filter-nav');
+    const swPill = document.getElementById('sidebar-widget-pillars');
+    const swType = document.getElementById('sidebar-widget-types');
+    if (filterNav) filterNav.hidden = hasQ;
+    if (swPill) swPill.hidden = hasQ;
+    if (swType) swType.hidden = hasQ;
 
     setPillAndSidebarActive(state);
   }
@@ -422,6 +435,14 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
     flex-wrap: wrap;
     align-items: center;
     gap: 0.35rem 0.6rem;
+  }
+
+  .blog-search-mode-label {
+    flex: 1 0 100%;
+    font-weight: 700;
+    color: var(--text);
+    font-size: 0.9rem;
+    margin-bottom: 0.15rem;
   }
 
   .blog-meta-sep {
