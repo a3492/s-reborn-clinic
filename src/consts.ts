@@ -20,10 +20,14 @@ export const CLINIC_INFO = {
   ],
 } as const;
 
-/** 네이버 지도 웹에서 장소 검색으로 여는 URL. 지도 앱 전체 URL을 iframe에 넣으면 차단·깨짐이 잦아 링크만 사용합니다. */
-export const NAVER_MAP_SEARCH_URL = `https://map.naver.com/p/search/${encodeURIComponent(
-  `${CLINIC_INFO.name} ${CLINIC_INFO.address}`,
-)}`;
+/**
+ * 네이버 지도 검색 키워드 — 짧게 유지 (전체 주소·쉼표 포함 긴 문자열은 /p/search 라우팅 오류·빈 화면이 날 수 있음).
+ * 상세 주소는 페이지 본문에 표시하고, 지도는 상호 기준 검색으로 연결합니다.
+ */
+export const NAVER_MAP_SEARCH_QUERY = '에스리본의원';
+
+/** 네이버 지도 웹 검색 (모바일·PC 공통) */
+export const NAVER_MAP_SEARCH_URL = `https://map.naver.com/p/search/${encodeURIComponent(NAVER_MAP_SEARCH_QUERY)}`;
 
 export const CATEGORIES = [
   { id: 'procedures',    label: '시술·치료',   description: '클리닉 시술 및 치료 안내' },

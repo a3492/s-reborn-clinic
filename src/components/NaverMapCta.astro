@@ -1,0 +1,242 @@
+---
+/**
+ * 네이버 지도 검색 링크 — 짧은 키워드만 사용 (주소+쉼표 긴 문자열은 네이버 쪽 라우팅 오류 유발 가능)
+ */
+import { CLINIC_INFO, NAVER_MAP_SEARCH_URL } from '../consts';
+
+type Variant = 'card' | 'compact';
+
+interface Props {
+  variant?: Variant;
+}
+
+const { variant = 'card' } = Astro.props;
+---
+
+{variant === 'card' ? (
+  <a
+    href={NAVER_MAP_SEARCH_URL}
+    target="_blank"
+    rel="noopener noreferrer"
+    class="naver-map-cta naver-map-cta--card"
+  >
+    <div class="naver-map-cta__graphic" aria-hidden="true">
+      <div class="naver-map-cta__grid"></div>
+      <svg class="naver-map-cta__pin" width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 21s-6-5.33-6-10a6 6 0 1 1 12 0c0 4.67-6 10-6 10z" fill="var(--color-gold-deep)" stroke="var(--color-white)" stroke-width="1.2"/>
+        <circle cx="12" cy="11" r="2.2" fill="var(--color-white)"/>
+      </svg>
+    </div>
+    <div class="naver-map-cta__body">
+      <span class="naver-map-cta__eyebrow">찾아오시는 길</span>
+      <strong class="naver-map-cta__name">{CLINIC_INFO.name}</strong>
+      <p class="naver-map-cta__addr">{CLINIC_INFO.address}</p>
+      <span class="naver-map-cta__btn">
+        <span class="naver-map-cta__btn-n">N</span>
+        네이버 지도로 열기
+        <svg class="naver-map-cta__arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5 12h14M13 6l6 6-6 6"/>
+        </svg>
+      </span>
+    </div>
+  </a>
+) : (
+  <a
+    href={NAVER_MAP_SEARCH_URL}
+    target="_blank"
+    rel="noopener noreferrer"
+    class="naver-map-cta naver-map-cta--compact"
+  >
+    <span class="naver-map-cta__btn-n naver-map-cta__btn-n--sm">N</span>
+    네이버 지도로 열기
+    <svg class="naver-map-cta__arrow naver-map-cta__arrow--sm" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M5 12h14M13 6l6 6-6 6"/>
+    </svg>
+  </a>
+)}
+
+<style>
+  .naver-map-cta {
+    text-decoration: none;
+    color: inherit;
+    font-family: var(--font-sans, inherit);
+  }
+
+  .naver-map-cta--card {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    border-radius: var(--radius-lg, 22px);
+    overflow: hidden;
+    border: 1px solid var(--rule, #e8e0d8);
+    background: var(--surface, #fff);
+    box-shadow: var(--shadow-md, 0 8px 24px rgba(42, 36, 32, 0.08));
+    transition: box-shadow 0.22s ease, transform 0.18s ease, border-color 0.2s ease;
+  }
+
+  .naver-map-cta--card:hover {
+    border-color: rgba(201, 169, 110, 0.55);
+    box-shadow: var(--shadow-lg, 0 20px 48px rgba(42, 36, 32, 0.1));
+    transform: translateY(-2px);
+  }
+
+  .naver-map-cta--card:focus-visible {
+    outline: 2px solid var(--accent, #c9a96e);
+    outline-offset: 3px;
+  }
+
+  .naver-map-cta__graphic {
+    position: relative;
+    width: 112px;
+    flex-shrink: 0;
+    background: linear-gradient(165deg, var(--color-gold-light, #f0e4ca) 0%, var(--color-blush, #f5eee8) 48%, var(--color-cream, #f9f5f0) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .naver-map-cta__grid {
+    position: absolute;
+    inset: 12px;
+    border-radius: 12px;
+    opacity: 0.35;
+    background-image:
+      linear-gradient(rgba(160, 120, 64, 0.12) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(160, 120, 64, 0.12) 1px, transparent 1px);
+    background-size: 14px 14px;
+  }
+
+  .naver-map-cta__pin {
+    position: relative;
+    z-index: 1;
+    filter: drop-shadow(0 3px 6px rgba(42, 36, 32, 0.15));
+  }
+
+  .naver-map-cta__body {
+    flex: 1;
+    min-width: 0;
+    padding: 1.25rem 1.35rem 1.35rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .naver-map-cta__eyebrow {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-dark, #a07840);
+    opacity: 0.9;
+  }
+
+  .naver-map-cta__name {
+    font-size: 1.08rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text, #2a2420);
+  }
+
+  .naver-map-cta__addr {
+    margin: 0;
+    font-size: 0.84rem;
+    line-height: 1.55;
+    color: var(--t2, #5c4a38);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .naver-map-cta__btn {
+    margin-top: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    align-self: flex-start;
+    padding: 0.62rem 1.15rem 0.62rem 0.75rem;
+    border-radius: var(--radius-full, 999px);
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--color-white, #fff);
+    background: linear-gradient(135deg, #03c75a 0%, #02b350 100%);
+    box-shadow: 0 4px 14px rgba(3, 199, 90, 0.35);
+    transition: transform 0.15s ease, box-shadow 0.2s ease;
+  }
+
+  .naver-map-cta--card:hover .naver-map-cta__btn {
+    box-shadow: 0 6px 20px rgba(3, 199, 90, 0.42);
+  }
+
+  .naver-map-cta__btn-n {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.22);
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+  }
+
+  .naver-map-cta__arrow {
+    opacity: 0.95;
+    margin-left: 0.1rem;
+  }
+
+  /* Compact (상담 페이지 등) */
+  .naver-map-cta--compact {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 1.1rem 0.55rem 0.65rem;
+    border-radius: var(--radius-full, 999px);
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: var(--color-white, #fff);
+    background: linear-gradient(135deg, #03c75a 0%, #02a84a 100%);
+    box-shadow: 0 4px 16px rgba(3, 199, 90, 0.3);
+    transition: transform 0.15s ease, box-shadow 0.2s ease;
+  }
+
+  .naver-map-cta--compact:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(3, 199, 90, 0.38);
+  }
+
+  .naver-map-cta--compact:focus-visible {
+    outline: 2px solid var(--accent, #c9a96e);
+    outline-offset: 3px;
+  }
+
+  .naver-map-cta__btn-n--sm {
+    width: 1.35rem;
+    height: 1.35rem;
+    border-radius: 5px;
+    font-size: 0.65rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.2);
+    font-weight: 900;
+  }
+
+  .naver-map-cta__arrow--sm {
+    opacity: 0.9;
+    margin-left: 0.05rem;
+  }
+
+  @media (max-width: 480px) {
+    .naver-map-cta--card {
+      flex-direction: column;
+    }
+
+    .naver-map-cta__graphic {
+      width: 100%;
+      height: 100px;
+    }
+  }
+</style>

@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { CATEGORIES, CLINIC_INFO, NAVER_MAP_SEARCH_URL } from '../consts';
+import NaverMapCta from '../components/NaverMapCta.astro';
+import { CATEGORIES, CLINIC_INFO } from '../consts';
 ---
 
 <Layout title="온라인 상담" description="에스리본 클리닉 온라인 상담 신청 — 전문 의료진이 직접 답변합니다.">
@@ -93,7 +94,7 @@ import { CATEGORIES, CLINIC_INFO, NAVER_MAP_SEARCH_URL } from '../consts';
             </li>
           </ul>
           <div class="consult-map-links">
-            <a href={NAVER_MAP_SEARCH_URL} target="_blank" rel="noopener noreferrer" class="map-link naver">네이버 지도에서 보기</a>
+            <NaverMapCta variant="compact" />
           </div>
         </div>
 
@@ -115,19 +116,6 @@ import { CATEGORIES, CLINIC_INFO, NAVER_MAP_SEARCH_URL } from '../consts';
   .consult-map-links {
     margin-top: 1rem;
   }
-
-  .map-link {
-    display: inline-block;
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    font-size: 0.82rem;
-    font-weight: 700;
-    text-align: center;
-    text-decoration: none;
-    transition: opacity 0.15s;
-  }
-  .map-link:hover { opacity: 0.8; }
-  .map-link.naver { background: #03c75a; color: white; }
 
   .consult-info-list small {
     font-size: 0.78rem;

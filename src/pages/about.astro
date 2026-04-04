@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { CLINIC_INFO, NAVER_MAP_SEARCH_URL } from '../consts';
+import NaverMapCta from '../components/NaverMapCta.astro';
+import { CLINIC_INFO } from '../consts';
 ---
 
 <Layout title="클리닉 소개" description="에스리본 클리닉 소개 — 전문 의료진, 진료 철학, 클리닉 소식">
@@ -72,24 +73,7 @@ import { CLINIC_INFO, NAVER_MAP_SEARCH_URL } from '../consts';
           </div>
         </div>
         <div class="location-map">
-          <a
-            href={NAVER_MAP_SEARCH_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="location-map-card"
-          >
-            <div class="location-map-card-visual" aria-hidden="true">
-              <svg class="location-map-pin" width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z" fill="currentColor"/>
-              </svg>
-              <span class="location-map-fake-ui"></span>
-            </div>
-            <div class="location-map-card-text">
-              <strong class="location-map-card-title">네이버 지도에서 위치 보기</strong>
-              <span class="location-map-card-desc">클릭 시 네이버 지도가 새 창에서 열립니다.</span>
-            </div>
-            <span class="location-map-card-cta">열기 →</span>
-          </a>
+          <NaverMapCta variant="card" />
         </div>
       </div>
     </section>
@@ -267,87 +251,6 @@ import { CLINIC_INFO, NAVER_MAP_SEARCH_URL } from '../consts';
     font-size: 0.9rem;
     margin: 0;
     line-height: 1.7;
-  }
-
-  .location-map-card {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1.25rem 1.35rem;
-    border-radius: 16px;
-    border: 1px solid var(--rule);
-    background: linear-gradient(145deg, #f6faf7 0%, var(--surface) 55%, var(--color-gold-light) 100%);
-    text-decoration: none;
-    color: inherit;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-    transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
-  }
-
-  .location-map-card:hover {
-    border-color: #03c75a;
-    box-shadow: 0 8px 28px rgba(3, 199, 90, 0.12);
-    transform: translateY(-1px);
-  }
-
-  .location-map-card:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 3px;
-  }
-
-  .location-map-card-visual {
-    flex-shrink: 0;
-    width: 88px;
-    height: 72px;
-    border-radius: 12px;
-    background: linear-gradient(160deg, #e8f5ee 0%, #d4eadc 100%);
-    border: 1px solid rgba(3, 199, 90, 0.25);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .location-map-pin {
-    color: #03c75a;
-    opacity: 0.95;
-  }
-
-  .location-map-fake-ui {
-    position: absolute;
-    inset: 6px;
-    border-radius: 8px;
-    border: 1px dashed rgba(3, 199, 90, 0.2);
-    pointer-events: none;
-  }
-
-  .location-map-card-text {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-  }
-
-  .location-map-card-title {
-    font-size: 1rem;
-    font-weight: 800;
-    color: var(--text);
-    letter-spacing: -0.02em;
-  }
-
-  .location-map-card-desc {
-    font-size: 0.78rem;
-    color: var(--t2);
-    line-height: 1.55;
-  }
-
-  .location-map-card-cta {
-    flex-shrink: 0;
-    font-size: 0.88rem;
-    font-weight: 800;
-    color: #03c75a;
-    white-space: nowrap;
   }
 
   @media (max-width: 768px) {
