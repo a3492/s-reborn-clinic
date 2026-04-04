@@ -187,15 +187,24 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
     box-sizing: border-box;
   }
 
+  /* design.css .hero-inner 의 2열 grid 를 반드시 덮어씀 */
   .hero-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    width: 100%;
     max-width: min(700px, 100%);
     margin: 0 auto;
     padding-inline: 0;
     box-sizing: border-box;
+    gap: 0;
+    grid-template-columns: none;
   }
 
   .hero-badge {
     display: inline-block;
+    align-self: center;
     margin-bottom: 1.25rem;
     padding: 0.35rem 1rem;
     border-radius: 999px;
@@ -208,17 +217,17 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
   }
 
   .hero-title {
-    /* 한 문장 통째로 한 줄 — 줄바꿈 이슈 반복 방지 */
-    white-space: nowrap;
-    font-size: clamp(0.68rem, 1.85vw + 0.52rem, 2.75rem);
+    font-size: clamp(1.15rem, 2.2vw + 0.85rem, 2.75rem);
     font-weight: 800;
     letter-spacing: -0.045em;
     color: var(--text);
-    line-height: 1.2;
-    margin: 0 auto 1.25rem;
+    line-height: 1.25;
+    margin: 0 0 1.25rem;
     max-width: 100%;
+    width: 100%;
     word-break: keep-all;
-    overflow-wrap: normal;
+    overflow-wrap: break-word;
+    text-wrap: balance;
   }
 
   .hero-desc {
@@ -226,6 +235,9 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
     color: var(--t2);
     line-height: 1.75;
     margin: 0 0 2rem;
+    max-width: 560px;
+    width: 100%;
+    text-align: center;
   }
 
   .hero-actions {
@@ -234,6 +246,7 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
     align-items: center;
     justify-content: center;
     flex-wrap: wrap;
+    width: 100%;
   }
 
   .hero-consult-link {
