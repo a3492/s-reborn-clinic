@@ -2,6 +2,7 @@ import rss from '@astrojs/rss';
 import type { APIRoute } from 'astro';
 import { getCollection } from 'astro:content';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+import { postPermalink } from '../lib/academy';
 
 export const GET: APIRoute = async (context) => {
   const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort(
@@ -16,7 +17,7 @@ export const GET: APIRoute = async (context) => {
       title: post.data.title,
       pubDate: post.data.date,
       description: post.data.description,
-      link: `/blog/${post.id}/`,
+      link: postPermalink(post),
     })),
     customData: '<language>ko-kr</language>',
     trailingSlash: true,

@@ -1,0 +1,139 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+import {
+	ACADEMY_PUBLIC_PATH,
+	ACADEMY_SECTIONS,
+	filterAcademyBySection,
+	postPermalink,
+	sortAcademyPosts,
+	type AcademySectionId,
+} from '../lib/academy';
+import '../styles/academy.css';
+
+interface Props {
+	section: AcademySectionId;
+}
+
+const { section } = Astro.props;
+const meta = ACADEMY_SECTIONS.find((s) => s.id === section)!;
+const all = await getCollection('blog', ({ data }) => !data.draft);
+const posts = filterAcademyBySection(all, section);
+
+/** frontmatter `series` 로 묶어 표시 — 한 섹션에 시리즈·단편이 섞일 때 누락처럼 보이는 것을 방지 */
+const SERIES_LABELS: Record<string, string> = {
+	'paper-writing-tools': '논문 제작 툴 시리즈 (5부작)',
+};
+
+const seriesKeys: string[] = [];
+const bySeries = new Map<string, typeof posts>();
+const noSeries: typeof posts = [];
+
+for (const p of posts) {
+	const key = p.data.series;
+	if (key) {
+		if (!bySeries.has(key)) {
+			bySeries.set(key, []);
+			seriesKeys.push(key);
+		}
+		bySeries.get(key)!.push(p);
+	} else {
+		noSeries.push(p);
+	}
+}
+
+seriesKeys.sort((a, b) => {
+	if (a === 'paper-writing-tools') return -1;
+	if (b === 'paper-writing-tools') return 1;
+	return a.localeCompare(b);
+});
+
+for (const key of seriesKeys) {
+	const arr = bySeries.get(key);
+	if (!arr) continue;
+	arr.sort((a, b) => {
+		const so = (a.data.series_order ?? 0) - (b.data.series_order ?? 0);
+		if (so !== 0) return so;
+		return b.data.date.valueOf() - a.data.date.valueOf();
+	});
+}
+
+noSeries.sort(sortAcademyPosts);
+
+function seriesLabel(id: string): string {
+	return SERIES_LABELS[id] ?? id;
+}
+---
+
+<Layout
+	title={`${meta.label} — Doctor AI Academy`}
+	description={meta.blurb}
+>
+	<div class="academy-hub academy-section-page">
+		<a class="academy-back" href={`${ACADEMY_PUBLIC_PATH}/`}>← Doctor AI Academy</a>
+
+		<header class="academy-hero">
+			<span class="academy-eyebrow" aria-hidden="true">{meta.icon} {meta.label}</span>
+			<h1>{meta.label}</h1>
+			<p class="academy-lead">{meta.blurb}</p>
+		</header>
+
+		<h2 class="academy-block-title">글 목록 ({posts.length}편)</h2>
+		<p class="academy-section-list-hint">시리즈 글은 묶음으로 표시됩니다. URL로 직접 들어와도 동일한 목록이 보여야 합니다.</p>
+
+		{
+			posts.length === 0 ? (
+				<p class="academy-empty">이 섹션에 공개된 글이 아직 없습니다.</p>
+			) : (
+				<div class="academy-post-groups">
+					{seriesKeys.map((key) => {
+						const group = bySeries.get(key);
+						if (!group?.length) return null;
+						return (
+							<div class="academy-series-block">
+								<h3 class="academy-series-title">{seriesLabel(key)}</h3>
+								<div class="academy-post-list">
+									{group.map((post) => (
+										<a class="academy-post-row" href={postPermalink(post)}>
+											<span class="academy-badge">{meta.label}</span>
+											<p class="academy-post-row-title">{post.data.title}</p>
+											<time class="academy-post-row-meta" datetime={post.data.date.toISOString()}>
+												{new Intl.DateTimeFormat('ko-KR', {
+													year: 'numeric',
+													month: 'short',
+													day: 'numeric',
+												}).format(post.data.date)}
+											</time>
+										</a>
+									))}
+								</div>
+							</div>
+						);
+					})}
+					{
+						noSeries.length > 0 && (
+							<div class="academy-series-block">
+								{seriesKeys.length > 0 && <h3 class="academy-series-title">기타 글</h3>}
+								<div class="academy-post-list">
+									{noSeries.map((post) => (
+										<a class="academy-post-row" href={postPermalink(post)}>
+											<span class="academy-badge">{meta.label}</span>
+											<p class="academy-post-row-title">{post.data.title}</p>
+											<time class="academy-post-row-meta" datetime={post.data.date.toISOString()}>
+												{new Intl.DateTimeFormat('ko-KR', {
+													year: 'numeric',
+													month: 'short',
+													day: 'numeric',
+												}).format(post.data.date)}
+											</time>
+										</a>
+									))}
+								</div>
+							</div>
+						)
+					}
+				</div>
+			)
+		}
+	</div>
+</Layout>

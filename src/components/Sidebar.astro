@@ -1,5 +1,6 @@
 ---
 import { CATEGORIES } from '../consts';
+import { ACADEMY_PUBLIC_PATH } from '../lib/academy-constants';
 import { BLOG_PILLAR_NAV, blogCategoryShortcutLabel } from '../data/blog-nav';
 
 interface Props {
@@ -56,7 +57,7 @@ const allClear = onBlogRoot && !currentCat && !currentPillar && !currentQ;
   <div class="sidebar-widget">
     <h2 class="sidebar-title">Doctor AI Academy</h2>
     <p class="sidebar-lead">의료진용 AI 시리즈(Fundamentals·Prompts·Cases·Tools). 일반 블로그 글과 URL이 다릅니다.</p>
-    <a class="sidebar-procedures-link" href="/doctor-ai/">Academy 허브로 이동 →</a>
+    <a class="sidebar-procedures-link" href={`${ACADEMY_PUBLIC_PATH}/`}>Academy 허브로 이동 →</a>
   </div>
 
   <div class="sidebar-widget">

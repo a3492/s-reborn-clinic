@@ -1,11 +1,13 @@
-# 구 블로그 URL → 캐논 /doctor-ai/ (B-안 2)
-/blog/doctor-ai/*  /doctor-ai/:splat  301
+# 구 URL → 캐논 /doctor-ai-academy/
+/blog/doctor-ai/*       /doctor-ai-academy/:splat  301
+/doctor-ai/*           /doctor-ai-academy/:splat  301
 
 # 슬래시 없이 들어온 주요 경로 → 캐논 URL (검색 스니펫·구버전 링크 보정)
-/blog  /blog/ 308
-/procedures  /procedures/ 308
-/consult  /consult/ 308
-/about  /about/ 308
-/doctor-ai  /doctor-ai/ 308
-/privacy  /privacy/ 308
-/terms  /terms/ 308
+/blog           /blog/           308
+/procedures     /procedures/     308
+/consult        /consult/        308
+/about          /about/          308
+/doctor-ai      /doctor-ai-academy/  301
+/doctor-ai-academy  /doctor-ai-academy/  308
+/privacy        /privacy/        308
+/terms          /terms/          308

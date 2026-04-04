@@ -1,6 +1,13 @@
 import type { CollectionEntry } from 'astro:content';
 import type { AcademySectionId } from './academy-constants';
+import {
+	ACADEMY_CONTENT_ID_PREFIX,
+	ACADEMY_LEGACY_CONTENT_PREFIX,
+	ACADEMY_PUBLIC_PATH,
+} from './academy-constants';
+
 export type { AcademySectionId } from './academy-constants';
+export { ACADEMY_PUBLIC_PATH, ACADEMY_CONTENT_ID_PREFIX } from './academy-constants';
 
 export const ACADEMY_SECTIONS: {
 	id: AcademySectionId;
@@ -34,23 +41,29 @@ export const ACADEMY_SECTIONS: {
 	},
 ];
 
-/** Doctor AI Academy 전용 URL(/doctor-ai/...)으로 노출되는 블로그 글 */
+/** Doctor AI Academy 전용 URL으로 노출되는 블로그 글 */
 export function isAcademyBlogPost(post: CollectionEntry<'blog'>): boolean {
 	if (post.data.category === 'doctor-ai') return true;
-	if (post.id.startsWith('doctor-ai/')) return true;
+	if (post.id.startsWith(ACADEMY_CONTENT_ID_PREFIX)) return true;
+	if (post.id.startsWith(ACADEMY_LEGACY_CONTENT_PREFIX)) return true;
 	return false;
 }
 
-/** /doctor-ai/[...slug] 의 params.slug (post.id 가 doctor-ai/ 로 시작하면 접두 제거) */
+/** `ACADEMY_PUBLIC_PATH/[...slug]` 의 params.slug */
 export function academySlugFromPostId(postId: string): string {
-	if (postId.startsWith('doctor-ai/')) return postId.slice('doctor-ai/'.length);
+	if (postId.startsWith(ACADEMY_CONTENT_ID_PREFIX)) {
+		return postId.slice(ACADEMY_CONTENT_ID_PREFIX.length);
+	}
+	if (postId.startsWith(ACADEMY_LEGACY_CONTENT_PREFIX)) {
+		return postId.slice(ACADEMY_LEGACY_CONTENT_PREFIX.length);
+	}
 	return postId;
 }
 
 /** 사이트 내 글 permalink (트레일링 슬래시 포함) */
 export function postPermalink(post: CollectionEntry<'blog'>): string {
 	if (isAcademyBlogPost(post)) {
-		return `/doctor-ai/${academySlugFromPostId(post.id)}/`;
+		return `${ACADEMY_PUBLIC_PATH}/${academySlugFromPostId(post.id)}/`;
 	}
 	return `/blog/${post.id}/`;
 }

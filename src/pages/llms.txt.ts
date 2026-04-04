@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { CLINIC_INFO, SITE_TITLE } from '../consts';
+import { ACADEMY_PUBLIC_PATH } from '../lib/academy-constants';
 
 /**
  * llms.txt — LLM·답변 엔진이 사이트 구조와 정책을 빠르게 파악하도록 안내.
@@ -28,7 +29,7 @@ export const GET: APIRoute = ({ site }) => {
 - [홈](${base}/)
 - [시술 안내](${base}/procedures/)
 - [블로그](${base}/blog/)
-- [Doctor AI Academy](${base}/doctor-ai/) (의료진용 AI 학습 시리즈)
+- [Doctor AI Academy](${base}${ACADEMY_PUBLIC_PATH}/) (의료진용 AI 학습 시리즈)
 - [온라인 상담](${base}/consult/)
 - [클리닉 소개](${base}/about/)
 - [개인정보처리방침](${base}/privacy/)

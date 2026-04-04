@@ -1,0 +1,250 @@
+/* Doctor AI Academy 허브·섹션 목록 — design.css 토큰 사용 */
+
+.academy-hub {
+	max-width: 960px;
+	margin: 0 auto;
+	padding: 1.5rem 0 3.5rem;
+}
+
+.academy-hero {
+	padding: 1.75rem 1.25rem 2rem;
+	border: 1px solid var(--rule);
+	border-radius: var(--radius-lg);
+	background: var(--surface);
+	box-shadow: var(--shadow-sm);
+	margin-bottom: 2rem;
+	border-bottom: 3px solid var(--accent);
+}
+
+.academy-eyebrow {
+	display: inline-block;
+	margin-bottom: 0.65rem;
+	padding: 0.2rem 0.55rem;
+	font-size: 0.65rem;
+	font-weight: 800;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--t3);
+	border: 1px solid var(--rule);
+	border-radius: 6px;
+	background: var(--bg2);
+}
+
+.academy-hero h1 {
+	margin: 0 0 0.5rem;
+	font-size: clamp(1.45rem, 3.5vw, 1.85rem);
+	font-weight: 800;
+	letter-spacing: -0.02em;
+	color: var(--text);
+	line-height: 1.25;
+}
+
+.academy-lead {
+	margin: 0;
+	font-size: 0.95rem;
+	line-height: 1.65;
+	color: var(--t2);
+	max-width: 40rem;
+}
+
+.academy-back {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	margin-bottom: 1.25rem;
+	font-size: 0.85rem;
+	font-weight: 700;
+	color: var(--accent-dark);
+	text-decoration: none;
+}
+
+.academy-back:hover {
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
+.academy-section-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+	gap: 1rem;
+	margin-bottom: 2.5rem;
+}
+
+.academy-section-card {
+	display: flex;
+	flex-direction: column;
+	padding: 1.15rem 1.1rem;
+	border: 1px solid var(--rule);
+	border-radius: var(--radius-md);
+	background: var(--surface);
+	text-decoration: none;
+	color: inherit;
+	transition:
+		transform 0.2s,
+		box-shadow 0.2s;
+}
+
+.academy-section-card:hover {
+	transform: translateY(-2px);
+	box-shadow: var(--shadow-md);
+}
+
+.academy-section-card-icon {
+	font-size: 1.35rem;
+	line-height: 1;
+	margin-bottom: 0.5rem;
+}
+
+.academy-section-card h2 {
+	margin: 0 0 0.35rem;
+	font-size: 1rem;
+	font-weight: 800;
+	color: var(--text);
+}
+
+.academy-section-card p {
+	margin: 0;
+	font-size: 0.82rem;
+	line-height: 1.55;
+	color: var(--t2);
+	flex: 1;
+}
+
+.academy-section-card-cta {
+	margin-top: 0.75rem;
+	font-size: 0.78rem;
+	font-weight: 700;
+	color: var(--accent-dark);
+}
+
+.academy-block-title {
+	margin: 0 0 1rem;
+	font-size: 1.05rem;
+	font-weight: 800;
+	color: var(--text);
+}
+
+.academy-recent-meta {
+	display: block;
+	margin-top: 0.35rem;
+	font-size: 0.78rem;
+	font-weight: 600;
+	color: var(--t3);
+	letter-spacing: 0;
+}
+
+.academy-recent-hint {
+	margin: -0.35rem 0 1rem;
+	font-size: 0.82rem;
+	line-height: 1.55;
+	color: var(--t2);
+}
+
+.academy-recent-hint strong {
+	color: var(--text);
+}
+
+.academy-section-list-hint {
+	margin: -0.5rem 0 1rem;
+	font-size: 0.8rem;
+	line-height: 1.5;
+	color: var(--t3);
+}
+
+.academy-series-title {
+	margin: 1.25rem 0 0.65rem;
+	font-size: 0.88rem;
+	font-weight: 800;
+	color: var(--text);
+	letter-spacing: -0.01em;
+}
+
+.academy-post-groups > .academy-series-block:first-child .academy-series-title {
+	margin-top: 0;
+}
+
+.academy-post-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.65rem;
+}
+
+.academy-post-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0.35rem 0.75rem;
+	padding: 0.85rem 1rem;
+	border: 1px solid var(--rule);
+	border-radius: var(--radius-md);
+	background: var(--bg2);
+	text-decoration: none;
+	color: inherit;
+	transition: border-color 0.15s, background 0.15s;
+}
+
+.academy-post-row:hover {
+	border-color: var(--accent);
+	background: var(--surface);
+}
+
+.academy-post-row-title {
+	font-size: 0.92rem;
+	font-weight: 700;
+	color: var(--text);
+	margin: 0;
+	flex: 1 1 200px;
+}
+
+.academy-post-row-meta {
+	font-size: 0.75rem;
+	color: var(--t3);
+	white-space: nowrap;
+}
+
+.academy-badge {
+	display: inline-block;
+	padding: 0.12rem 0.45rem;
+	font-size: 0.65rem;
+	font-weight: 800;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--accent-dark);
+	background: rgba(192, 153, 94, 0.15);
+	border-radius: 6px;
+}
+
+.academy-empty {
+	padding: 2rem 1rem;
+	text-align: center;
+	color: var(--t3);
+	font-size: 0.9rem;
+	border: 1px dashed var(--rule);
+	border-radius: var(--radius-md);
+}
+
+.academy-footer-note {
+	margin-top: 2rem;
+	font-size: 0.85rem;
+	color: var(--t3);
+}
+
+.academy-footer-note a {
+	color: var(--accent-dark);
+	font-weight: 700;
+	text-decoration: none;
+}
+
+.academy-footer-note a:hover {
+	text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+	.academy-hub {
+		padding-top: 1rem;
+	}
+
+	.academy-hero {
+		padding: 1.25rem 1rem 1.5rem;
+	}
+}

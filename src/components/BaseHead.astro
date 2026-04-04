@@ -1,5 +1,6 @@
 ---
 import { CLINIC_INFO, SITE_TITLE } from '../consts';
+import { ACADEMY_PUBLIC_PATH } from '../lib/academy-constants';
 
 interface Props {
 	title: string;
@@ -20,7 +21,9 @@ const { title, description, image, siteTitle = SITE_TITLE, ogType: ogTypeProp, j
 
 const pathNorm = Astro.url.pathname.replace(/\/$/, '') || '/';
 const afterBlog = pathNorm.startsWith('/blog/') ? pathNorm.slice(6) : '';
-const doctorAiArticle = /^\/doctor-ai\/[^/]+\/.+/.test(pathNorm);
+const doctorAiArticle = new RegExp(
+	`^${ACADEMY_PUBLIC_PATH.replace(/\//g, '\\/')}\\/[^/]+\\/.+`
+).test(pathNorm);
 const inferredOgType = afterBlog.includes('/') || doctorAiArticle ? 'article' : 'website';
 const ogType = ogTypeProp ?? inferredOgType;
 

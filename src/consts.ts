@@ -1,9 +1,12 @@
+import { ACADEMY_PUBLIC_PATH } from './lib/academy-constants';
+
 export const SITE_TITLE = '에스리본 클리닉';
 export const SITE_DESCRIPTION = '에스리본 클리닉 공식 블로그 — 시술 안내, 건강 정보, 원장 칼럼';
 export const CONTACT_EMAIL = 'a01034920591@gmail.com';
 export const KAKAO_CHANNEL_ID = '_MNGNb';
 
 // 클리닉 기본 정보
+
 export const CLINIC_INFO = {
   name: '에스리본의원',
   director: '김도위 대표원장',
@@ -39,8 +42,8 @@ export const CATEGORIES = [
   { id: 'faq',           label: 'FAQ',         description: 'Frequently Asked Questions — 자주 묻는 질문' },
   { id: 'myth',          label: 'MYTH',        description: 'Common misconceptions — 자주하는 오해' },
   { id: 'doctor-column', label: '원장 칼럼',   description: '원장의 전문 칼럼' },
-  /** 블로그 필터·배지용 — 목록은 /doctor-ai 로 분리, 사이드바에서는 별도 링크만 노출 */
-  { id: 'doctor-ai', label: 'Doctor AI Academy', description: '의료진용 AI 학습 시리즈 (/doctor-ai)' },
+  /** 블로그 필터·배지용 — 목록은 Academy 경로로 분리, 사이드바에서는 별도 링크만 노출 */
+  { id: 'doctor-ai', label: 'Doctor AI Academy', description: `의료진용 AI 학습 시리즈 (${ACADEMY_PUBLIC_PATH})` },
 ] as const;
 
 export type CategoryId = typeof CATEGORIES[number]['id'];
@@ -50,7 +53,7 @@ export const NAV_LINKS = [
   { label: '홈',         href: '/' },
   { label: '시술 안내',  href: '/procedures/' },
   { label: '블로그',     href: '/blog/' },
-  { label: 'Doctor AI',  href: '/doctor-ai/' },
+  { label: 'Doctor AI',  href: `${ACADEMY_PUBLIC_PATH}/` },
   { label: '온라인 상담', href: '/consult/' },
   { label: '소개',       href: '/about/' },
 ];

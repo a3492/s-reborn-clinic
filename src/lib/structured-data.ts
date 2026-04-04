@@ -1,4 +1,5 @@
 import { CLINIC_INFO, SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+import { ACADEMY_PUBLIC_PATH } from './academy-constants';
 
 function originOnly(site: string | URL | undefined, fallback: string): string {
   if (!site) return fallback.replace(/\/$/, '');
@@ -44,7 +45,7 @@ export function buildOrganizationAndWebSiteJsonLd(site: string | URL | undefined
         `${origin}/`,
         `${origin}/procedures/`,
         `${origin}/blog/`,
-        `${origin}/doctor-ai/`,
+        `${origin}${ACADEMY_PUBLIC_PATH}/`,
         `${origin}/consult/`,
       ],
     },

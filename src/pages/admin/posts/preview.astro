@@ -401,8 +401,11 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 
     const buildResolvedPreview = (post, settings) => {
       const cleanSlug = String(post.slug || '').trim();
+      const cat = post.category || 'uncategorized';
       const canonicalPath = cleanSlug
-        ? `/blog/${post.category || 'uncategorized'}/${cleanSlug}/`
+        ? cat === 'doctor-ai'
+          ? `/doctor-ai-academy/${cleanSlug}/`
+          : `/blog/${cat}/${cleanSlug}/`
         : '/blog/preview/';
       const canonicalUrl = absoluteUrl(post.canonical_url || canonicalPath, canonicalPath);
       const seoTitle = (post.seo_title || post.title || 'Untitled').trim();

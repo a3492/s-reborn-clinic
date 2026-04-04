@@ -1,12 +1,20 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
-import { ACADEMY_SECTIONS, isAcademyBlogPost, postPermalink } from '../../lib/academy';
+import {
+	ACADEMY_PUBLIC_PATH,
+	ACADEMY_SECTIONS,
+	isAcademyBlogPost,
+	postPermalink,
+} from '../../lib/academy';
 import '../../styles/academy.css';
 
 const all = await getCollection('blog', ({ data }) => !data.draft);
 const academyPosts = all.filter(isAcademyBlogPost).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
-const recent = academyPosts.slice(0, 5);
+/** 허브 미리보기 — 적은 수만 자르면 신규 글이 목록에서 빠져 보이는 문제가 생김 */
+const RECENT_HUB_LIMIT = 50;
+const recent = academyPosts.slice(0, RECENT_HUB_LIMIT);
+const recentTruncated = academyPosts.length > RECENT_HUB_LIMIT;
 ---
 
 <Layout
@@ -26,7 +34,7 @@ const recent = academyPosts.slice(0, 5);
 		<h2 class="academy-block-title">시작하기</h2>
 		<div class="academy-section-grid">
 			{ACADEMY_SECTIONS.map((s) => (
-				<a class="academy-section-card" href={`/doctor-ai/${s.id}/`}>
+				<a class="academy-section-card" href={`${ACADEMY_PUBLIC_PATH}/${s.id}/`}>
 					<span class="academy-section-card-icon" aria-hidden="true">
 						{s.icon}
 					</span>
@@ -37,7 +45,18 @@ const recent = academyPosts.slice(0, 5);
 			))}
 		</div>
 
-		<h2 class="academy-block-title">최근 글</h2>
+		<h2 class="academy-block-title">
+			최근 글
+			{recent.length > 0 && (
+				<span class="academy-recent-meta">
+					({recent.length}편 표시
+					{recentTruncated ? ` · 전체 ${academyPosts.length}편 중` : ''} · 날짜순)
+				</span>
+			)}
+		</h2>
+		<p class="academy-recent-hint">
+			<strong>Tools·Fundamentals</strong> 등 <strong>섹션 카드</strong>를 누르면 해당 트랙의 <strong>전체 글 목록</strong>을 볼 수 있습니다.
+		</p>
 		{
 			recent.length === 0 ? (
 				<p class="academy-empty">아직 공개된 아카데미 글이 없습니다. 콘텐츠를 추가하면 여기에 표시됩니다.</p>

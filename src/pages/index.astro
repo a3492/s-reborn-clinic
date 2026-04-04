@@ -3,7 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
 import { CATEGORIES, CLINIC_INFO } from '../consts';
 import { PROCEDURE_PILLAR_SUMMARIES } from '../data/procedure-catalog';
-import { isAcademyBlogPost, postPermalink } from '../lib/academy';
+import { ACADEMY_PUBLIC_PATH, isAcademyBlogPost, postPermalink } from '../lib/academy';
 
 const allPosts = (await getCollection('blog', ({ data }) => !data.draft))
   .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
@@ -175,7 +175,7 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
     <section class="section">
       <div class="section-header">
         <h2 class="section-title">Doctor AI Academy</h2>
-        <a href="/doctor-ai/" class="section-more">Academy 전체 →</a>
+        <a href={`${ACADEMY_PUBLIC_PATH}/`} class="section-more">Academy 전체 →</a>
       </div>
       <div class="post-grid">
         {academyPreview.map((post) => (
