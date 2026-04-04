@@ -1,0 +1,21 @@
+---
+import { getCollection, render } from 'astro:content';
+import BlogPost from '../../layouts/BlogPost.astro';
+import { academySlugFromPostId, isAcademyBlogPost } from '../../lib/academy';
+
+export async function getStaticPaths() {
+	const all = await getCollection('blog', ({ data }) => !data.draft);
+	const academy = all.filter(isAcademyBlogPost);
+	return academy.map((post) => ({
+		params: { slug: academySlugFromPostId(post.id) },
+		props: post,
+	}));
+}
+
+const post = Astro.props;
+const { Content } = await render(post);
+---
+
+<BlogPost {...post.data}>
+	<Content />
+</BlogPost>
