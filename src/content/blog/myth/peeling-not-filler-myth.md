@@ -2,6 +2,7 @@
 title: "「필링」이에요 「필러」예요? — 한 글자 차이, 시술은 우주가 다름"
 description: "발음은 비슷한데 철자가 다른 필링(피부 벗기기·재생 촉진)과 필러(채우기). 상담실에서 자주 엇갈리는 이야기를 MYTH처럼 풀어 봅니다."
 date: 2026-04-12
+pillar: "topical"
 category: "myth"
 tags: ["MYTH", "필링", "필러", "오해", "피부관리"]
 draft: false

@@ -10,6 +10,8 @@ draft: false
 
 클리닉에서 필러(대부분 **히알루론산, HA**)는 주름·꺼짐·윤곽을 보완하는 대표 주사 시술입니다. 아래는 **일반적인 안내**이며, 실제 사용 제품·층·용량·금기 여부는 반드시 **진료·상담**에서 개인별로 결정합니다.
 
+**「필링」과 「필러」**를 말로만 들어 헷갈리신다면 [MYTH: 필링이에요 필러예요?](/blog/myth/peeling-not-filler-myth/)를 먼저 보셔도 좋습니다.
+
 히알루론산 필러가 **얼굴 안을 돌아다닌다**는 말에 대한 정리는 [MYTH: 필러 이동 오해](/blog/myth/filler-migration-myth/)에서 이어서 읽으실 수 있습니다. 보톡스와의 차이·주기는 [보톡스 시술 안내](/blog/procedures/botox-natural-guide/), [보톡스 간격 FAQ](/blog/faq/botox-interval-faq/)를 참고해 주세요.
 
 ## 시술이 목표로 하는 것
