@@ -56,6 +56,7 @@
 - `design.css` `.hero-inner` grid는 **다른 페이지에서 2열 히어로 쓸 때** 클래스 분리(`hero-inner--split` 등) 검토 권장.
 
 ### 다음 작업 아이디어
+- Academy를 `s-reborn-doctor-ai-academy.pages.dev`로만 두고 클리닉 `/doctor-ai-academy/` 를 걷어낼 때: **`docs/MIGRATION_ACADEMY_EXTERNAL_DOMAIN.md`** (`_redirects` 초안·경로 목록·RSS/sitemap 주의).
 - MYTH 후속편(보톡스 “약 안 먹음” 오해) 글 작성.
 - 이용약관·개인정보처리방침 법률 검토 반영.
 - 상담 폼 `CATEGORIES`에 myth/faq 포함 여부 UX 정리.
@@ -72,4 +73,5 @@
 | 블로그 메뉴 헬퍼 | `src/data/blog-nav.ts` |
 | 콘텐츠 스키마 | `src/content.config.ts` |
 | **Doctor AI Academy 글 작성 규칙** | `docs/DOCTOR_AI_ACADEMY_CONTENT.md` |
+| **Academy 전용 도메인 마이그레이션** | `docs/MIGRATION_ACADEMY_EXTERNAL_DOMAIN.md` |
 | 구조화 데이터 | `src/lib/structured-data.ts` |
