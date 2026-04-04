@@ -16,10 +16,7 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
   <section class="hero">
     <div class="hero-inner">
       <div class="hero-badge">에스리본 클리닉</div>
-      <h1 class="hero-title">
-        <span class="hero-title-line">자연스러운 아름다움을</span>
-        <span class="hero-title-line">함께 만듭니다</span>
-      </h1>
+      <h1 class="hero-title">자연스러운 아름다움을 함께 만듭니다</h1>
       <p class="hero-desc">가정의학과 전문의 진료를 바탕으로, 과하지 않은 시술만 차분히 제안합니다.</p>
       <div class="hero-actions">
         <a href="/procedures" class="btn btn-primary btn-lg">시술 안내 보기</a>
@@ -167,8 +164,10 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
   }
 
   .hero-inner {
-    max-width: 700px;
+    max-width: min(700px, 100%);
     margin: 0 auto;
+    padding-inline: clamp(0.25rem, 2vw, 0.5rem);
+    box-sizing: border-box;
   }
 
   .hero-badge {
@@ -185,20 +184,17 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
   }
 
   .hero-title {
-    font-size: clamp(2rem, 5vw, 3.2rem);
+    /* 한 문장 통째로 한 줄 — 줄바꿈 이슈 반복 방지 */
+    white-space: nowrap;
+    font-size: clamp(0.68rem, 1.85vw + 0.52rem, 2.75rem);
     font-weight: 800;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.045em;
     color: var(--text);
-    line-height: 1.25;
-    margin: 0 0 1.25rem;
-    /* global.css body의 overflow-wrap: break-word가 한글 어절 중간 줄바꿈 유발 → 히어로만 차단 */
+    line-height: 1.2;
+    margin: 0 auto 1.25rem;
+    max-width: 100%;
     word-break: keep-all;
     overflow-wrap: normal;
-    line-break: strict;
-  }
-
-  .hero-title-line {
-    display: block;
   }
 
   .hero-desc {
