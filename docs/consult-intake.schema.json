@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://s-reborn-clinic.local/schemas/consult-intake.json",
+  "title": "ConsultIntake",
+  "description": "온라인 상담 다단계 인테이크 응답. Supabase consult_requests.intake_json 등에 저장.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "submittedAt",
+    "interest",
+    "history",
+    "healthFlags",
+    "expectation",
+    "scheduling",
+    "consents"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1,
+      "description": "스키마 버전. 마이그레이션 시 증가."
+    },
+    "submittedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "클라이언트 제출 시각 ISO 8601"
+    },
+    "locale": {
+      "type": "string",
+      "const": "ko-KR"
+    },
+    "stepsSeen": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "사용자가 거친 스텝 id 순서 (분석·이탈률용)"
+    },
+    "interest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["areas"],
+      "properties": {
+        "areas": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "wrinkle_elasticity",
+              "pigment",
+              "acne_scar",
+              "pore_texture",
+              "lifting",
+              "botox_filler",
+              "hair_removal",
+              "body",
+              "other"
+            ]
+          },
+          "minItems": 1
+        },
+        "otherNote": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "areas에 other 포함 시"
+        }
+      }
+    },
+    "history": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["concernDuration", "priorProcedure"],
+      "properties": {
+        "concernDuration": {
+          "type": "string",
+          "enum": ["lt_1m", "1_6m", "6_12m", "gt_12m", "unsure"]
+        },
+        "priorProcedure": {
+          "type": "string",
+          "enum": ["none", "yes_same_area", "yes_other", "unsure"]
+        },
+        "priorProcedureNote": {
+          "type": "string",
+          "maxLength": 200
+        }
+      }
+    },
+    "healthFlags": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "진단 아님. 상담 시 확인용 플래그.",
+      "required": [
+        "pregnancyPossible",
+        "anticoagulantOrSteroid",
+        "recentProcedure2w",
+        "keloidTendency",
+        "severeAllergy"
+      ],
+      "properties": {
+        "pregnancyPossible": { "type": "string", "enum": ["yes", "no", "unsure", "skip"] },
+        "anticoagulantOrSteroid": { "type": "string", "enum": ["yes", "no", "unsure", "skip"] },
+        "recentProcedure2w": { "type": "string", "enum": ["yes", "no", "unsure", "skip"] },
+        "keloidTendency": { "type": "string", "enum": ["yes", "no", "unsure", "skip"] },
+        "severeAllergy": { "type": "string", "enum": ["yes", "no", "unsure", "skip"] },
+        "allergyNote": { "type": "string", "maxLength": 200 },
+        "medicationNote": { "type": "string", "maxLength": 200 }
+      }
+    },
+    "skinAndLife": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "skinType": {
+          "type": "string",
+          "enum": ["dry", "oily", "combination", "normal", "unsure", "skip"]
+        },
+        "sunExposure": {
+          "type": "string",
+          "enum": ["low", "moderate", "high", "unsure", "skip"]
+        },
+        "sleepStress": {
+          "type": "string",
+          "enum": ["low", "moderate", "high", "unsure", "skip"]
+        }
+      }
+    },
+    "expectation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["naturalToDramatic"],
+      "properties": {
+        "naturalToDramatic": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "description": "1=최대한 자연스럽게, 5=변화가 분명하게"
+        },
+        "photoConsultInterest": {
+          "type": "string",
+          "enum": ["yes", "no", "maybe", "skip"]
+        }
+      }
+    },
+    "scheduling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["visitWindow", "contactWindows", "contactChannel"],
+      "properties": {
+        "visitWindow": {
+          "type": "string",
+          "enum": ["this_week", "two_weeks", "within_month", "undecided", "skip"]
+        },
+        "contactWindows": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["morning", "lunch", "afternoon", "evening"]
+          },
+          "minItems": 0,
+          "maxItems": 4
+        },
+        "contactChannel": {
+          "type": "string",
+          "enum": ["phone", "sms", "kakao", "any", "skip"]
+        }
+      }
+    },
+    "freeText": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "추가 메모 (선택)"
+    },
+    "consents": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["privacy", "nonDiagnosisDisclaimer"],
+      "properties": {
+        "privacy": { "type": "boolean", "const": true },
+        "nonDiagnosisDisclaimer": { "type": "boolean", "const": true },
+        "marketingOptional": { "type": "boolean" }
+      }
+    }
+  },
+  "$comment": "interest.areas에 other 포함 시 otherNote 권장 — 클라이언트에서 검증. 부분 저장용 페이로드는 required 완화 버전 스키마를 별도 정의할 것."
+}
