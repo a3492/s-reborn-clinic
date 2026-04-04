@@ -4,7 +4,7 @@ import Sidebar from '../../components/Sidebar.astro';
 import { getCollection } from 'astro:content';
 import { CATEGORIES, SITE_TITLE } from '../../consts';
 import { BLOG_PILLAR_NAV, BLOG_TYPE_SHORTCUTS, blogPillarLabel } from '../../data/blog-nav';
-import { isAcademyBlogPost, postPermalink } from '../../lib/academy';
+import { ACADEMY_PUBLIC_PATH, isAcademyBlogPost, postPermalink } from '../../lib/academy';
 
 const allPosts = (await getCollection('blog', ({ data }) => !data.draft))
   .filter((p) => !isAcademyBlogPost(p))
@@ -76,7 +76,7 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
           <p class="blog-menu-hint">
             영역과 유형을 함께 고르면 해당 조합의 글만 보입니다.
             <a href="/procedures/">시술 안내 전체</a>에서 4축 개요를 확인할 수 있습니다.
-            의료진용 AI 시리즈는 <a href="/doctor-ai/">Doctor AI Academy</a>에서 보실 수 있습니다.
+            의료진용 AI 시리즈는 <a href={`${ACADEMY_PUBLIC_PATH}/`}>Doctor AI Academy</a>에서 보실 수 있습니다.
           </p>
         </nav>
 
@@ -653,6 +653,17 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
   @media (max-width: 900px) {
     .blog-layout {
       flex-direction: column;
+      gap: 1rem;
+    }
+
+    /* 모바일에서 사이드바를 카드 위에 표시하되 최소 높이로 유지 */
+    .blog-layout > :global(.blog-sidebar) {
+      margin-bottom: 0.25rem;
+    }
+
+    /* Doctor AI 사이드바 위젯은 모바일에서 숨김 (공간 절약) */
+    .blog-layout > :global(.blog-sidebar .sidebar-widget:nth-child(2)) {
+      display: none;
     }
   }
 

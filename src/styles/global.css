@@ -97,11 +97,27 @@ p {
 .blog-post-shell .site-main.blog-with-sidebar .blog-post-main {
 	flex: 1;
 	min-width: 0;
+	/* global main { padding } 이중 패딩 제거 — .blog-post-prose 가 자체 패딩 보유 */
+	padding: 0;
+	width: auto;
+	max-width: 100%;
+	margin: 0;
 }
 
 @media (max-width: 900px) {
 	.blog-post-shell .site-main.blog-with-sidebar {
 		flex-direction: column;
+		gap: 0;
+	}
+
+	.blog-post-shell .site-main.blog-with-sidebar .blog-sidebar {
+		display: none;
+	}
+
+	.blog-post-shell .site-main.blog-with-sidebar .blog-post-main {
+		width: 100%;
+		max-width: 100%;
+		padding: 0;
 	}
 }
 
@@ -257,9 +273,12 @@ hr {
 }
 
 .blog-post-main {
-	width: calc(100% - 2em);
+	/* flex:1 컨텍스트 안에서 width/margin은 부모 규칙에 위임 */
+	width: 100%;
 	max-width: 100%;
 	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
 }
 
 .blog-post-hero {
@@ -486,6 +505,10 @@ hr {
 
 	.blog-post-title h1 {
 		font-size: 1.4rem;
+	}
+
+	.blog-post-shell .site-main.blog-with-sidebar {
+		padding-top: 0.75rem;
 	}
 }
 
