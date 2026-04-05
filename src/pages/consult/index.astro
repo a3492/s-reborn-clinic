@@ -1,0 +1,1438 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { CONCERN_TREE } from '../../data/concern-tree';
+import { CONSULT_QUESTIONS, COMMON_QUESTIONS } from '../../data/consult-questions';
+import { CLINIC_INFO, KAKAO_CHANNEL_ID } from '../../consts';
+
+// 클라이언트에 넘길 데이터 직렬화
+const treeJson = JSON.stringify(CONCERN_TREE);
+const questionsJson = JSON.stringify(CONSULT_QUESTIONS);
+const commonQuestionsJson = JSON.stringify(COMMON_QUESTIONS);
+const kakaoChannelUrl = `http://pf.kakao.com/${KAKAO_CHANNEL_ID}`;
+---
+
+<Layout
+  title="AI 상담 마법사"
+  description="에스리본 클리닉 AI 상담 마법사 — 고민을 선택하고 AI 분석 결과와 추천을 받아보세요."
+>
+  <div class="wizard-page">
+    <!-- 진행 상태 바 -->
+    <div class="wizard-progress-bar" id="wizard-progress-bar">
+      <div class="wizard-progress-fill" id="wizard-progress-fill"></div>
+    </div>
+
+    <div class="wizard-wrap" id="wizard-wrap">
+      <!-- Step 0: 언어 선택 -->
+      <div class="wizard-step" id="step-0" data-step="0">
+        <div class="wizard-hero">
+          <div class="wizard-badge">AI Consultation Wizard</div>
+          <h1 class="wizard-title">언어를 선택해 주세요</h1>
+          <p class="wizard-desc">Please select your preferred language</p>
+        </div>
+        <div class="lang-grid">
+          <button class="lang-card active" data-lang="ko">
+            <span class="lang-flag">🇰🇷</span>
+            <span class="lang-name">한국어</span>
+            <span class="lang-sub">Korean</span>
+          </button>
+          <button class="lang-card" data-lang="zh">
+            <span class="lang-flag">🇨🇳</span>
+            <span class="lang-name">中文</span>
+            <span class="lang-sub">Chinese · 준비중</span>
+          </button>
+          <button class="lang-card" data-lang="ja">
+            <span class="lang-flag">🇯🇵</span>
+            <span class="lang-name">日本語</span>
+            <span class="lang-sub">Japanese · 준비중</span>
+          </button>
+          <button class="lang-card" data-lang="en">
+            <span class="lang-flag">🇬🇧</span>
+            <span class="lang-name">English</span>
+            <span class="lang-sub">준비중</span>
+          </button>
+        </div>
+        <div class="lang-notice" id="lang-notice" hidden>
+          <p>해당 언어는 현재 준비 중입니다. 카카오채널 또는 WeChat으로 문의해 주세요.</p>
+          <a href={kakaoChannelUrl} target="_blank" rel="noopener noreferrer" class="btn btn-accent">카카오채널 상담 →</a>
+        </div>
+        <div class="wizard-nav">
+          <span></span>
+          <button class="btn btn-primary" id="step0-next" disabled>시작하기 →</button>
+        </div>
+      </div>
+
+      <!-- Step 1: 기본 정보 -->
+      <div class="wizard-step" id="step-1" data-step="1" hidden>
+        <div class="wizard-step-head">
+          <div class="wizard-step-num">Step 1 / 5</div>
+          <h2 class="wizard-step-title">기본 정보</h2>
+          <p class="wizard-step-desc">상담을 위해 간단한 정보를 알려주세요.</p>
+        </div>
+        <div class="wizard-card">
+          <div class="wiz-fields">
+            <div class="wiz-field">
+              <label class="wiz-label" for="w-name">이름 <span class="req">*</span></label>
+              <input class="wiz-input" id="w-name" type="text" placeholder="홍길동" autocomplete="name" />
+            </div>
+            <div class="wiz-field">
+              <label class="wiz-label" for="w-phone">연락처 <span class="req">*</span></label>
+              <input class="wiz-input" id="w-phone" type="tel" placeholder="010-0000-0000" autocomplete="tel" />
+            </div>
+            <div class="wiz-field">
+              <label class="wiz-label" for="w-age">연령대</label>
+              <select class="wiz-input" id="w-age">
+                <option value="">선택해 주세요</option>
+                <option value="10대">10대</option>
+                <option value="20대">20대</option>
+                <option value="30대">30대</option>
+                <option value="40대">40대</option>
+                <option value="50대">50대</option>
+                <option value="60대 이상">60대 이상</option>
+              </select>
+            </div>
+            <div class="wiz-field">
+              <label class="wiz-label">성별</label>
+              <div class="wiz-radio-group">
+                <label class="wiz-radio-label">
+                  <input type="radio" name="w-gender" value="여성" />
+                  <span>여성</span>
+                </label>
+                <label class="wiz-radio-label">
+                  <input type="radio" name="w-gender" value="남성" />
+                  <span>남성</span>
+                </label>
+                <label class="wiz-radio-label">
+                  <input type="radio" name="w-gender" value="선택 안 함" />
+                  <span>선택 안 함</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="wizard-nav">
+          <button class="btn btn-ghost" id="step1-back">← 이전</button>
+          <button class="btn btn-primary" id="step1-next">다음 →</button>
+        </div>
+      </div>
+
+      <!-- Step 2: 고민 선택 -->
+      <div class="wizard-step" id="step-2" data-step="2" hidden>
+        <div class="wizard-step-head">
+          <div class="wizard-step-num">Step 2 / 5</div>
+          <h2 class="wizard-step-title">고민 선택</h2>
+          <p class="wizard-step-desc">고민되는 부위와 증상을 선택해 주세요. 여러 개 선택 가능합니다.</p>
+        </div>
+
+        <!-- 선택된 항목 칩 -->
+        <div class="concern-chips" id="concern-chips" hidden>
+          <div class="concern-chips-inner" id="concern-chips-inner"></div>
+        </div>
+
+        <!-- 트리 렌더링 영역 -->
+        <div id="concern-tree-root"></div>
+
+        <div class="wizard-nav">
+          <button class="btn btn-ghost" id="step2-back">← 이전</button>
+          <button class="btn btn-primary" id="step2-next" disabled>다음 →</button>
+        </div>
+      </div>
+
+      <!-- Step 3: 추가 질문 -->
+      <div class="wizard-step" id="step-3" data-step="3" hidden>
+        <div class="wizard-step-head">
+          <div class="wizard-step-num">Step 3 / 5</div>
+          <h2 class="wizard-step-title">세부 질문</h2>
+          <p class="wizard-step-desc">더 정확한 상담을 위해 몇 가지 여쭤볼게요.</p>
+        </div>
+        <div id="questions-container"></div>
+        <div class="wizard-nav">
+          <button class="btn btn-ghost" id="step3-back">← 이전</button>
+          <button class="btn btn-primary" id="step3-next">AI 분석 요청 →</button>
+        </div>
+      </div>
+
+      <!-- Step 4: AI 분석 -->
+      <div class="wizard-step" id="step-4" data-step="4" hidden>
+        <div class="wizard-step-head">
+          <div class="wizard-step-num">Step 4 / 5</div>
+          <h2 class="wizard-step-title">AI 분석 중</h2>
+          <p class="wizard-step-desc">고민 내용을 분석하고 있습니다. 잠시만 기다려 주세요.</p>
+        </div>
+        <div id="ai-loading" class="ai-loading">
+          <div class="ai-spinner"></div>
+          <p class="ai-loading-text">에스리본 AI가 고민을 분석 중입니다...</p>
+        </div>
+        <div id="ai-result" hidden>
+          <div class="ai-result-card" id="ai-summary-card">
+            <div class="ai-result-icon">🩺</div>
+            <h3 class="ai-result-section-title">고민 요약</h3>
+            <p id="ai-summary-text" class="ai-summary-text"></p>
+          </div>
+          <div class="ai-result-card" id="ai-recommendations-card">
+            <div class="ai-result-icon">✨</div>
+            <h3 class="ai-result-section-title">추천 방향</h3>
+            <div id="ai-recommendations-list" class="ai-recs-list"></div>
+          </div>
+          <div class="ai-result-card" id="ai-cautions-card">
+            <div class="ai-result-icon">⚠️</div>
+            <h3 class="ai-result-section-title">참고 사항</h3>
+            <ul id="ai-cautions-list" class="ai-cautions-list"></ul>
+          </div>
+          <p class="ai-disclaimer">* 위 내용은 AI 기반 참고 정보로, 정확한 진단과 치료 계획은 반드시 전문 의료진과의 직접 상담을 통해 결정해야 합니다.</p>
+        </div>
+        <div class="wizard-nav" id="step4-nav" hidden>
+          <button class="btn btn-ghost" id="step4-back">← 이전</button>
+          <button class="btn btn-primary" id="step4-next">다음 단계 →</button>
+        </div>
+      </div>
+
+      <!-- Step 5: 액션 선택 -->
+      <div class="wizard-step" id="step-5" data-step="5" hidden>
+        <div class="wizard-step-head">
+          <div class="wizard-step-num">Step 5 / 5</div>
+          <h2 class="wizard-step-title">다음 단계를 선택해 주세요</h2>
+          <p class="wizard-step-desc">AI 분석 결과를 바탕으로 원하시는 방향을 선택해 주세요.</p>
+        </div>
+        <div class="action-grid">
+          <a class="action-card" id="action-kakao" href={kakaoChannelUrl} target="_blank" rel="noopener noreferrer">
+            <div class="action-card-icon">💬</div>
+            <h3 class="action-card-title">카카오채널로 상담하기</h3>
+            <p class="action-card-desc">카카오톡으로 빠르게 문의하실 수 있습니다. AI 분석 결과를 함께 보내드립니다.</p>
+            <span class="action-card-cta">채널 열기 →</span>
+          </a>
+          <button class="action-card" id="action-submit" type="button">
+            <div class="action-card-icon">📋</div>
+            <h3 class="action-card-title">상담 신청서 제출</h3>
+            <p class="action-card-desc">상담 신청서를 제출하면 의료진이 검토 후 연락드립니다. (1~2 영업일 이내)</p>
+            <span class="action-card-cta" id="action-submit-cta">신청서 제출 →</span>
+          </button>
+          <a class="action-card" href="/procedures/" target="_blank" rel="noopener noreferrer">
+            <div class="action-card-icon">🔍</div>
+            <h3 class="action-card-title">관련 시술 정보 보기</h3>
+            <p class="action-card-desc">에스리본 클리닉의 다양한 시술과 치료법에 대해 자세히 알아보세요.</p>
+            <span class="action-card-cta">시술 안내 →</span>
+          </a>
+        </div>
+        <div id="submit-result" class="submit-result" hidden></div>
+        <div class="wizard-nav">
+          <button class="btn btn-ghost" id="step5-back">← 이전</button>
+          <a class="btn btn-ghost" href="/">처음으로</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script define:vars={{ treeJson, questionsJson, commonQuestionsJson, kakaoChannelUrl }}>
+  // ── 데이터 파싱 ────────────────────────────────────────────────
+  const TREE = JSON.parse(treeJson);
+  const QUESTIONS = JSON.parse(questionsJson);
+  const COMMON_QS = JSON.parse(commonQuestionsJson);
+
+  // ── 상태 ──────────────────────────────────────────────────────
+  const state = {
+    step: 0,
+    language: 'ko',
+    name: '',
+    phone: '',
+    ageRange: '',
+    gender: '',
+    selectedConcerns: [], // leaf node ids
+    answers: {},          // { questionId: string[] }
+    aiSummary: '',
+    aiRecommendations: [],
+    aiCautions: [],
+  };
+
+  // ── 진행률 바 ─────────────────────────────────────────────────
+  const TOTAL_STEPS = 5;
+  const progressFill = document.getElementById('wizard-progress-fill');
+  function updateProgress() {
+    if (progressFill) {
+      const pct = (state.step / TOTAL_STEPS) * 100;
+      progressFill.style.width = `${pct}%`;
+    }
+  }
+
+  // ── 스텝 이동 ─────────────────────────────────────────────────
+  function goTo(n) {
+    const cur = document.getElementById(`step-${state.step}`);
+    const next = document.getElementById(`step-${n}`);
+    if (cur) cur.hidden = true;
+    if (next) next.hidden = false;
+    state.step = n;
+    updateProgress();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ── 헬퍼: 이스케이프 ─────────────────────────────────────────
+  function esc(s) {
+    return String(s ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // ────────────────────────────────────────────────────────────────
+  // STEP 0: 언어 선택
+  // ────────────────────────────────────────────────────────────────
+  const langCards = document.querySelectorAll('[data-lang]');
+  const langNotice = document.getElementById('lang-notice');
+  const step0Next = document.getElementById('step0-next');
+
+  langCards.forEach((card) => {
+    card.addEventListener('click', () => {
+      langCards.forEach((c) => c.classList.remove('active'));
+      card.classList.add('active');
+      const lang = card.dataset.lang;
+      state.language = lang;
+      if (lang !== 'ko') {
+        if (langNotice) langNotice.hidden = false;
+        if (step0Next) step0Next.disabled = true;
+      } else {
+        if (langNotice) langNotice.hidden = true;
+        if (step0Next) step0Next.disabled = false;
+      }
+    });
+  });
+
+  step0Next?.addEventListener('click', () => goTo(1));
+
+  // ────────────────────────────────────────────────────────────────
+  // STEP 1: 기본 정보
+  // ────────────────────────────────────────────────────────────────
+  document.getElementById('step1-back')?.addEventListener('click', () => goTo(0));
+  document.getElementById('step1-next')?.addEventListener('click', () => {
+    const name = document.getElementById('w-name').value.trim();
+    const phone = document.getElementById('w-phone').value.trim();
+    if (!name || !phone) {
+      alert('이름과 연락처는 필수입니다.');
+      return;
+    }
+    state.name = name;
+    state.phone = phone;
+    state.ageRange = document.getElementById('w-age').value;
+    const genderEl = document.querySelector('input[name="w-gender"]:checked');
+    state.gender = genderEl ? genderEl.value : '';
+    goTo(2);
+    renderConcernTree();
+  });
+
+  // ────────────────────────────────────────────────────────────────
+  // STEP 2: 고민 선택 (트리)
+  // ────────────────────────────────────────────────────────────────
+  function findNodeById(id, nodes) {
+    for (const n of nodes) {
+      if (n.id === id) return n;
+      if (n.children) {
+        const f = findNodeById(id, n.children);
+        if (f) return f;
+      }
+    }
+    return null;
+  }
+
+  function getPathLabels(id) {
+    const path = [];
+    function walk(nodes, target, current) {
+      for (const n of nodes) {
+        const next = [...current, n.label];
+        if (n.id === target) { path.push(...next); return true; }
+        if (n.children && walk(n.children, target, next)) return true;
+      }
+      return false;
+    }
+    walk(TREE, id, []);
+    return path;
+  }
+
+  function getPathLabel(id) {
+    return getPathLabels(id).join(' > ');
+  }
+
+  function isLeafNode(node) {
+    return !node.children || node.children.length === 0;
+  }
+
+  // 선택된 칩 렌더
+  function renderChips() {
+    const container = document.getElementById('concern-chips');
+    const inner = document.getElementById('concern-chips-inner');
+    if (!inner || !container) return;
+    if (state.selectedConcerns.length === 0) {
+      container.hidden = true;
+      return;
+    }
+    container.hidden = false;
+    inner.innerHTML = state.selectedConcerns.map((id) => {
+      const label = getPathLabel(id);
+      return `<span class="chip" data-chip-id="${esc(id)}">${esc(label)}<button type="button" class="chip-remove" data-remove-id="${esc(id)}" aria-label="제거">×</button></span>`;
+    }).join('');
+
+    inner.querySelectorAll('[data-remove-id]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const rid = btn.dataset.removeId;
+        state.selectedConcerns = state.selectedConcerns.filter((x) => x !== rid);
+        renderChips();
+        updateStep2Next();
+        // 체크박스 해제
+        const cb = document.querySelector(`input[type="checkbox"][data-node-id="${rid}"]`);
+        if (cb) cb.checked = false;
+      });
+    });
+  }
+
+  function updateStep2Next() {
+    const btn = document.getElementById('step2-next');
+    if (btn) btn.disabled = state.selectedConcerns.length === 0;
+  }
+
+  // 트리 노드 렌더 (재귀)
+  function renderLevel(nodes, depth, container) {
+    if (depth === 0) {
+      // Level 1: 카드형 버튼
+      const grid = document.createElement('div');
+      grid.className = 'concern-l1-grid';
+      nodes.forEach((node) => {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'concern-l1-card';
+        card.dataset.l1Id = node.id;
+        card.textContent = node.label;
+        if (isLeafNode(node)) {
+          card.classList.add('leaf');
+          card.addEventListener('click', () => {
+            toggleLeaf(node.id, card);
+          });
+        } else {
+          card.addEventListener('click', () => {
+            toggleL1(node, card, grid);
+          });
+        }
+        grid.appendChild(card);
+      });
+      container.appendChild(grid);
+    } else {
+      // Level 2+: 체크박스 목록
+      const list = document.createElement('div');
+      list.className = `concern-sub concern-depth-${depth}`;
+      nodes.forEach((node) => {
+        const item = document.createElement('div');
+        item.className = 'concern-sub-item';
+
+        if (isLeafNode(node)) {
+          const label = document.createElement('label');
+          label.className = 'concern-check-label';
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.dataset.nodeId = node.id;
+          cb.checked = state.selectedConcerns.includes(node.id);
+          cb.addEventListener('change', () => {
+            if (cb.checked) {
+              if (!state.selectedConcerns.includes(node.id)) {
+                state.selectedConcerns.push(node.id);
+              }
+            } else {
+              state.selectedConcerns = state.selectedConcerns.filter((x) => x !== node.id);
+            }
+            renderChips();
+            updateStep2Next();
+          });
+          const span = document.createElement('span');
+          span.textContent = node.label;
+          label.appendChild(cb);
+          label.appendChild(span);
+          item.appendChild(label);
+        } else {
+          const toggle = document.createElement('button');
+          toggle.type = 'button';
+          toggle.className = 'concern-branch-btn';
+          toggle.dataset.branchId = node.id;
+          toggle.innerHTML = `<span>${esc(node.label)}</span><span class="branch-arrow">›</span>`;
+          const subContainer = document.createElement('div');
+          subContainer.className = 'concern-sub-children';
+          subContainer.hidden = true;
+
+          toggle.addEventListener('click', () => {
+            const open = !subContainer.hidden;
+            subContainer.hidden = open;
+            toggle.classList.toggle('open', !open);
+          });
+
+          item.appendChild(toggle);
+          item.appendChild(subContainer);
+          renderLevel(node.children, depth + 1, subContainer);
+        }
+
+        list.appendChild(item);
+      });
+      container.appendChild(list);
+    }
+  }
+
+  function toggleL1(node, card, grid) {
+    // 같은 L1을 다시 클릭하면 닫기
+    const existingSub = grid.querySelector(`[data-l1-sub="${node.id}"]`);
+    if (existingSub) {
+      existingSub.remove();
+      card.classList.remove('open');
+      return;
+    }
+    // 다른 L1 서브 닫기
+    grid.querySelectorAll('[data-l1-sub]').forEach((el) => el.remove());
+    grid.querySelectorAll('.concern-l1-card.open').forEach((el) => el.classList.remove('open'));
+
+    card.classList.add('open');
+    const sub = document.createElement('div');
+    sub.dataset.l1Sub = node.id;
+    sub.className = 'concern-l1-sub';
+    renderLevel(node.children, 1, sub);
+
+    // card 바로 다음에 삽입
+    card.insertAdjacentElement('afterend', sub);
+  }
+
+  function toggleLeaf(id, card) {
+    if (state.selectedConcerns.includes(id)) {
+      state.selectedConcerns = state.selectedConcerns.filter((x) => x !== id);
+      card.classList.remove('selected');
+    } else {
+      state.selectedConcerns.push(id);
+      card.classList.add('selected');
+    }
+    renderChips();
+    updateStep2Next();
+  }
+
+  function renderConcernTree() {
+    const root = document.getElementById('concern-tree-root');
+    if (!root) return;
+    root.innerHTML = '';
+    renderLevel(TREE, 0, root);
+    renderChips();
+    updateStep2Next();
+  }
+
+  document.getElementById('step2-back')?.addEventListener('click', () => goTo(1));
+  document.getElementById('step2-next')?.addEventListener('click', () => {
+    goTo(3);
+    renderQuestions();
+  });
+
+  // ────────────────────────────────────────────────────────────────
+  // STEP 3: 추가 질문
+  // ────────────────────────────────────────────────────────────────
+  function getQuestionsForConcerns(selectedIds) {
+    const seen = new Set();
+    const result = [];
+    for (const cq of QUESTIONS) {
+      if (cq.concernIds.some((id) => selectedIds.includes(id))) {
+        for (const q of cq.questions) {
+          if (!seen.has(q.id)) {
+            seen.add(q.id);
+            result.push(q);
+          }
+        }
+      }
+    }
+    for (const q of COMMON_QS) {
+      if (!seen.has(q.id)) {
+        seen.add(q.id);
+        result.push(q);
+      }
+    }
+    return result;
+  }
+
+  function renderQuestions() {
+    const container = document.getElementById('questions-container');
+    if (!container) return;
+    const questions = getQuestionsForConcerns(state.selectedConcerns);
+    container.innerHTML = '';
+
+    questions.forEach((q) => {
+      const card = document.createElement('div');
+      card.className = 'wizard-card q-card';
+
+      const label = document.createElement('p');
+      label.className = 'q-text';
+      label.textContent = q.text;
+      card.appendChild(label);
+
+      if (q.type === 'text') {
+        const ta = document.createElement('textarea');
+        ta.className = 'wiz-input wiz-textarea';
+        ta.rows = 4;
+        ta.placeholder = '자유롭게 입력해 주세요.';
+        ta.value = (state.answers[q.id] || []).join('');
+        ta.addEventListener('input', () => {
+          state.answers[q.id] = ta.value ? [ta.value] : [];
+        });
+        card.appendChild(ta);
+      } else if (q.type === 'single' && q.options) {
+        const optWrap = document.createElement('div');
+        optWrap.className = 'q-options';
+        q.options.forEach((opt) => {
+          const lbl = document.createElement('label');
+          lbl.className = 'q-option-label';
+          const input = document.createElement('input');
+          input.type = 'radio';
+          input.name = `q-${q.id}`;
+          input.value = opt;
+          input.checked = (state.answers[q.id] || []).includes(opt);
+          input.addEventListener('change', () => {
+            state.answers[q.id] = [opt];
+          });
+          const span = document.createElement('span');
+          span.textContent = opt;
+          lbl.appendChild(input);
+          lbl.appendChild(span);
+          optWrap.appendChild(lbl);
+        });
+        card.appendChild(optWrap);
+      } else if (q.type === 'multi' && q.options) {
+        const optWrap = document.createElement('div');
+        optWrap.className = 'q-options';
+        q.options.forEach((opt) => {
+          const lbl = document.createElement('label');
+          lbl.className = 'q-option-label';
+          const input = document.createElement('input');
+          input.type = 'checkbox';
+          input.name = `q-${q.id}`;
+          input.value = opt;
+          input.checked = (state.answers[q.id] || []).includes(opt);
+          input.addEventListener('change', () => {
+            const cur = state.answers[q.id] || [];
+            if (input.checked) {
+              state.answers[q.id] = [...cur, opt];
+            } else {
+              state.answers[q.id] = cur.filter((x) => x !== opt);
+            }
+          });
+          const span = document.createElement('span');
+          span.textContent = opt;
+          lbl.appendChild(input);
+          lbl.appendChild(span);
+          optWrap.appendChild(lbl);
+        });
+        card.appendChild(optWrap);
+      }
+
+      container.appendChild(card);
+    });
+  }
+
+  document.getElementById('step3-back')?.addEventListener('click', () => goTo(2));
+  document.getElementById('step3-next')?.addEventListener('click', () => {
+    goTo(4);
+    runAiAnalysis();
+  });
+
+  // ────────────────────────────────────────────────────────────────
+  // STEP 4: AI 분석
+  // ────────────────────────────────────────────────────────────────
+  async function runAiAnalysis() {
+    const loadingEl = document.getElementById('ai-loading');
+    const resultEl = document.getElementById('ai-result');
+    const navEl = document.getElementById('step4-nav');
+    if (loadingEl) loadingEl.hidden = false;
+    if (resultEl) resultEl.hidden = true;
+    if (navEl) navEl.hidden = true;
+
+    try {
+      const concernLabels = state.selectedConcerns.map((id) => getPathLabel(id));
+      const res = await fetch('/api/consult-ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          concerns: concernLabels,
+          answers: state.answers,
+          language: state.language,
+        }),
+      });
+      const data = await res.json();
+      state.aiSummary = data.summary || '';
+      state.aiRecommendations = data.recommendations || [];
+      state.aiCautions = data.cautions || [];
+      renderAiResult(data);
+    } catch (err) {
+      state.aiSummary = 'AI 분석 중 오류가 발생했습니다. 상담 신청서를 제출하시면 의료진이 직접 검토해 드립니다.';
+      state.aiRecommendations = [];
+      state.aiCautions = [];
+      renderAiResult({ summary: state.aiSummary, recommendations: [], cautions: [] });
+    } finally {
+      if (loadingEl) loadingEl.hidden = true;
+      if (resultEl) resultEl.hidden = false;
+      if (navEl) navEl.hidden = false;
+    }
+  }
+
+  function renderAiResult(data) {
+    const summaryEl = document.getElementById('ai-summary-text');
+    const recsList = document.getElementById('ai-recommendations-list');
+    const cautionsList = document.getElementById('ai-cautions-list');
+
+    if (summaryEl) summaryEl.textContent = data.summary || '-';
+
+    if (recsList) {
+      if (Array.isArray(data.recommendations) && data.recommendations.length > 0) {
+        recsList.innerHTML = data.recommendations.map((rec) => {
+          if (typeof rec === 'string') {
+            return `<div class="ai-rec-item"><p>${esc(rec)}</p></div>`;
+          }
+          return `<div class="ai-rec-item">
+            <strong class="ai-rec-title">${esc(rec.title || '')}</strong>
+            <p class="ai-rec-desc">${esc(rec.description || '')}</p>
+            ${rec.reasoning ? `<p class="ai-rec-reason">이유: ${esc(rec.reasoning)}</p>` : ''}
+          </div>`;
+        }).join('');
+      } else {
+        recsList.innerHTML = '<p>해당 고민에 맞는 추천 방향은 직접 상담을 통해 안내드리겠습니다.</p>';
+      }
+    }
+
+    if (cautionsList) {
+      if (Array.isArray(data.cautions) && data.cautions.length > 0) {
+        cautionsList.innerHTML = data.cautions.map((c) => `<li>${esc(c)}</li>`).join('');
+      } else {
+        cautionsList.innerHTML = '<li>자세한 사항은 내원 상담 시 안내해 드립니다.</li>';
+      }
+    }
+  }
+
+  document.getElementById('step4-back')?.addEventListener('click', () => goTo(3));
+  document.getElementById('step4-next')?.addEventListener('click', () => goTo(5));
+
+  // ────────────────────────────────────────────────────────────────
+  // STEP 5: 액션 선택
+  // ────────────────────────────────────────────────────────────────
+  document.getElementById('step5-back')?.addEventListener('click', () => goTo(4));
+
+  document.getElementById('action-submit')?.addEventListener('click', async () => {
+    const btn = document.getElementById('action-submit');
+    const cta = document.getElementById('action-submit-cta');
+    const resultEl = document.getElementById('submit-result');
+    if (btn) btn.disabled = true;
+    if (cta) cta.textContent = '제출 중...';
+
+    // preferred contact 추출
+    const preferredContact = (state.answers['common-contact-method'] || [])[0] || '';
+
+    try {
+      const res = await fetch('/api/consult-submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: state.name,
+          phone: state.phone,
+          ageRange: state.ageRange,
+          gender: state.gender,
+          language: state.language,
+          concerns: state.selectedConcerns.map((id) => ({
+            id,
+            label: getPathLabel(id),
+          })),
+          answers: state.answers,
+          aiSummary: state.aiSummary,
+          aiRecommendations: state.aiRecommendations,
+          preferredContact,
+        }),
+      });
+      if (res.ok) {
+        if (resultEl) {
+          resultEl.hidden = false;
+          resultEl.dataset.state = 'success';
+          resultEl.textContent = '상담 신청이 완료되었습니다! 1~2 영업일 이내에 연락드리겠습니다.';
+        }
+        if (btn) btn.disabled = true;
+        if (cta) cta.textContent = '제출 완료 ✓';
+      } else {
+        throw new Error('서버 오류');
+      }
+    } catch {
+      if (resultEl) {
+        resultEl.hidden = false;
+        resultEl.dataset.state = 'error';
+        resultEl.textContent = '제출 중 오류가 발생했습니다. 카카오채널로 문의해 주세요.';
+      }
+      if (btn) btn.disabled = false;
+      if (cta) cta.textContent = '다시 시도 →';
+    }
+  });
+
+  // ── 초기화 ────────────────────────────────────────────────────
+  updateProgress();
+</script>
+
+<style>
+  /* ── 페이지 레이아웃 ───────────────────────────────────────── */
+  .wizard-page {
+    min-height: 80vh;
+  }
+
+  .wizard-progress-bar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    height: 4px;
+    background: var(--rule);
+  }
+
+  .wizard-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-dark));
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 0%;
+  }
+
+  .wizard-wrap {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 2.5rem var(--page-inline) 4rem;
+  }
+
+  /* ── 스텝 공통 ─────────────────────────────────────────────── */
+  .wizard-hero {
+    text-align: center;
+    padding: 2.5rem 0 2rem;
+  }
+
+  .wizard-badge {
+    display: inline-block;
+    margin-bottom: 0.75rem;
+    padding: 0.28rem 0.9rem;
+    border-radius: 999px;
+    background: rgba(201, 169, 110, 0.15);
+    border: 1px solid rgba(201, 169, 110, 0.35);
+    color: var(--accent-dark);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+
+  .wizard-title {
+    font-size: clamp(1.6rem, 5vw, 2.2rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--text);
+    margin: 0 0 0.6rem;
+  }
+
+  .wizard-desc {
+    font-size: 0.95rem;
+    color: var(--t2);
+    margin: 0;
+    line-height: 1.7;
+  }
+
+  .wizard-step-head {
+    margin-bottom: 1.5rem;
+  }
+
+  .wizard-step-num {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--accent-dark);
+    margin-bottom: 0.4rem;
+  }
+
+  .wizard-step-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: var(--text);
+    margin: 0 0 0.4rem;
+  }
+
+  .wizard-step-desc {
+    font-size: 0.9rem;
+    color: var(--t2);
+    margin: 0;
+    line-height: 1.65;
+  }
+
+  .wizard-card {
+    padding: 1.25rem;
+    border: 1px solid var(--rule);
+    border-radius: 18px;
+    background: var(--surface);
+    margin-bottom: 1rem;
+  }
+
+  .wizard-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1.75rem;
+    gap: 0.75rem;
+  }
+
+  /* ── 버튼 ────────────────────────────────────────────────────── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.7rem 1.4rem;
+    border-radius: 12px;
+    font: inherit;
+    font-size: 0.92rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+    text-decoration: none;
+  }
+
+  .btn:active { transform: scale(0.97); }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(201, 169, 110, 0.3);
+  }
+  .btn-primary:hover { background: var(--accent-dark); }
+  .btn-primary:disabled {
+    background: var(--rule);
+    color: var(--t3);
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--t2);
+    border: 1px solid var(--rule);
+  }
+  .btn-ghost:hover { background: var(--bg2); }
+
+  .btn-accent {
+    background: #fee500;
+    color: #3c1e1e;
+    border-radius: 12px;
+    font-weight: 700;
+    padding: 0.65rem 1.25rem;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 0.9rem;
+  }
+
+  /* ── STEP 0: 언어 선택 ────────────────────────────────────────── */
+  .lang-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.85rem;
+    margin-bottom: 1rem;
+  }
+
+  .lang-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 1.25rem 1rem;
+    border: 2px solid var(--rule);
+    border-radius: 16px;
+    background: var(--surface);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    font: inherit;
+  }
+
+  .lang-card:hover {
+    border-color: var(--accent);
+    background: var(--bg2);
+  }
+
+  .lang-card.active {
+    border-color: var(--accent);
+    background: rgba(201, 169, 110, 0.08);
+    box-shadow: 0 0 0 3px rgba(201, 169, 110, 0.2);
+  }
+
+  .lang-flag { font-size: 2rem; }
+  .lang-name { font-size: 1.05rem; font-weight: 700; color: var(--text); }
+  .lang-sub { font-size: 0.75rem; color: var(--t3); }
+
+  .lang-notice {
+    padding: 1rem 1.25rem;
+    border-radius: 14px;
+    background: var(--bg2);
+    border: 1px solid var(--rule);
+    margin-bottom: 1rem;
+    text-align: center;
+    font-size: 0.88rem;
+    color: var(--t2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  /* ── STEP 1: 기본 정보 ────────────────────────────────────────── */
+  .wiz-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .wiz-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .wiz-label {
+    font-size: 0.83rem;
+    font-weight: 700;
+    color: var(--t2);
+  }
+
+  .req { color: var(--color-rose); }
+
+  .wiz-input {
+    padding: 0.65rem 0.9rem;
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    background: var(--bg2);
+    font: inherit;
+    font-size: 0.92rem;
+    color: var(--text);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .wiz-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(201, 169, 110, 0.15);
+    background: var(--surface);
+  }
+
+  .wiz-textarea {
+    resize: vertical;
+    min-height: 100px;
+    line-height: 1.65;
+  }
+
+  .wiz-radio-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .wiz-radio-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.88rem;
+    color: var(--text);
+    cursor: pointer;
+    padding: 0.45rem 0.75rem;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    background: var(--bg2);
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .wiz-radio-label:has(input:checked) {
+    border-color: var(--accent);
+    background: rgba(201, 169, 110, 0.1);
+  }
+
+  /* ── STEP 2: 고민 트리 ────────────────────────────────────────── */
+  .concern-chips {
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg2);
+    border-radius: 14px;
+    border: 1px solid var(--rule);
+  }
+
+  .concern-chips-inner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.3rem 0.65rem;
+    background: rgba(201, 169, 110, 0.15);
+    border: 1px solid rgba(201, 169, 110, 0.4);
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--accent-dark);
+  }
+
+  .chip-remove {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--t3);
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0;
+    display: flex;
+    align-items: center;
+  }
+  .chip-remove:hover { color: var(--color-rose); }
+
+  /* Level 1 카드 그리드 */
+  .concern-l1-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .concern-l1-card {
+    padding: 0.85rem 1rem;
+    border: 2px solid var(--rule);
+    border-radius: 14px;
+    background: var(--surface);
+    font: inherit;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    text-align: left;
+    line-height: 1.4;
+  }
+
+  .concern-l1-card:hover,
+  .concern-l1-card.open {
+    border-color: var(--accent);
+    background: rgba(201, 169, 110, 0.06);
+  }
+
+  .concern-l1-card.selected {
+    border-color: var(--accent);
+    background: rgba(201, 169, 110, 0.15);
+    box-shadow: 0 0 0 3px rgba(201, 169, 110, 0.2);
+    color: var(--accent-dark);
+  }
+
+  /* L1 서브 패널 */
+  .concern-l1-sub {
+    grid-column: 1 / -1;
+    padding: 0.75rem;
+    border: 1px solid var(--accent);
+    border-radius: 14px;
+    background: rgba(201, 169, 110, 0.04);
+    margin-top: -0.25rem;
+    margin-bottom: 0.25rem;
+  }
+
+  /* L2+ 체크박스 */
+  .concern-sub {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .concern-depth-1 { padding: 0; }
+  .concern-depth-2 { padding-left: 1rem; margin-top: 0.25rem; }
+  .concern-depth-3 { padding-left: 1.5rem; margin-top: 0.2rem; }
+
+  .concern-sub-item {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .concern-check-label {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.88rem;
+    color: var(--text);
+    cursor: pointer;
+    padding: 0.35rem 0.5rem;
+    border-radius: 8px;
+    transition: background 0.12s;
+  }
+  .concern-check-label:hover { background: rgba(201, 169, 110, 0.08); }
+  .concern-check-label input[type="checkbox"] { accent-color: var(--accent); }
+
+  .concern-branch-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.4rem 0.5rem;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--t2);
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.12s, color 0.12s;
+  }
+  .concern-branch-btn:hover { background: rgba(201, 169, 110, 0.08); color: var(--text); }
+  .concern-branch-btn.open { color: var(--accent-dark); }
+  .branch-arrow {
+    font-size: 1.1rem;
+    transition: transform 0.2s;
+    display: inline-block;
+  }
+  .concern-branch-btn.open .branch-arrow { transform: rotate(90deg); }
+
+  .concern-sub-children { padding-top: 0.25rem; }
+
+  /* ── STEP 3: 질문 ─────────────────────────────────────────────── */
+  .q-card {
+    margin-bottom: 1rem;
+  }
+
+  .q-text {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0 0 0.75rem;
+    line-height: 1.55;
+  }
+
+  .q-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .q-option-label {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.88rem;
+    color: var(--text);
+    cursor: pointer;
+    padding: 0.4rem 0.6rem;
+    border-radius: 8px;
+    transition: background 0.12s;
+  }
+  .q-option-label:hover { background: rgba(201, 169, 110, 0.08); }
+  .q-option-label input { accent-color: var(--accent); }
+
+  /* ── STEP 4: AI 분석 ─────────────────────────────────────────── */
+  .ai-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 3rem 1rem;
+  }
+
+  .ai-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--rule);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.85s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .ai-loading-text {
+    font-size: 0.92rem;
+    color: var(--t2);
+    margin: 0;
+  }
+
+  .ai-result-card {
+    padding: 1.25rem;
+    border: 1px solid var(--rule);
+    border-radius: 18px;
+    background: var(--surface);
+    margin-bottom: 1rem;
+  }
+
+  .ai-result-icon {
+    font-size: 1.4rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .ai-result-section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0 0 0.75rem;
+  }
+
+  .ai-summary-text {
+    font-size: 0.92rem;
+    color: var(--t2);
+    line-height: 1.75;
+    margin: 0;
+  }
+
+  .ai-recs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .ai-rec-item {
+    padding: 0.85rem 1rem;
+    border-radius: 12px;
+    background: var(--bg2);
+    border-left: 3px solid var(--accent);
+  }
+
+  .ai-rec-title {
+    display: block;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.3rem;
+  }
+
+  .ai-rec-desc {
+    font-size: 0.88rem;
+    color: var(--t2);
+    margin: 0 0 0.3rem;
+    line-height: 1.65;
+  }
+
+  .ai-rec-reason {
+    font-size: 0.8rem;
+    color: var(--t3);
+    margin: 0;
+    font-style: italic;
+  }
+
+  .ai-cautions-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .ai-cautions-list li {
+    font-size: 0.88rem;
+    color: var(--t2);
+    line-height: 1.65;
+    padding-left: 1.2rem;
+    position: relative;
+  }
+
+  .ai-cautions-list li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .ai-disclaimer {
+    font-size: 0.78rem;
+    color: var(--t3);
+    line-height: 1.6;
+    margin: 0;
+    padding: 0.75rem 1rem;
+    background: var(--bg2);
+    border-radius: 10px;
+    border: 1px solid var(--rule);
+  }
+
+  /* ── STEP 5: 액션 ─────────────────────────────────────────────── */
+  .action-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .action-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 1.25rem;
+    border: 2px solid var(--rule);
+    border-radius: 18px;
+    background: var(--surface);
+    text-decoration: none;
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    color: var(--text);
+  }
+
+  .action-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 4px 16px rgba(201, 169, 110, 0.15);
+    background: rgba(201, 169, 110, 0.04);
+  }
+
+  .action-card:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .action-card-icon { font-size: 1.5rem; margin-bottom: 0.25rem; }
+
+  .action-card-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+  }
+
+  .action-card-desc {
+    font-size: 0.85rem;
+    color: var(--t2);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  .action-card-cta {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--accent-dark);
+    margin-top: 0.35rem;
+  }
+
+  .submit-result {
+    padding: 0.85rem 1rem;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+
+  .submit-result[data-state="success"] {
+    background: rgba(39, 122, 75, 0.1);
+    color: #277A4B;
+    border: 1px solid rgba(39, 122, 75, 0.25);
+  }
+
+  .submit-result[data-state="error"] {
+    background: rgba(184, 66, 53, 0.1);
+    color: #B84235;
+    border: 1px solid rgba(184, 66, 53, 0.25);
+  }
+
+  /* ── 반응형 ───────────────────────────────────────────────────── */
+  @media (max-width: 600px) {
+    .lang-grid { grid-template-columns: 1fr 1fr; }
+    .wiz-fields { grid-template-columns: 1fr; }
+    .concern-l1-grid { grid-template-columns: 1fr; }
+    .wizard-nav { flex-direction: column-reverse; }
+    .wizard-nav .btn { width: 100%; }
+  }
+</style>

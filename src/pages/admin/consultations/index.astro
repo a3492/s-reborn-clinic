@@ -1,0 +1,242 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout
+  title="AI 상담 관리"
+  pageTitle="AI 상담 위자드 — 신청 목록"
+  pageDescription="상담 위자드로 접수된 신청을 확인하고 상태를 관리합니다."
+  status="Consultations"
+>
+  <div class="admin-card pad-lg">
+    <div class="admin-actions-row">
+      <div>
+        <h2 class="admin-section-title">상담 신청 목록</h2>
+        <p class="admin-section-desc">AI 상담 위자드를 통해 접수된 신청 내역입니다.</p>
+      </div>
+      <div style="display:flex;gap:0.5rem;align-items:center;">
+        <select id="status-filter" class="admin-select-sm">
+          <option value="">전체</option>
+          <option value="new" selected>새 상담</option>
+          <option value="reviewing">검토중</option>
+          <option value="contacted">연락완료</option>
+          <option value="completed">완료</option>
+        </select>
+      </div>
+    </div>
+
+    <p class="admin-inline-note" id="consult-message" hidden></p>
+
+    <div class="admin-table-wrap">
+      <table class="admin-table" id="consult-table">
+        <thead>
+          <tr>
+            <th>이름</th>
+            <th>연락처</th>
+            <th>연령·성별</th>
+            <th>고민 항목</th>
+            <th>선호 상담</th>
+            <th>접수일시</th>
+            <th>상태</th>
+            <th>상세</th>
+          </tr>
+        </thead>
+        <tbody id="consult-tbody">
+          <tr><td colspan="8" class="loading-cell">불러오는 중...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="admin-pagination" id="pagination" hidden>
+      <button id="prev-btn" class="admin-btn admin-btn-sm" disabled>← 이전</button>
+      <span id="page-info" class="admin-pagination-info"></span>
+      <button id="next-btn" class="admin-btn admin-btn-sm">다음 →</button>
+    </div>
+  </div>
+
+  <script>
+    const STATUS_LABEL: Record<string, string> = {
+      new: '새 상담',
+      reviewing: '검토중',
+      contacted: '연락완료',
+      completed: '완료',
+    };
+
+    const STATUS_CLASS: Record<string, string> = {
+      new: 'badge-new',
+      reviewing: 'badge-reviewing',
+      contacted: 'badge-contacted',
+      completed: 'badge-completed',
+    };
+
+    const tbody = document.getElementById('consult-tbody')!;
+    const messageEl = document.getElementById('consult-message')!;
+    const filterEl = document.getElementById('status-filter') as HTMLSelectElement;
+    const prevBtn = document.getElementById('prev-btn') as HTMLButtonElement;
+    const nextBtn = document.getElementById('next-btn') as HTMLButtonElement;
+    const pageInfo = document.getElementById('page-info')!;
+    const paginationEl = document.getElementById('pagination')!;
+
+    const PAGE_SIZE = 30;
+    let currentOffset = 0;
+    let currentTotal = 0;
+
+    function fmt(iso: string) {
+      return new Intl.DateTimeFormat('ko-KR', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit',
+        timeZone: 'Asia/Seoul',
+      }).format(new Date(iso));
+    }
+
+    function concernSummary(concerns: { label: string }[]) {
+      if (!concerns?.length) return '—';
+      if (concerns.length <= 2) return concerns.map(c => c.label).join(', ');
+      return `${concerns.slice(0, 2).map(c => c.label).join(', ')} 외 ${concerns.length - 2}개`;
+    }
+
+    async function load(offset = 0) {
+      const status = filterEl.value;
+      currentOffset = offset;
+
+      tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">불러오는 중...</td></tr>';
+      messageEl.hidden = true;
+
+      const params = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(offset) });
+      if (status) params.set('status', status);
+
+      try {
+        const res = await fetch(`/api/admin/consultations?${params}`);
+        const json = await res.json();
+
+        if (!json.ok || !json.data?.length) {
+          tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">신청 내역이 없습니다.</td></tr>';
+          paginationEl.hidden = true;
+          return;
+        }
+
+        const rows = json.data as {
+          id: string; name: string; phone: string;
+          age_range: string; gender: string;
+          concerns: { label: string }[];
+          preferred_contact: string;
+          created_at: string; status: string;
+        }[];
+
+        currentTotal = rows.length; // 실제로는 count header 필요하지만 단순화
+
+        tbody.innerHTML = rows.map(r => `
+          <tr>
+            <td><strong>${r.name}</strong></td>
+            <td>${r.phone}</td>
+            <td>${r.age_range || '—'} / ${r.gender || '—'}</td>
+            <td class="concern-cell">${concernSummary(r.concerns)}</td>
+            <td>${r.preferred_contact || '—'}</td>
+            <td class="date-cell">${fmt(r.created_at)}</td>
+            <td><span class="status-badge ${STATUS_CLASS[r.status] || ''}">${STATUS_LABEL[r.status] || r.status}</span></td>
+            <td><a href="/admin/consultations/${r.id}" class="admin-link">상세 →</a></td>
+          </tr>
+        `).join('');
+
+        // 페이지네이션
+        const hasMore = rows.length === PAGE_SIZE;
+        paginationEl.hidden = !hasMore && currentOffset === 0;
+        prevBtn.disabled = currentOffset === 0;
+        nextBtn.disabled = !hasMore;
+        pageInfo.textContent = `${currentOffset + 1} – ${currentOffset + rows.length}`;
+
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="8" class="loading-cell error-cell">불러오기 실패. 새로고침 해보세요.</td></tr>';
+      }
+    }
+
+    filterEl.addEventListener('change', () => load(0));
+    prevBtn.addEventListener('click', () => load(Math.max(0, currentOffset - PAGE_SIZE)));
+    nextBtn.addEventListener('click', () => load(currentOffset + PAGE_SIZE));
+
+    load(0);
+  </script>
+</AdminLayout>
+
+<style>
+  .loading-cell {
+    text-align: center;
+    color: var(--admin-t2, #6b7280);
+    padding: 2rem 0;
+  }
+
+  .error-cell {
+    color: #dc2626;
+  }
+
+  .concern-cell {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.82rem;
+  }
+
+  .date-cell {
+    font-size: 0.8rem;
+    color: var(--admin-t2, #6b7280);
+    white-space: nowrap;
+  }
+
+  .status-badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border: 1px solid transparent;
+  }
+
+  .badge-new {
+    background: #fef3c7;
+    color: #92400e;
+    border-color: #fde68a;
+  }
+
+  .badge-reviewing {
+    background: #dbeafe;
+    color: #1e40af;
+    border-color: #bfdbfe;
+  }
+
+  .badge-contacted {
+    background: #d1fae5;
+    color: #065f46;
+    border-color: #a7f3d0;
+  }
+
+  .badge-completed {
+    background: #f3f4f6;
+    color: #374151;
+    border-color: #e5e7eb;
+  }
+
+  .admin-link {
+    color: var(--admin-accent, #b8895e);
+    font-weight: 700;
+    text-decoration: none;
+    font-size: 0.84rem;
+  }
+
+  .admin-link:hover {
+    text-decoration: underline;
+  }
+
+  .admin-pagination {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1rem;
+    justify-content: center;
+  }
+
+  .admin-pagination-info {
+    font-size: 0.84rem;
+    color: var(--admin-t2, #6b7280);
+  }
+</style>
