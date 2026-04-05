@@ -94,6 +94,11 @@ body {
 
 /* 본문 영역 — 헤더·푸터와 동일한 좌우 리듬 + 노치 대응 */
 .site-main {
+  /* global.css의 main{width:720px}을 클래스 선택자 우선순위로 덮어씀 */
+  width: 100%;
+  max-width: var(--max-width);
+  margin-inline: auto;
+  box-sizing: border-box;
   padding-left: max(var(--page-inline), env(safe-area-inset-left, 0px));
   padding-right: max(var(--page-inline), env(safe-area-inset-right, 0px));
   padding-bottom: calc(var(--space-xl) + env(safe-area-inset-bottom, 0px));

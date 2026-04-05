@@ -1,7 +1,7 @@
 ---
 import { CATEGORIES } from '../consts';
 import { ACADEMY_PUBLIC_PATH } from '../lib/academy-constants';
-import { BLOG_PILLAR_NAV, blogCategoryShortcutLabel } from '../data/blog-nav';
+import { BLOG_PILLAR_NAV } from '../data/blog-nav';
 
 interface Props {
   /** 블로그 목록에서 키워드 검색 중일 때 사이드 메뉴 전체 숨김 */
@@ -10,13 +10,11 @@ interface Props {
 
 const { blogSearchFocus = false } = Astro.props;
 
-const pathname = Astro.url.pathname;
-const sp = Astro.url.searchParams;
-const currentCat = sp.get('category') ?? '';
-const currentPillar = sp.get('pillar') ?? '';
-const currentQ = sp.get('q') ?? '';
-const onBlogRoot = pathname === '/blog' || pathname === '/blog/';
-const allClear = onBlogRoot && !currentCat && !currentPillar && !currentQ;
+const PROCEDURES_CATS = ['procedures', 'faq', 'myth', 'before-after', 'patient-story'];
+const LIFESTYLE_CATS = ['health-tips', 'doctor-column', 'clinic-news'];
+
+const proceduresCats = CATEGORIES.filter((c) => PROCEDURES_CATS.includes(c.id));
+const lifestyleCats = CATEGORIES.filter((c) => LIFESTYLE_CATS.includes(c.id));
 ---
 
 <aside
@@ -25,94 +23,201 @@ const allClear = onBlogRoot && !currentCat && !currentPillar && !currentQ;
   hidden={blogSearchFocus}
   aria-hidden={blogSearchFocus ? 'true' : undefined}
 >
-  <div class="sidebar-widget">
-    <h2 class="sidebar-title">시술 영역 (심화·FAQ)</h2>
-    <p class="sidebar-lead">시술 안내 4축과 같은 기준으로 글을 묶었습니다.</p>
-    <ul class="sidebar-pillar-list">
-      <li>
-        <a
-          href="/blog/"
-          class:list={['sidebar-cat-link', 'js-blog-merge', { 'is-active': !currentPillar }]}
-          data-blog-merge={JSON.stringify({ pillar: null })}
-        >
-          <span>영역 전체</span>
-        </a>
-      </li>
-      {BLOG_PILLAR_NAV.map((p) => (
+  <!-- ── 트랙 탭 (전체 / 시술 정보 / 건강·라이프) ── -->
+  <div class="sidebar-track-tabs">
+    <a
+      class="sidebar-track-tab js-blog-merge"
+      data-blog-track=""
+      data-blog-merge={JSON.stringify({ track: null, pillar: null, category: null })}
+      href="/blog/"
+    >전체</a>
+    <a
+      class="sidebar-track-tab js-blog-merge"
+      data-blog-track="procedures"
+      data-blog-merge={JSON.stringify({ track: 'procedures', pillar: null, category: null })}
+      href="/blog/"
+    >시술 정보</a>
+    <a
+      class="sidebar-track-tab js-blog-merge"
+      data-blog-track="lifestyle"
+      data-blog-merge={JSON.stringify({ track: 'lifestyle', pillar: null, category: null })}
+      href="/blog/"
+    >건강·라이프</a>
+  </div>
+
+  <!-- ── 시술 정보 트랙 섹션 ── -->
+  <div class="sidebar-section" data-sidebar-track="procedures">
+    <div class="sidebar-widget">
+      <h2 class="sidebar-title">시술 영역</h2>
+      <ul class="sidebar-pillar-list">
         <li>
           <a
             href="/blog/"
-            class:list={['sidebar-cat-link', 'js-blog-merge', { 'is-active': currentPillar === p.id }]}
-            data-blog-merge={JSON.stringify({ pillar: p.id })}
-            title={p.short}
-          >
-            <span>{p.label}</span>
-          </a>
+            class="sidebar-cat-link js-blog-merge"
+            data-blog-pillar=""
+            data-blog-merge={JSON.stringify({ pillar: null })}
+          ><span>영역 전체</span></a>
         </li>
-      ))}
-    </ul>
-    <a class="sidebar-procedures-link" href="/procedures/">시술 안내 페이지 →</a>
+        {BLOG_PILLAR_NAV.map((p) => (
+          <li>
+            <a
+              href="/blog/"
+              class="sidebar-cat-link js-blog-merge"
+              data-blog-pillar={p.id}
+              data-blog-merge={JSON.stringify({ pillar: p.id })}
+              title={p.short}
+            ><span>{p.label}</span></a>
+          </li>
+        ))}
+      </ul>
+      <a class="sidebar-procedures-link" href="/procedures/">시술 안내 →</a>
+    </div>
+
+    <div class="sidebar-widget">
+      <h2 class="sidebar-title">글 유형</h2>
+      <ul class="sidebar-cat-list">
+        {proceduresCats.map((cat) => (
+          <li>
+            <a
+              href="/blog/"
+              class="sidebar-cat-link js-blog-merge"
+              data-blog-cat={cat.id}
+              data-blog-merge={JSON.stringify({ category: cat.id })}
+              title={cat.description}
+            ><span>{cat.label}</span></a>
+          </li>
+        ))}
+      </ul>
+    </div>
   </div>
 
-  <div class="sidebar-widget">
+  <!-- ── 건강·라이프 트랙 섹션 ── -->
+  <div class="sidebar-section" data-sidebar-track="lifestyle">
+    <div class="sidebar-widget">
+      <h2 class="sidebar-title">카테고리</h2>
+      <ul class="sidebar-cat-list">
+        {lifestyleCats.map((cat) => (
+          <li>
+            <a
+              href="/blog/"
+              class="sidebar-cat-link js-blog-merge"
+              data-blog-cat={cat.id}
+              data-blog-merge={JSON.stringify({ category: cat.id })}
+              title={cat.description}
+            ><span>{cat.label}</span></a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+
+  <!-- ── Doctor AI Academy 링크 ── -->
+  <div class="sidebar-widget sidebar-academy">
     <h2 class="sidebar-title">Doctor AI Academy</h2>
-    <p class="sidebar-lead">의료진용 AI 시리즈(Fundamentals·Prompts·Cases·Tools). 일반 블로그 글과 URL이 다릅니다.</p>
+    <p class="sidebar-lead">의료진용 AI 시리즈 (별도 경로)</p>
     <a class="sidebar-procedures-link" href={`${ACADEMY_PUBLIC_PATH}/`}>Academy 허브로 이동 →</a>
-  </div>
-
-  <div class="sidebar-widget">
-    <h2 class="sidebar-title">글 유형</h2>
-    <ul class="sidebar-cat-list">
-      <li>
-        <a href="/blog/" class:list={['sidebar-cat-link', { 'is-active': allClear }]}>
-          <span>전체 글</span>
-        </a>
-      </li>
-      {CATEGORIES.filter((cat) => cat.id !== 'doctor-ai').map((cat) => (
-        <li>
-          <a
-            href="/blog/"
-            class:list={['sidebar-cat-link', 'js-blog-merge', { 'is-active': currentCat === cat.id }]}
-            data-blog-merge={JSON.stringify({ category: cat.id })}
-            title={cat.description}
-          >
-            <span>{blogCategoryShortcutLabel(cat.id)}</span>
-          </a>
-        </li>
-      ))}
-    </ul>
   </div>
 </aside>
 
 <style>
   .blog-sidebar {
-    width: 240px;
+    width: 200px;
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
   }
 
-  .sidebar-widget + .sidebar-widget {
-    margin-top: 1.75rem;
-    padding-top: 1.75rem;
+  /* ── 트랙 탭 ── */
+  .sidebar-track-tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: 1.25rem;
+    background: var(--bg2);
+    border-radius: 10px;
+    padding: 0.25rem;
+  }
+
+  .sidebar-track-tab {
+    flex: 1;
+    text-align: center;
+    padding: 0.4rem 0.3rem;
+    border-radius: 7px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--t2);
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+
+  .sidebar-track-tab:hover {
+    background: var(--surface);
+    color: var(--text);
+  }
+
+  .sidebar-track-tab.is-active {
+    background: var(--surface);
+    color: var(--accent-dark);
+    font-weight: 700;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  }
+
+  /* ── 섹션 ── */
+  .sidebar-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .sidebar-section[hidden] {
+    display: none !important;
+  }
+
+  /* ── 위젯 ── */
+  .sidebar-widget + .sidebar-widget,
+  .sidebar-section + .sidebar-widget,
+  .sidebar-section + .sidebar-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--rule);
+  }
+
+  .sidebar-widget .sidebar-widget + .sidebar-widget {
+    border-top: 1px solid var(--rule);
+  }
+
+  .sidebar-section .sidebar-widget + .sidebar-widget {
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--rule);
+  }
+
+  .sidebar-academy {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
     border-top: 1px solid var(--rule);
   }
 
   .sidebar-title {
-    margin: 0 0 0.35rem;
-    font-size: 0.95rem;
+    margin: 0 0 0.4rem;
+    font-size: 0.82rem;
     font-weight: 800;
-    color: var(--text);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--t3);
   }
 
   .sidebar-lead {
-    margin: 0 0 0.65rem;
-    font-size: 0.78rem;
+    margin: 0 0 0.5rem;
+    font-size: 0.76rem;
     line-height: 1.5;
     color: var(--t3);
   }
 
   .sidebar-procedures-link {
     display: inline-block;
-    margin-top: 0.65rem;
+    margin-top: 0.5rem;
     font-size: 0.8rem;
     font-weight: 700;
     color: var(--accent-dark);
@@ -130,19 +235,17 @@ const allClear = onBlogRoot && !currentCat && !currentPillar && !currentQ;
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
+    gap: 0.1rem;
   }
 
   .sidebar-cat-link {
     display: block;
-    padding: 0.45rem 0.5rem;
+    padding: 0.4rem 0.5rem;
     border-radius: 8px;
-    font-size: 0.86rem;
+    font-size: 0.84rem;
     color: var(--t2);
     text-decoration: none;
-    transition:
-      background 0.15s,
-      color 0.15s;
+    transition: background 0.15s, color 0.15s;
   }
 
   .sidebar-cat-link:hover {
@@ -161,17 +264,33 @@ const allClear = onBlogRoot && !currentCat && !currentPillar && !currentQ;
       width: 100%;
     }
 
+    .sidebar-track-tabs {
+      margin-bottom: 0.75rem;
+    }
+
+    .sidebar-section {
+      display: none;
+    }
+
+    .sidebar-section.is-mobile-open {
+      display: flex;
+    }
+
     .sidebar-pillar-list,
     .sidebar-cat-list {
       flex-direction: row;
       flex-wrap: wrap;
-      gap: 0.4rem;
+      gap: 0.35rem;
     }
 
     .sidebar-cat-link {
-      padding: 0.4rem 0.8rem;
+      padding: 0.35rem 0.75rem;
       border-radius: 999px;
       border: 1px solid var(--rule);
+    }
+
+    .sidebar-academy {
+      display: none;
     }
   }
 </style>
