@@ -1,0 +1,68 @@
+---
+interface Props {
+  slug: string;
+}
+const { slug } = Astro.props;
+---
+
+<button
+  type="button"
+  class="blog-post-share-btn share-btn reader-bookmark"
+  data-reader-bookmark
+  data-slug={slug}
+  aria-pressed="false"
+  aria-label="읽기 목록에 저장"
+>
+  <span class="reader-bookmark-svg" aria-hidden="true">
+    <svg
+      class="reader-bookmark-outline"
+      data-bookmark-icon-outline
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+    >
+      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+    </svg>
+    <svg
+      class="reader-bookmark-filled"
+      data-bookmark-icon-filled
+      hidden
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      stroke="currentColor"
+      stroke-width="2"
+    >
+      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+    </svg>
+  </span>
+  읽기 목록
+</button>
+
+<script>
+  import { mountReaderBookmarkButtons } from '../lib/reader-bookmark-button';
+  mountReaderBookmarkButtons();
+</script>
+
+<style>
+  .reader-bookmark-svg {
+    position: relative;
+    display: inline-flex;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  .reader-bookmark-svg svg {
+    position: absolute;
+    inset: 0;
+  }
+
+  .reader-bookmark-filled {
+    stroke: none;
+  }
+</style>

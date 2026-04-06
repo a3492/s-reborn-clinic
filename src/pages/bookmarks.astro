@@ -1,0 +1,238 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+  title="읽기 목록"
+  description="저장해 둔 블로그 글을 모아 봅니다."
+  noindex
+>
+  <div class="reader-bookmarks-page">
+    <h1 class="reader-bookmarks-title">읽기 목록</h1>
+    <p class="reader-bookmarks-loading" data-bookmarks-loading>불러오는 중…</p>
+    <ul class="reader-bookmarks-list" data-bookmarks-list hidden></ul>
+    <div class="reader-bookmarks-empty" data-bookmarks-empty hidden>
+      <p>아직 저장한 글이 없습니다.</p>
+      <p><a href="/blog/">블로그 목록으로 가기</a></p>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  import { createClient } from '@supabase/supabase-js';
+  import {
+    fetchBookmarkMetaIndex,
+    loadBookmarkSlugsForList,
+    removeReaderBookmark,
+  } from '../lib/reader-bookmark-button';
+
+  const url = import.meta.env.PUBLIC_SUPABASE_URL as string | undefined;
+  const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string | undefined;
+  const supabase =
+    url && key
+      ? createClient(url, key, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: false,
+          },
+        })
+      : null;
+
+  const loadingEl = document.querySelector('[data-bookmarks-loading]');
+  const listEl = document.querySelector('[data-bookmarks-list]');
+  const emptyEl = document.querySelector('[data-bookmarks-empty]');
+
+  async function render() {
+    if (!loadingEl || !listEl || !emptyEl) return;
+    loadingEl.hidden = false;
+    listEl.hidden = true;
+    emptyEl.hidden = true;
+
+    const meta = await fetchBookmarkMetaIndex();
+    const slugs = await loadBookmarkSlugsForList(supabase);
+
+    loadingEl.hidden = true;
+
+    if (!slugs.length) {
+      listEl.innerHTML = '';
+      emptyEl.hidden = false;
+      return;
+    }
+
+    emptyEl.hidden = true;
+    listEl.hidden = false;
+    listEl.innerHTML = '';
+
+    for (const slug of slugs) {
+      const m = meta.get(slug);
+      const title = m?.title ?? slug;
+      const desc = (m?.description ?? '').slice(0, 160);
+      const href = m?.href ?? `/blog/${encodeURIComponent(slug)}/`;
+
+      const li = document.createElement('li');
+      li.className = 'reader-bookmarks-card';
+
+      const inner = document.createElement('div');
+      inner.className = 'reader-bookmarks-card-inner';
+
+      const main = document.createElement('div');
+      const link = document.createElement('a');
+      link.className = 'reader-bookmarks-card-link';
+      link.href = href;
+      const h2 = document.createElement('h2');
+      h2.className = 'reader-bookmarks-card-title';
+      h2.textContent = title;
+      link.appendChild(h2);
+      main.appendChild(link);
+      if (desc) {
+        const p = document.createElement('p');
+        p.className = 'reader-bookmarks-card-desc';
+        p.textContent = desc + (m?.description && m.description.length > 160 ? '…' : '');
+        main.appendChild(p);
+      }
+
+      const rm = document.createElement('button');
+      rm.type = 'button';
+      rm.className = 'reader-bookmarks-remove';
+      rm.dataset.slug = slug;
+      rm.setAttribute('aria-label', '읽기 목록에서 제거');
+      rm.textContent = '제거';
+
+      inner.appendChild(main);
+      inner.appendChild(rm);
+      li.appendChild(inner);
+      listEl.appendChild(li);
+
+      rm.addEventListener('click', async () => {
+        const prev = rm.textContent;
+        rm.disabled = true;
+        rm.textContent = '…';
+        const ok = await removeReaderBookmark(supabase, slug);
+        rm.disabled = false;
+        rm.textContent = prev;
+        if (ok) await render();
+      });
+    }
+  }
+
+  if (supabase) {
+    supabase.auth.onAuthStateChange(() => {
+      void render();
+    });
+  }
+  void render();
+</script>
+
+<style>
+  .reader-bookmarks-page {
+    max-width: 40rem;
+    margin: 2rem auto;
+    padding: 0 max(var(--page-inline, 1rem), env(safe-area-inset-left, 0px)) 3rem
+      max(var(--page-inline, 1rem), env(safe-area-inset-right, 0px));
+  }
+
+  .reader-bookmarks-title {
+    margin: 0 0 1.25rem;
+    font-size: 1.65rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .reader-bookmarks-loading {
+    margin: 0;
+    color: var(--t2);
+    font-size: 0.95rem;
+  }
+
+  .reader-bookmarks-empty {
+    padding: 2rem 1rem;
+    text-align: center;
+    border: 1px dashed var(--rule);
+    border-radius: var(--radius-md, 14px);
+    background: var(--bg2);
+    color: var(--t2);
+  }
+
+  .reader-bookmarks-empty a {
+    color: var(--accent-dark);
+    font-weight: 700;
+  }
+
+  .reader-bookmarks-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .reader-bookmarks-card {
+    margin: 0;
+  }
+
+  .reader-bookmarks-card-inner {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-md, 14px);
+    background: var(--surface, #fff);
+  }
+
+  .reader-bookmarks-card-inner > div:first-child {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .reader-bookmarks-card-link {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .reader-bookmarks-card-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+    line-height: 1.35;
+  }
+
+  .reader-bookmarks-card-link:hover .reader-bookmarks-card-title,
+  .reader-bookmarks-card-link:focus-visible .reader-bookmarks-card-title {
+    color: var(--accent-dark);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+
+  .reader-bookmarks-card-desc {
+    margin: 0.4rem 0 0;
+    font-size: 0.88rem;
+    color: var(--t2);
+    line-height: 1.5;
+  }
+
+  .reader-bookmarks-remove {
+    flex-shrink: 0;
+    min-height: 40px;
+    padding: 0.35rem 0.75rem;
+    border-radius: 10px;
+    border: 1px solid var(--rule);
+    background: var(--bg2);
+    color: var(--text);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .reader-bookmarks-remove:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent-dark);
+  }
+
+  .reader-bookmarks-remove:disabled {
+    opacity: 0.6;
+    cursor: wait;
+  }
+</style>
