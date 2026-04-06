@@ -2,8 +2,8 @@
  * S-Reborn 클리닉 PWA — Cache-first: CSS/JS/폰트, Network-first: HTML(문서),
  * 네비게이션 실패 시 /offline/ 폴백 (오프라인 안내는 /offline.html → /offline/ 리다이렉트)
  */
-const STATIC_CACHE = 'sreborn-static-v1';
-const PAGE_CACHE = 'sreborn-pages-v1';
+const STATIC_CACHE = 'sreborn-static-v2';
+const PAGE_CACHE = 'sreborn-pages-v2';
 const OFFLINE_URL = '/offline/';
 
 self.addEventListener('install', (event) => {
@@ -12,7 +12,16 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    Promise.all([
+      self.clients.claim(),
+      caches.keys().then((keys) =>
+        Promise.all(
+          keys.filter((k) => k === 'sreborn-static-v1' || k === 'sreborn-pages-v1').map((k) => caches.delete(k)),
+        ),
+      ),
+    ]),
+  );
 });
 
 function sameOrigin(url, base) {

@@ -1,0 +1,6 @@
+# Cloudflare Pages (Git 연동)
+# `astro build` + @astrojs/cloudflare 는 정적 자산이 dist/client 에 생성됩니다.
+# 출력 디렉터리를 dist 로만 두면 procedures 등 HTML 이 갱신되지 않은 채로 보일 수 있습니다.
+name = "s-reborn-clinic"
+compatibility_date = "2025-11-01"
+pages_build_output_dir = "dist/client"

@@ -1,6 +1,10 @@
 # Cloudflare Pages — https://developers.cloudflare.com/pages/configuration/headers/
 # 임베딩 남용 완화 + MIME 스니핑·리퍼러 제한. (공개 HTML은 여전히 브라우저에서 복사 가능)
 
+# HTML 문서는 엣지·브라우저에 오래 캐시되지 않게 (배포 후에도 옛 페이지가 보이는 현상 완화)
+/procedures/*
+  Cache-Control: public, max-age=0, must-revalidate
+
 /*
   X-Frame-Options: SAMEORIGIN
   X-Content-Type-Options: nosniff
