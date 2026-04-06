@@ -29,7 +29,7 @@ const lifestyleCats = CATEGORIES.filter((c) => LIFESTYLE_CATS.includes(c.id));
   id="blog-sidebar"
   hidden={blogSearchFocus}
   aria-hidden={blogSearchFocus ? 'true' : undefined}
-  aria-label="블로그 필터·카테고리·태그"
+  aria-label="블로그 필터·글 유형·태그"
 >
   <!-- ── 트랙 탭 (전체 / 시술 정보 / 건강·라이프) ── -->
   <div class="sidebar-track-tabs">
@@ -102,7 +102,7 @@ const lifestyleCats = CATEGORIES.filter((c) => LIFESTYLE_CATS.includes(c.id));
   <!-- ── 건강·라이프 트랙 섹션 ── -->
   <div class="sidebar-section" data-sidebar-track="lifestyle">
     <div class="sidebar-widget">
-      <h2 class="sidebar-title">카테고리</h2>
+      <h2 class="sidebar-title">글 유형</h2>
       <ul class="sidebar-cat-list">
         {lifestyleCats.map((cat) => (
           <li>
