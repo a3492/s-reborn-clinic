@@ -54,9 +54,20 @@ if (variant === 'cloud' && posts.length > 0) {
 	}));
 }
 
+/** Fisher-Yates 셔플 (빌드 시 실행 — 배포마다 랜덤) */
+function shuffle<T>(arr: T[]): T[] {
+	const a = [...arr];
+	for (let i = a.length - 1; i > 0; i--) {
+		const j = Math.floor(Math.random() * (i + 1));
+		[a[i], a[j]] = [a[j], a[i]];
+	}
+	return a;
+}
+
 const isCloud = variant === 'cloud';
-const previewItems = isCloud ? items.slice(0, previewCount) : items;
-const moreItems   = isCloud ? items.slice(previewCount)     : [];
+const displayItems = isCloud ? shuffle(items) : items;
+const previewItems = isCloud ? displayItems.slice(0, previewCount) : items;
+const moreItems   = isCloud ? displayItems.slice(previewCount)     : [];
 const hasMore     = moreItems.length > 0;
 ---
 
