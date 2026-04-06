@@ -8,12 +8,13 @@ import { isAcademyBlogPost, postPermalink } from '../../../lib/academy';
 import { blogTagPageHref } from '../../../lib/blog-tag-url';
 
 export async function getStaticPaths() {
+	const internalTagRe = /^작성-\d{6,}/;
 	const posts = (await getCollection('blog', ({ data }) => !data.draft)).filter((p) => !isAcademyBlogPost(p));
 	const seen = new Set<string>();
 	for (const p of posts) {
 		for (const raw of p.data.tags ?? []) {
 			const t = String(raw || '').trim();
-			if (t) seen.add(t);
+			if (t && !internalTagRe.test(t)) seen.add(t);
 		}
 	}
 	// Astro 링크 크롤러는 UTF-8 경로(예: /blog/tag/의사칼럼/)로 요청하므로
@@ -96,17 +97,20 @@ const titleBase = decodedTag ? `#${decodedTag} 관련 글 ${matched.length}개` 
 										}
 									</time>
 									{post.data.tags &&
-										post.data.tags.slice(0, 4).map((tag) => (
-											<a
-												href={blogTagPageHref(tag)}
-												class:list={[
-													'blog-post-card-tag',
-													String(tag).trim() === decodedTag && 'is-current-tag',
-												]}
-											>
-												#{tag}
-											</a>
-										))}
+										post.data.tags
+											.filter((tag) => !/^작성-\d{6,}/.test(String(tag).trim()))
+											.slice(0, 4)
+											.map((tag) => (
+												<a
+													href={blogTagPageHref(tag)}
+													class:list={[
+														'blog-post-card-tag',
+														String(tag).trim() === decodedTag && 'is-current-tag',
+													]}
+												>
+													#{tag}
+												</a>
+											))}
 								</div>
 							</article>
 						))}

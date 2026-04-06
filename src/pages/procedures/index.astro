@@ -1,0 +1,829 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { PROCEDURE_CATALOG, PROCEDURE_PILLAR_SUMMARIES } from '../../data/procedure-catalog';
+import { getCollection } from 'astro:content';
+import { postPermalink } from '../../lib/academy';
+
+const allPosts = (await getCollection('blog', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+
+// 시술 관련 글 (category: procedures)
+const procedurePosts = allPosts.filter(p => p.data.category === 'procedures').slice(0, 8);
+
+// 인기 글 (원장 칼럼 + FAQ + 건강정보)
+const popularPosts = allPosts
+  .filter(p => ['doctor-column', 'faq', 'health-tips'].includes(p.data.category ?? ''))
+  .slice(0, 6);
+
+const categoryLabels: Record<string, string> = {
+  procedures: '시술·치료',
+  'doctor-column': '원장 칼럼',
+  faq: 'FAQ',
+  'health-tips': '건강 정보',
+  'before-after': '전후 사례',
+  'patient-story': '환자 이야기',
+  myth: 'MYTH',
+  'clinic-news': '클리닉 소식',
+};
+---
+
+<Layout
+  title="시술 안내"
+  description="에스리본 클리닉 시술 안내 — EBD·주사·경구약·외용제를 영역별로 정리했습니다."
+>
+  <div class="proc-layout">
+
+    <!-- ── 왼쪽 사이드바 ── -->
+    <aside class="proc-sidebar" aria-label="시술 영역 내비게이션">
+      <div class="sidebar-widget">
+        <h2 class="sidebar-title">시술 영역</h2>
+        <nav class="proc-sidebar-nav" aria-label="시술 영역 선택">
+          <ul class="sidebar-cat-list">
+
+            <!-- 홈 (전체 보기) -->
+            <li>
+              <button
+                type="button"
+                class="sidebar-cat-link proc-nav-link is-active"
+                data-proc-nav="home"
+              >
+                <span class="proc-nav-stack">
+                  <span class="proc-nav-label">전체 보기</span>
+                  <span class="proc-nav-short">홈 · 추천글</span>
+                </span>
+              </button>
+            </li>
+
+            <!-- 4개 카테고리 -->
+            {PROCEDURE_PILLAR_SUMMARIES.map((p) => (
+              <li>
+                <button
+                  type="button"
+                  class="sidebar-cat-link proc-nav-link"
+                  data-proc-nav={p.id}
+                >
+                  <span class="proc-nav-stack">
+                    <span class="proc-nav-label">{p.label}</span>
+                    <span class="proc-nav-short">{p.short}</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+
+          </ul>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- ── 오른쪽 본문 ── -->
+    <div class="proc-main">
+      <div class="proc-main-inner">
+
+        <!-- ══ 홈 뷰 ══ -->
+        <div data-proc-view="home">
+
+          <header class="proc-hero">
+            <p class="proc-hero-badge">Treatments</p>
+            <h1 class="proc-hero-title">시술 안내</h1>
+            <p class="proc-hero-lead">
+              클리닉에서 다루는 치료를 <strong>EBD(기기)</strong> · <strong>주사</strong> ·
+              <strong>경구약</strong> · <strong>외용제</strong> 네 축으로 정리했습니다.
+              왼쪽 메뉴에서 영역을 선택하거나 아래 글을 먼저 읽어보세요.
+            </p>
+          </header>
+
+          <!-- 카테고리 빠른 선택 카드 -->
+          <div class="proc-pillar-cards" role="list">
+            {PROCEDURE_PILLAR_SUMMARIES.map((p) => (
+              <button
+                type="button"
+                class="proc-pillar-card"
+                data-proc-nav={p.id}
+                role="listitem"
+              >
+                <span class="proc-pillar-card-label">{p.label}</span>
+                <span class="proc-pillar-card-short">{p.short}</span>
+                <span class="proc-pillar-card-arrow" aria-hidden="true">→</span>
+              </button>
+            ))}
+          </div>
+
+          <!-- 시술 관련 글 -->
+          {procedurePosts.length > 0 && (
+            <section class="proc-posts-section">
+              <h2 class="proc-section-title">시술 관련 글</h2>
+              <div class="proc-posts-grid" id="proc-posts-grid">
+                {procedurePosts.map((post) => (
+                  <a
+                    href={postPermalink(post)}
+                    class="proc-post-card"
+                    data-date={post.data.date.valueOf()}
+                  >
+                    <span class="proc-post-card-cat">
+                      {categoryLabels[post.data.category ?? ''] ?? post.data.category}
+                    </span>
+                    <span class="proc-post-card-title">{post.data.title}</span>
+                    {post.data.description && (
+                      <span class="proc-post-card-desc">{post.data.description}</span>
+                    )}
+                  </a>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <!-- 인기글 / 원장 칼럼 -->
+          {popularPosts.length > 0 && (
+            <section class="proc-posts-section">
+              <h2 class="proc-section-title">원장 칼럼 · FAQ</h2>
+              <div class="proc-posts-grid proc-posts-grid--popular" id="proc-popular-grid">
+                {popularPosts.map((post) => (
+                  <a
+                    href={postPermalink(post)}
+                    class="proc-post-card"
+                    data-date={post.data.date.valueOf()}
+                  >
+                    <span class="proc-post-card-cat">
+                      {categoryLabels[post.data.category ?? ''] ?? post.data.category}
+                    </span>
+                    <span class="proc-post-card-title">{post.data.title}</span>
+                    {post.data.description && (
+                      <span class="proc-post-card-desc">{post.data.description}</span>
+                    )}
+                  </a>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <footer class="proc-footer">
+            <p>
+              위치·연락은 <a href="/about#location">오시는 길</a>, 문의는 <a href="/consult">온라인 상담</a>을 이용해 주세요.
+            </p>
+          </footer>
+        </div>
+
+        <!-- ══ 카테고리 뷰 (4개) ══ -->
+        {PROCEDURE_CATALOG.map((pillar) => (
+          <div data-proc-view={pillar.id} hidden>
+
+            <!-- 카테고리 헤더 -->
+            <header class="proc-cat-header">
+              <button type="button" class="proc-back-btn" data-proc-nav="home">
+                ← 전체 보기
+              </button>
+              <p class="proc-hero-badge">{pillar.subtitle}</p>
+              <h1 class="proc-hero-title">{pillar.title}</h1>
+              <p class="proc-hero-lead">{pillar.intro}</p>
+            </header>
+
+            <p class="proc-disclaimer" role="note">
+              아래 목록은 <strong>의학적 정보 안내용 분류</strong>이며, 모든 항목이 본원에서 시행된다는 뜻은 아닙니다.
+              약물·시술은 부작용·금기가 있을 수 있으니 반드시 진료를 통해 결정합니다.
+            </p>
+
+            <div class="proc-tree-toolbar" role="toolbar" aria-label="목록 펼침·접기">
+              <button type="button" class="proc-tree-toggle proc-expand-all">모두 펼치기</button>
+              <button type="button" class="proc-tree-toggle proc-collapse-all">모두 접기</button>
+            </div>
+
+            <div class="proc-tree-root">
+              <section class="proc-pillar" aria-label={pillar.title}>
+                {pillar.subgroups.map((sub) => (
+                  <details class="proc-tree-leaf proc-tree-leaf--lg">
+                    <summary class="proc-tree-leaf-summary proc-tree-leaf-summary--lg">
+                      <span class="proc-tree-chevron" aria-hidden="true"></span>
+                      <span class="proc-tree-leaf-title">{sub.title}</span>
+                    </summary>
+                    <ul class="proc-item-list">
+                      {sub.items.map((item) => (
+                        <li>
+                          <span class="proc-item-name">{item.name}</span>
+                          {item.note && <span class="proc-item-note">{item.note}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                ))}
+              </section>
+            </div>
+
+            <footer class="proc-footer">
+              <p>
+                이 영역의 심화 글·FAQ는 <a href={`/blog/?pillar=${pillar.id}`}>블로그</a>에서 확인하실 수 있습니다.
+              </p>
+              <p>
+                위치·연락은 <a href="/about#location">오시는 길</a>, 문의는 <a href="/consult">온라인 상담</a>을 이용해 주세요.
+              </p>
+            </footer>
+          </div>
+        ))}
+
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    (function () {
+      var VALID_VIEWS = ['home', 'ebd', 'injection', 'oral', 'topical'];
+
+      // ── 뷰 전환 ──
+      function switchView(id) {
+        if (!id || !VALID_VIEWS.includes(id)) id = 'home';
+        document.querySelectorAll('[data-proc-view]').forEach(function (el) {
+          el.hidden = el.getAttribute('data-proc-view') !== id;
+        });
+        document.querySelectorAll('.proc-nav-link').forEach(function (btn) {
+          btn.classList.toggle('is-active', btn.getAttribute('data-proc-nav') === id);
+        });
+        // URL 해시 업데이트
+        if (id === 'home') {
+          history.replaceState(null, '', location.pathname);
+        } else {
+          history.replaceState(null, '', location.pathname + '#' + id);
+        }
+        // 스크롤 상단으로
+        var mainInner = document.querySelector('.proc-main-inner');
+        if (mainInner) {
+          mainInner.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        } else {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }
+
+      // ── 모두 펼치기 / 접기 ──
+      function bindExpandCollapse() {
+        document.addEventListener('click', function (e) {
+          var btn = e.target.closest('.proc-expand-all, .proc-collapse-all');
+          if (!btn) return;
+          var view = btn.closest('[data-proc-view]');
+          if (!view) return;
+          var open = btn.classList.contains('proc-expand-all');
+          view.querySelectorAll('details').forEach(function (d) { d.open = open; });
+        });
+      }
+
+      // ── 카드 셔플 (홈 뷰) ──
+      function shuffleGrid(id) {
+        var grid = document.getElementById(id);
+        if (!grid) return;
+        var cards = Array.from(grid.children);
+        for (var i = cards.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1));
+          grid.appendChild(cards[j]);
+          var tmp = cards[i]; cards[i] = cards[j]; cards[j] = tmp;
+        }
+      }
+
+      // ── 초기화 ──
+      document.addEventListener('DOMContentLoaded', function () {
+        // 네비 클릭 이벤트 (sidebar + 카테고리 카드 + 뒤로가기 버튼 모두)
+        document.addEventListener('click', function (e) {
+          var btn = e.target.closest('[data-proc-nav]');
+          if (!btn) return;
+          e.preventDefault();
+          switchView(btn.getAttribute('data-proc-nav'));
+        });
+
+        // 모두 펼치기 / 접기
+        bindExpandCollapse();
+
+        // 카드 셔플
+        shuffleGrid('proc-posts-grid');
+        shuffleGrid('proc-popular-grid');
+
+        // URL 해시에서 초기 뷰 결정
+        var hash = (location.hash || '').slice(1);
+        switchView(hash || 'home');
+      });
+
+      // 브라우저 앞뒤로 이동
+      window.addEventListener('popstate', function () {
+        var hash = (location.hash || '').slice(1);
+        switchView(hash || 'home');
+      });
+    })();
+  </script>
+</Layout>
+
+<style>
+  /* ── 레이아웃 ── */
+  .proc-layout {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+    padding: 1.5rem 0 3.5rem;
+    word-break: keep-all;
+  }
+
+  .proc-sidebar {
+    width: 200px;
+    flex-shrink: 0;
+    position: sticky;
+    top: calc(var(--header-height, 68px) + 1rem);
+    max-height: calc(100vh - var(--header-height, 68px) - 2rem);
+    overflow-y: auto;
+    align-self: flex-start;
+  }
+
+  .proc-sidebar .sidebar-title {
+    margin: 0 0 0.4rem;
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--t3);
+  }
+
+  .proc-sidebar .sidebar-cat-list {
+    gap: 0.1rem;
+  }
+
+  /* 버튼을 링크처럼 */
+  .proc-sidebar .sidebar-cat-link {
+    width: 100%;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    align-items: flex-start;
+    justify-content: flex-start;
+    min-height: 40px;
+    box-sizing: border-box;
+    padding: 0.45rem 0.65rem;
+    border-radius: var(--radius-sm, 8px);
+    display: flex;
+    font: inherit;
+    color: var(--t2);
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .proc-sidebar .sidebar-cat-link:focus-visible {
+    outline: 2px solid var(--accent, #b8956a);
+    outline-offset: 1px;
+  }
+
+  .proc-sidebar .sidebar-cat-link:hover {
+    background: var(--bg2);
+    color: var(--text);
+  }
+
+  .proc-sidebar .sidebar-cat-link.is-active {
+    background: rgba(184, 138, 94, 0.14);
+    color: var(--accent-dark);
+    font-weight: 700;
+  }
+
+  .proc-nav-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.12rem;
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .proc-nav-label {
+    font-size: 0.84rem;
+    line-height: 1.35;
+    font-weight: inherit;
+  }
+
+  .proc-nav-short {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--t3);
+    line-height: 1.3;
+  }
+
+  .proc-sidebar .sidebar-cat-link.is-active .proc-nav-short,
+  .proc-sidebar .sidebar-cat-link:hover .proc-nav-short {
+    color: inherit;
+    opacity: 0.85;
+  }
+
+  /* ── 메인 ── */
+  .proc-main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .proc-main-inner {
+    width: 100%;
+    max-width: 920px;
+    margin-inline: auto;
+  }
+
+  /* ── 히어로 ── */
+  .proc-hero {
+    text-align: center;
+    padding: 2.25rem 0 2rem;
+  }
+
+  .proc-hero-badge {
+    display: inline-block;
+    margin: 0 0 0.85rem;
+    padding: 0.3rem 0.9rem;
+    border-radius: 999px;
+    background: rgba(201, 169, 110, 0.15);
+    border: 1px solid rgba(201, 169, 110, 0.3);
+    color: var(--accent-dark);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .proc-hero-title {
+    margin: 0 0 1rem;
+    font-size: clamp(1.85rem, 4vw, 2.5rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--text);
+  }
+
+  .proc-hero-lead {
+    margin: 0 auto;
+    max-width: 40rem;
+    font-size: 1rem;
+    line-height: 1.8;
+    color: var(--t2);
+  }
+
+  .proc-hero-lead strong {
+    color: var(--text);
+    font-weight: 700;
+  }
+
+  /* ── 카테고리 빠른 선택 카드 ── */
+  .proc-pillar-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .proc-pillar-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 1rem 1.1rem;
+    border-radius: var(--radius-lg, 22px);
+    border: 1px solid var(--rule);
+    background: var(--surface);
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    color: var(--text);
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    position: relative;
+  }
+
+  .proc-pillar-card:hover {
+    border-color: var(--accent);
+    background: var(--bg2);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .proc-pillar-card-label {
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: var(--text);
+  }
+
+  .proc-pillar-card-short {
+    font-size: 0.78rem;
+    color: var(--t3);
+  }
+
+  .proc-pillar-card-arrow {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--accent-dark);
+    font-size: 0.9rem;
+    opacity: 0.6;
+    transition: opacity 0.15s, right 0.15s;
+  }
+
+  .proc-pillar-card:hover .proc-pillar-card-arrow {
+    opacity: 1;
+    right: 0.75rem;
+  }
+
+  /* ── 포스트 섹션 ── */
+  .proc-posts-section {
+    margin-bottom: 2.5rem;
+  }
+
+  .proc-section-title {
+    margin: 0 0 1rem;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    padding-bottom: 0.6rem;
+    border-bottom: 2px solid var(--rule);
+  }
+
+  .proc-posts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .proc-post-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 1rem 1.1rem;
+    border-radius: var(--radius-md, 14px);
+    border: 1px solid var(--rule);
+    background: var(--surface);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  }
+
+  .proc-post-card:hover {
+    border-color: var(--accent);
+    background: var(--bg2);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .proc-post-card-cat {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--accent-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .proc-post-card-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.45;
+  }
+
+  .proc-post-card-desc {
+    font-size: 0.8rem;
+    color: var(--t3);
+    line-height: 1.55;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* ── 카테고리 뷰 헤더 ── */
+  .proc-cat-header {
+    padding: 1.5rem 0 1.75rem;
+  }
+
+  .proc-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 1.25rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid var(--rule);
+    background: var(--surface);
+    color: var(--t2);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+  }
+
+  .proc-back-btn:hover {
+    border-color: var(--accent);
+    background: var(--bg2);
+    color: var(--accent-dark);
+  }
+
+  /* ── 공통 컴포넌트 ── */
+  .proc-disclaimer {
+    margin: 0 0 1rem;
+    padding: 1rem 1.15rem;
+    border-radius: var(--radius-md, 14px);
+    background: var(--bg2);
+    border: 1px solid var(--rule);
+    font-size: 0.86rem;
+    line-height: 1.65;
+    color: var(--t2);
+  }
+
+  .proc-tree-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin: 0 0 1.25rem;
+  }
+
+  .proc-tree-toggle {
+    min-height: 44px;
+    padding: 0.5rem 1.1rem;
+    border-radius: 10px;
+    border: 1px solid var(--rule);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  }
+
+  .proc-tree-toggle:hover {
+    border-color: var(--accent);
+    background: var(--bg2);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .proc-tree-root {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  /* 카테고리 뷰에서 leaf를 branch처럼 크게 */
+  .proc-tree-leaf--lg {
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-lg, 22px);
+    background: var(--surface);
+    overflow: hidden;
+  }
+
+  .proc-tree-leaf-summary--lg {
+    padding: 1.15rem 1.2rem;
+    font-size: 1rem;
+  }
+
+  .proc-tree-leaf {
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-md, 14px);
+    background: var(--surface);
+    overflow: hidden;
+  }
+
+  .proc-tree-leaf-summary {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    padding: 0.85rem 1rem;
+    cursor: pointer;
+    list-style: none;
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.4;
+    transition: background 0.15s;
+  }
+
+  .proc-tree-leaf-summary::-webkit-details-marker { display: none; }
+  .proc-tree-leaf-summary::marker { content: ''; }
+
+  .proc-tree-leaf-summary:hover {
+    background: var(--bg2);
+  }
+
+  .proc-tree-leaf-title {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .proc-tree-chevron {
+    flex-shrink: 0;
+    width: 0.5rem;
+    height: 0.5rem;
+    margin-top: 0.4rem;
+    border-right: 2px solid var(--accent-dark);
+    border-bottom: 2px solid var(--accent-dark);
+    transform: rotate(-45deg);
+    transition: transform 0.2s ease;
+    opacity: 0.85;
+  }
+
+  details[open] > .proc-tree-leaf-summary .proc-tree-chevron {
+    transform: rotate(45deg);
+    margin-top: 0.28rem;
+  }
+
+  .proc-item-list {
+    margin: 0;
+    padding: 0.85rem 1rem 1rem 1.85rem;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    border-top: 1px solid var(--rule);
+    background: var(--surface);
+  }
+
+  .proc-item-list li {
+    font-size: 0.84rem;
+    line-height: 1.5;
+    color: var(--t2);
+    padding-left: 0.65rem;
+    border-left: 2px solid var(--color-gold-light, #e8d5b0);
+  }
+
+  .proc-item-name {
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .proc-item-note {
+    display: block;
+    margin-top: 0.15rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--t3);
+  }
+
+  .proc-footer {
+    margin-top: 2.5rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--rule);
+    text-align: center;
+    font-size: 0.9rem;
+    line-height: 1.75;
+    color: var(--t2);
+  }
+
+  .proc-footer a {
+    color: var(--accent-dark);
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+
+  .proc-footer p {
+    margin: 0 0 0.75rem;
+  }
+
+  .proc-footer p:last-child {
+    margin-bottom: 0;
+  }
+
+  /* ── 모바일 ── */
+  @media (max-width: 900px) {
+    .proc-layout {
+      flex-direction: column;
+      gap: 1rem;
+      padding-top: 1rem;
+    }
+
+    .proc-sidebar {
+      width: 100%;
+      position: static;
+      max-height: none;
+      overflow: visible;
+    }
+
+    .proc-sidebar .sidebar-cat-list {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    .proc-sidebar .sidebar-cat-link {
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      border: 1px solid var(--rule);
+      min-height: 0;
+    }
+
+    .proc-sidebar .proc-nav-short {
+      display: none;
+    }
+
+    .proc-sidebar .proc-nav-label {
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+
+    .proc-pillar-cards {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .proc-posts-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  @media (max-width: 500px) {
+    .proc-pillar-cards {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .proc-posts-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

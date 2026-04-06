@@ -117,11 +117,14 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
                       }
                     </time>
                     {post.data.tags &&
-                      post.data.tags.slice(0, 4).map((tag) => (
-                        <a href={blogTagPageHref(tag)} class="blog-post-card-tag">
-                          #{tag}
-                        </a>
-                      ))}
+                      post.data.tags
+                        .filter((tag) => !/^작성-\d{6,}/.test(tag))
+                        .slice(0, 4)
+                        .map((tag) => (
+                          <a href={blogTagPageHref(tag)} class="blog-post-card-tag">
+                            #{tag}
+                          </a>
+                        ))}
                   </div>
                 </article>
               ))}
@@ -645,5 +648,102 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
     });
   }
 
-  fillBlogGridViews();
+  async function initBlogAbTests() {
+    if (!url || !key) return;
+    const grid = document.getElementById('blog-grid');
+    if (!grid) return;
+    const cards = [...grid.querySelectorAll('[data-blog-card]')].filter(
+      (el): el is HTMLElement => el instanceof HTMLElement,
+    );
+    if (!cards.length) return;
+
+    const slugs = [...new Set(cards.map((c) => c.dataset.blogSlug?.trim()).filter(Boolean))];
+    if (!slugs.length) return;
+
+    const supabase = createClient(url, key);
+    const { data: tests, error } = await supabase
+      .from('ab_tests')
+      .select('id, slug, title_a, title_b')
+      .is('ended_at', null)
+      .in('slug', slugs);
+
+    if (error || !tests?.length) return;
+
+    const bySlug = new Map(tests.map((t) => [t.slug, t]));
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting || !(entry.target instanceof HTMLElement)) continue;
+          const card = entry.target;
+          const testId = card.dataset.abTestId;
+          const variant = card.dataset.abVariant;
+          if (!testId || (variant !== 'a' && variant !== 'b')) continue;
+          const seenKey = `ab_view_${testId}`;
+          if (sessionStorage.getItem(seenKey)) {
+            observer.unobserve(card);
+            continue;
+          }
+          sessionStorage.setItem(seenKey, '1');
+          void supabase.rpc('increment_ab_views', { test_id: testId, variant });
+          observer.unobserve(card);
+        }
+      },
+      { root: null, rootMargin: '0px', threshold: 0.35 },
+    );
+
+    for (const card of cards) {
+      const slug = card.dataset.blogSlug?.trim() ?? '';
+      const test = slug ? bySlug.get(slug) : undefined;
+      if (!test) continue;
+
+      const sk = `ab_${slug}`;
+      let variant = sessionStorage.getItem(sk);
+      if (variant !== 'a' && variant !== 'b') {
+        variant = Math.random() < 0.5 ? 'a' : 'b';
+        sessionStorage.setItem(sk, variant);
+      }
+
+      const baseTitle = card.getAttribute('data-title') || '';
+      const titleEl = card.querySelector('.blog-post-card-title');
+      if (titleEl) {
+        titleEl.textContent = variant === 'a' ? test.title_a : test.title_b;
+      }
+      card.setAttribute('data-title', `${baseTitle} ${test.title_a} ${test.title_b}`.trim());
+
+      card.dataset.abTestId = test.id;
+      card.dataset.abVariant = variant;
+
+      observer.observe(card);
+    }
+
+    grid.addEventListener(
+      'click',
+      (e) => {
+        const t = e.target;
+        if (!(t instanceof Element)) return;
+        const a = t.closest('a.blog-post-card-main');
+        if (!a || !grid.contains(a)) return;
+        const card = a.closest('[data-blog-card]');
+        if (!(card instanceof HTMLElement)) return;
+        const testId = card.dataset.abTestId;
+        const variant = card.dataset.abVariant;
+        if (!testId || (variant !== 'a' && variant !== 'b')) return;
+        const clickKey = `ab_click_${testId}_${variant}`;
+        if (sessionStorage.getItem(clickKey)) return;
+        sessionStorage.setItem(clickKey, '1');
+        void supabase.rpc('increment_ab_clicks', { test_id: testId, variant });
+      },
+      true,
+    );
+  }
+
+  async function runBlogGridClient() {
+    await fillBlogGridViews();
+    await initBlogAbTests();
+    const refilter = (globalThis as unknown as { applyBlogFilters?: () => void }).applyBlogFilters;
+    if (typeof refilter === 'function') refilter();
+  }
+
+  void runBlogGridClient();
 </script>

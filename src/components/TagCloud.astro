@@ -9,18 +9,23 @@ interface Props {
 	/** 글 본문용: 이 태그만 링크 (크기 균일) */
 	tags?: string[];
 	title?: string;
+	/** cloud 변형에서 펼치지 않고 기본 표시할 태그 수 (기본 20) */
+	previewCount?: number;
 }
 
-const { variant = 'cloud', posts = [], tags: postTags = [], title } = Astro.props;
+const { variant = 'cloud', posts = [], tags: postTags = [], title, previewCount = 20 } = Astro.props;
 
 const cloudTitle = title ?? '태그';
+
+/** 내부 관리용 태그 패턴 — UI에 노출하지 않음 */
+const INTERNAL_TAG_RE = /^작성-\d{6,}/;
 
 function aggregateTags(entries: CollectionEntry<'blog'>[]): Map<string, number> {
 	const m = new Map<string, number>();
 	for (const p of entries) {
 		for (const raw of p.data.tags ?? []) {
 			const t = String(raw || '').trim();
-			if (!t) continue;
+			if (!t || INTERNAL_TAG_RE.test(t)) continue;
 			m.set(t, (m.get(t) ?? 0) + 1);
 		}
 	}
@@ -48,14 +53,21 @@ if (variant === 'cloud' && posts.length > 0) {
 		tier: 2 as const,
 	}));
 }
+
+const isCloud = variant === 'cloud';
+const previewItems = isCloud ? items.slice(0, previewCount) : items;
+const moreItems   = isCloud ? items.slice(previewCount)     : [];
+const hasMore     = moreItems.length > 0;
 ---
 
 {
 	items.length > 0 && (
-		<div class:list={['tag-cloud', variant === 'post' && 'tag-cloud--post']}>
+		<div class:list={['tag-cloud', !isCloud && 'tag-cloud--post']}>
 			<h2 class="tag-cloud-title">{cloudTitle}</h2>
+
+			{/* 항상 보이는 상위 태그 */}
 			<ul class="tag-cloud-list">
-				{items.map(({ tag, count, tier }) => (
+				{previewItems.map(({ tag, count, tier }) => (
 					<li>
 						<a
 							href={blogTagPageHref(tag)}
@@ -63,11 +75,42 @@ if (variant === 'cloud' && posts.length > 0) {
 							title={`「${tag}」 태그가 달린 글 목록`}
 						>
 							#{tag}
-							{variant === 'cloud' && <span class="tag-cloud-count">{count}</span>}
+							{isCloud && <span class="tag-cloud-count">{count}</span>}
 						</a>
 					</li>
 				))}
 			</ul>
+
+			{/* 더보기 Accordion — cloud 변형에만 */}
+			{hasMore && (
+				<>
+					<ul class="tag-cloud-list tag-cloud-more-list" id="tag-cloud-more" hidden aria-hidden="true">
+						{moreItems.map(({ tag, count, tier }) => (
+							<li>
+								<a
+									href={blogTagPageHref(tag)}
+									class:list={['tag-cloud-link', `tag-cloud-link--t${tier}`]}
+									title={`「${tag}」 태그가 달린 글 목록`}
+								>
+									#{tag}
+									<span class="tag-cloud-count">{count}</span>
+								</a>
+							</li>
+						))}
+					</ul>
+
+					<button
+						class="tag-cloud-toggle"
+						type="button"
+						aria-expanded="false"
+						aria-controls="tag-cloud-more"
+						data-more-label={`태그 더보기 (${moreItems.length}개)`}
+						data-less-label="접기"
+					>
+						태그 더보기 ({moreItems.length}개)
+					</button>
+				</>
+			)}
 		</div>
 	)
 }
@@ -94,6 +137,14 @@ if (variant === 'cloud' && posts.length > 0) {
 		flex-wrap: wrap;
 		gap: 0.35rem 0.5rem;
 		align-items: center;
+	}
+
+	.tag-cloud-more-list {
+		margin-top: 0.35rem;
+	}
+
+	.tag-cloud-more-list[hidden] {
+		display: none !important;
 	}
 
 	.tag-cloud-link {
@@ -146,4 +197,64 @@ if (variant === 'cloud' && posts.length > 0) {
 	.tag-cloud-link:hover .tag-cloud-count {
 		color: var(--t2);
 	}
+
+	/* 더보기 토글 버튼 */
+	.tag-cloud-toggle {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		margin-top: 0.55rem;
+		padding: 0.25rem 0.65rem;
+		font-size: 0.76rem;
+		font-weight: 700;
+		color: var(--t3);
+		background: transparent;
+		border: 1px solid var(--rule);
+		border-radius: 999px;
+		cursor: pointer;
+		transition: color 0.15s, border-color 0.15s, background 0.15s;
+		line-height: 1.4;
+	}
+
+	.tag-cloud-toggle::after {
+		content: '▾';
+		font-size: 0.7em;
+		transition: transform 0.2s ease;
+	}
+
+	.tag-cloud-toggle[aria-expanded='true']::after {
+		transform: rotate(180deg);
+	}
+
+	.tag-cloud-toggle:hover {
+		color: var(--accent-dark);
+		border-color: var(--accent);
+		background: var(--bg2);
+	}
+
+	.tag-cloud-toggle:focus-visible {
+		outline: 2px solid var(--accent, #b8956a);
+		outline-offset: 2px;
+	}
 </style>
+
+<script>
+	document.querySelectorAll<HTMLButtonElement>('.tag-cloud-toggle').forEach((btn) => {
+		btn.addEventListener('click', () => {
+			const targetId = btn.getAttribute('aria-controls');
+			if (!targetId) return;
+			const panel = document.getElementById(targetId);
+			if (!panel) return;
+
+			const expanded = btn.getAttribute('aria-expanded') === 'true';
+			const nowExpanded = !expanded;
+
+			panel.hidden = !nowExpanded;
+			panel.setAttribute('aria-hidden', String(!nowExpanded));
+			btn.setAttribute('aria-expanded', String(nowExpanded));
+			btn.textContent = nowExpanded
+				? (btn.dataset.lessLabel ?? '접기')
+				: (btn.dataset.moreLabel ?? '더보기');
+		});
+	});
+</script>
