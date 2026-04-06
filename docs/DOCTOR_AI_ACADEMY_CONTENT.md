@@ -35,7 +35,7 @@ src/content/blog/doctor-ai-academy/{섹션}/{파일베이스}.md
 | `title` | 제목 |
 | `description` | 요약·검색용 설명 |
 | `date` | 발행일 (ISO 문자열 등, 다른 블로그 글과 동일) |
-| `category` | **`doctor-ai`** (다른 값이면 `academy_section`을 쓸 수 없음) — **URL 경로와 별개인 카테고리 id** |
+| `category` | **`doctor-ai`** (다른 값이면 `academy_section`을 쓸 수 없음) — **URL 경로와 별개인 글 유형 id**(스키마 필드명은 `category`) |
 | `academy_section` | **`fundamentals` \| `prompts` \| `cases` \| `tools`** 중 하나 |
 
 ### 선택
@@ -55,7 +55,7 @@ src/content/blog/doctor-ai-academy/{섹션}/{파일베이스}.md
 
 ## 3. 관리자(어드민) 미리보기·저장 경로
 
-- **카테고리**가 `doctor-ai`이면, 공개 시 캐논 경로는 **`/doctor-ai-academy/{슬러그}/`** 로 잡힙니다.
+- **글 유형**(`category`)이 `doctor-ai`이면, 공개 시 캐논 경로는 **`/doctor-ai-academy/{슬러그}/`** 로 잡힙니다.
 - **슬러그**에는 파일과 동일하게 **`섹션/파일베이스`** 형태를 넣습니다.  
   예: `fundamentals/welcome-doctor-ai-academy` → `/doctor-ai-academy/fundamentals/welcome-doctor-ai-academy/`
 - 로컬 파일 경로 예: `src/content/blog/doctor-ai-academy/fundamentals/welcome-doctor-ai-academy.md`

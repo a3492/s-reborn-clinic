@@ -14,7 +14,7 @@ export const BLOG_PILLAR_NAV = PROCEDURE_PILLAR_SUMMARIES.map((p) => ({
   proceduresHref: `/procedures#${p.id}`,
 }));
 
-/** 글 유형 바로가기 — consts CATEGORIES와 동일 id·순서 (FAQ·MYTH는 영문 약자 라벨). doctor-ai 카테고리는 Academy 경로로 분리 */
+/** 글 유형 바로가기 — consts CATEGORIES와 동일 id·순서 (FAQ·MYTH는 영문 약자 라벨). doctor-ai 글은 Academy 경로로 분리 */
 export const BLOG_TYPE_SHORTCUTS = CATEGORIES.filter((c) => c.id !== 'doctor-ai').map((c) => ({
   category: c.id,
   label:

@@ -41,7 +41,7 @@
 ### 완료된 작업 요약
 - **홈 히어로**: `design.css`의 `.hero-inner` 2열 grid가 홈에 그대로 먹던 문제 수정. `index.astro`에서 `.hero-inner`를 `flex` 세로 스택 + 중앙 정렬로 명시 오버라이드. 제목 `white-space: nowrap` 제거, 부제 `max-width: 560px` 등.
 - **모바일 여백**: `--page-inline` + `.site-main` 패딩, 헤더/푸터/탑바 정렬. 페이지별 이중 가로 패딩 제거(procedures, consult, about, legal-doc).
-- **블로그**: `pillar` 필드, `llms.txt`/`robots.txt` 엔드포인트, 정적 빌드용 클라이언트 필터·`data-blog-merge` 링크. 카테고리 **MYTH**(자주하는 오해), 메뉴 라벨 FAQ·MYTH·사이드바 `blogCategoryShortcutLabel`.
+- **블로그**: `pillar` 필드, `llms.txt`/`robots.txt` 엔드포인트, 정적 빌드용 클라이언트 필터·`data-blog-merge` 링크. 글 유형 **MYTH**(자주하는 오해), 메뉴 라벨 FAQ·MYTH·사이드바 `blogCategoryShortcutLabel`.
 - **콘텐츠**: `myth/botox-frozen-face-myth.md` 공개 글, `myth/example-myth-starter.md`는 `draft: true` 템플릿.
 - **법률 페이지**: `/privacy`, `/terms`, 푸터·상담 동의 링크.
 - **GEO/AEO·보안**: JSON-LD(Organization/WebSite/BlogPosting), `public/_headers`(CSP 등), `.well-known/security.txt`, 관리자 `noindex`, 사이트맵에서 `/admin` 제외.
@@ -69,7 +69,7 @@
 | 홈 | `src/pages/index.astro` |
 | 디자인 토큰·히어로(전역) | `src/styles/design.css` |
 | 블로그 목록·필터 스크립트 | `src/pages/blog/index.astro` |
-| 카테고리 정의 | `src/consts.ts` |
+| 글 유형 정의 (`CATEGORIES`) | `src/consts.ts` |
 | 블로그 메뉴 헬퍼 | `src/data/blog-nav.ts` |
 | 콘텐츠 스키마 | `src/content.config.ts` |
 | **Doctor AI Academy 글 작성 규칙** | `docs/DOCTOR_AI_ACADEMY_CONTENT.md` |

@@ -43,7 +43,7 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
         </div>
 
         <div class="admin-field">
-          <label class="admin-label" for="category">카테고리</label>
+          <label class="admin-label" for="category">글 유형</label>
           <select id="category" name="category" class="admin-select">
             {CATEGORIES.map((c) => (
               <option value={c.id}>{c.label}</option>
@@ -253,7 +253,7 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
       if (!metaList) return;
       metaList.innerHTML = `
         <li class="admin-list-row"><div><p class="admin-item-title">${post.title}</p><p class="admin-item-meta">slug: ${post.slug}</p></div><div><span class="admin-status ${post.status}">${post.status}</span></div></li>
-        <li class="admin-list-row"><div><p class="admin-item-title">카테고리</p><p class="admin-item-meta">${post.category ?? '-'}</p></div></li>
+        <li class="admin-list-row"><div><p class="admin-item-title">글 유형</p><p class="admin-item-meta">${post.category ?? '-'}</p></div></li>
         <li class="admin-list-row"><div><p class="admin-item-title">최근 수정</p><p class="admin-item-meta">${post.updated_at ?? '-'}</p></div></li>
       `;
       updatePreviewHref(post.slug);

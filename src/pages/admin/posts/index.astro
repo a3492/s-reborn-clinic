@@ -31,7 +31,7 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
         </select>
       </div>
       <div class="admin-field">
-        <label class="admin-label" for="admin-filter-category">카테고리</label>
+        <label class="admin-label" for="admin-filter-category">글 유형</label>
         <select id="admin-filter-category" class="admin-select" data-filter-category>
           <option value="">전체</option>
           {categoryOptions.map((c) => (
@@ -85,8 +85,8 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
               </button>
             </th>
             <th>
-              <button type="button" class="admin-th-sort" data-sort="category" aria-label="카테고리 기준 정렬">
-                카테고리 <span data-sort-indicator="category" aria-hidden="true"></span>
+              <button type="button" class="admin-th-sort" data-sort="category" aria-label="글 유형 기준 정렬">
+                글 유형 <span data-sort-indicator="category" aria-hidden="true"></span>
               </button>
             </th>
             <th>상태</th>
