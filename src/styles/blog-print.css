@@ -1,0 +1,138 @@
+/* 블로그 글 인쇄·PDF 저장 (BlogPost 레이아웃 전용) */
+
+.blog-print-banner {
+  display: none;
+}
+
+@media print {
+  :root,
+  html[data-theme='dark'] {
+    --bg: #ffffff;
+    --bg2: #f5f5f5;
+    --bg3: #eeeeee;
+    --surface: #ffffff;
+    --text: #111111;
+    --t2: #333333;
+    --t3: #555555;
+    --accent: #333333;
+    --accent-dark: #000000;
+    --accent-pink: #444444;
+    --rule: #cccccc;
+    --color-charcoal: #111111;
+    --color-brown-mid: #333333;
+    --color-gold-deep: #000000;
+  }
+
+  @page {
+    margin: 12mm 14mm;
+  }
+
+  body.blog-post-shell {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 12pt;
+    line-height: 1.6;
+  }
+
+  body.blog-post-shell .site-header,
+  body.blog-post-shell .topbar,
+  body.blog-post-shell .blog-sidebar,
+  body.blog-post-shell .site-footer,
+  body.blog-post-shell .blog-post-series,
+  body.blog-post-shell .blog-post-tag-cloud-wrap,
+  body.blog-post-shell .blog-post-reactions,
+  body.blog-post-shell .blog-post-share-section,
+  body.blog-post-shell .subscribe-form-card,
+  body.blog-post-shell .blog-post-tags,
+  body.blog-post-shell .blog-post-view-line,
+  body.blog-post-shell a[href*='/admin'] {
+    display: none !important;
+  }
+
+  /* 본문에 삽입된 목차·TOC 패턴 (향후 플러그인 대비) */
+  body.blog-post-shell article .table-of-contents,
+  body.blog-post-shell article [data-toc],
+  body.blog-post-shell article nav.toc {
+    display: none !important;
+  }
+
+  body.blog-post-shell .blog-print-banner {
+    display: block !important;
+    margin: 0 0 1rem;
+    padding: 0 0 0.65rem;
+    border-bottom: 1px solid #000;
+    color: #000;
+    font-size: 9pt;
+    line-height: 1.45;
+    word-break: break-all;
+  }
+
+  body.blog-post-shell .blog-print-banner::before {
+    content: attr(data-print-site) ' · ' attr(data-print-url) ' · 인쇄: ' attr(data-print-date);
+  }
+
+  body.blog-post-shell .site-wrap {
+    max-width: none !important;
+  }
+
+  body.blog-post-shell .blog-with-sidebar {
+    display: block !important;
+    padding-top: 0 !important;
+  }
+
+  body.blog-post-shell .blog-post-main {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.blog-post-shell .blog-post-article {
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  body.blog-post-shell .blog-post-prose.prose {
+    font-size: 12pt !important;
+    line-height: 1.6 !important;
+    color: #000 !important;
+  }
+
+  body.blog-post-shell .blog-post-title .meta,
+  body.blog-post-shell .blog-post-title .category-badge,
+  body.blog-post-shell .blog-post-title time {
+    color: #000 !important;
+  }
+
+  body.blog-post-shell .blog-post-title h1 {
+    color: #000 !important;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  body.blog-post-shell article.blog-post-article .prose h2,
+  body.blog-post-shell article.blog-post-article .prose h3 {
+    page-break-after: avoid;
+    break-after: avoid;
+    color: #000 !important;
+  }
+
+  body.blog-post-shell article.blog-post-article .prose pre,
+  body.blog-post-shell article.blog-post-article .prose table,
+  body.blog-post-shell article.blog-post-article .prose figure,
+  body.blog-post-shell article.blog-post-article .prose img {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  body.blog-post-shell article.blog-post-article .prose a[href]::after {
+    content: ' (' attr(href) ')';
+    font-size: 0.88em;
+    font-weight: normal;
+  }
+
+  body.blog-post-shell * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+}

@@ -1,6 +1,8 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { CATEGORIES } from '../../../consts';
 
+const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
 ---
 
 <AdminLayout
@@ -13,42 +15,219 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
     <div class="admin-actions-row">
       <div>
         <h2 class="admin-section-title">Post List</h2>
-        <p class="admin-section-desc">최신 글과 최근 publish 결과를 함께 확인합니다.</p>
+        <p class="admin-section-desc">필터·정렬·벌크 작업으로 목록을 관리합니다.</p>
       </div>
       <a href="/admin/posts/new" class="admin-btn primary">새 글 작성</a>
+    </div>
+
+    <form class="admin-posts-filters" data-admin-posts-filters>
+      <div class="admin-field">
+        <label class="admin-label" for="admin-filter-status">상태</label>
+        <select id="admin-filter-status" class="admin-select" data-filter-status>
+          <option value="">전체</option>
+          <option value="draft">draft</option>
+          <option value="published">published</option>
+          <option value="archived">archived</option>
+        </select>
+      </div>
+      <div class="admin-field">
+        <label class="admin-label" for="admin-filter-category">카테고리</label>
+        <select id="admin-filter-category" class="admin-select" data-filter-category>
+          <option value="">전체</option>
+          {categoryOptions.map((c) => (
+            <option value={c.id}>{c.label}</option>
+          ))}
+        </select>
+      </div>
+      <div class="admin-field">
+        <label class="admin-label" for="admin-filter-date">기간 (수정일 기준)</label>
+        <select id="admin-filter-date" class="admin-select" data-filter-date>
+          <option value="">전체 기간</option>
+          <option value="week">이번 주</option>
+          <option value="month">이번 달</option>
+          <option value="custom">직접 입력</option>
+        </select>
+      </div>
+      <div class="admin-field admin-posts-date-custom" hidden data-filter-custom-dates>
+        <label class="admin-label" for="admin-filter-from">시작</label>
+        <input id="admin-filter-from" class="admin-input" type="date" data-filter-from />
+        <label class="admin-label" for="admin-filter-to" style="margin-top: 0.35rem;">종료</label>
+        <input id="admin-filter-to" class="admin-input" type="date" data-filter-to />
+      </div>
+      <div class="admin-field admin-posts-filter-actions">
+        <button type="submit" class="admin-btn primary">필터 적용</button>
+        <button type="button" class="admin-btn" data-filter-reset>초기화</button>
+      </div>
+    </form>
+
+    <div class="admin-bulk-bar" data-admin-bulk-bar hidden>
+      <span class="admin-bulk-bar-count" data-admin-bulk-count>0개 선택됨</span>
+      <div class="admin-bulk-bar-actions">
+        <button type="button" class="admin-btn admin-btn-sm primary" data-admin-bulk-publish>일괄 발행</button>
+        <button type="button" class="admin-btn admin-btn-sm" data-admin-bulk-archive>일괄 아카이브</button>
+        <button type="button" class="admin-btn admin-btn-sm danger" data-admin-bulk-delete>일괄 삭제</button>
+      </div>
+      <span class="admin-bulk-progress" data-admin-bulk-progress hidden></span>
     </div>
 
     <p class="admin-inline-note" data-admin-posts-message hidden></p>
 
     <div class="admin-table-wrap">
-    <table class="admin-table">
-      <thead>
-        <tr>
-          <th>Title</th>
-          <th>Category</th>
-          <th>Post Status</th>
-          <th>Latest Publish</th>
-          <th>Updated</th>
-          <th>공개 관리</th>
-        </tr>
-      </thead>
-      <tbody data-admin-posts-body>
-        <tr>
-          <td colspan="6">불러오는 중...</td>
-        </tr>
-      </tbody>
-    </table>
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th class="admin-th-check">
+              <input type="checkbox" aria-label="현재 목록 전체 선택" data-admin-select-all />
+            </th>
+            <th>
+              <button type="button" class="admin-th-sort" data-sort="title" aria-label="제목 기준 정렬">
+                제목 <span data-sort-indicator="title" aria-hidden="true"></span>
+              </button>
+            </th>
+            <th>
+              <button type="button" class="admin-th-sort" data-sort="category" aria-label="카테고리 기준 정렬">
+                카테고리 <span data-sort-indicator="category" aria-hidden="true"></span>
+              </button>
+            </th>
+            <th>상태</th>
+            <th>최근 Publish</th>
+            <th>
+              <button type="button" class="admin-th-sort" data-sort="published_at" aria-label="발행일 기준 정렬">
+                발행일 <span data-sort-indicator="published_at" aria-hidden="true"></span>
+              </button>
+            </th>
+            <th>
+              <button type="button" class="admin-th-sort" data-sort="views" aria-label="조회수 기준 정렬">
+                조회수 <span data-sort-indicator="views" aria-hidden="true"></span>
+              </button>
+            </th>
+            <th>반응</th>
+            <th>공개 관리</th>
+          </tr>
+        </thead>
+        <tbody data-admin-posts-body>
+          <tr>
+            <td colspan="9">불러오는 중...</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
     <p class="admin-inline-note" data-admin-toggle-message hidden></p>
   </div>
 
+  <style>
+    .admin-posts-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1rem;
+      align-items: flex-end;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background: var(--admin-bg2, var(--bg2));
+      border-radius: 12px;
+      border: 1px solid var(--rule);
+    }
+
+    .admin-posts-filters .admin-field {
+      margin: 0;
+      min-width: 140px;
+    }
+
+    .admin-posts-date-custom {
+      min-width: 180px;
+    }
+
+    .admin-posts-filter-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+
+    .admin-bulk-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem 1rem;
+      margin-bottom: 1rem;
+      padding: 0.65rem 1rem;
+      border-radius: 10px;
+      border: 1px solid var(--rule);
+      background: rgba(184, 138, 94, 0.08);
+    }
+
+    .admin-bulk-bar[hidden] {
+      display: none !important;
+    }
+
+    .admin-bulk-bar-count {
+      font-weight: 700;
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+
+    .admin-bulk-bar-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .admin-bulk-progress {
+      font-size: 0.86rem;
+      color: var(--t2);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .admin-th-check {
+      width: 2.25rem;
+    }
+
+    .admin-th-sort {
+      border: none;
+      background: none;
+      padding: 0;
+      margin: 0;
+      font: inherit;
+      font-weight: 700;
+      color: inherit;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      text-align: left;
+    }
+
+    .admin-th-sort:hover {
+      color: var(--accent-dark);
+    }
+  </style>
+
   <script>
     import { createClient } from '@supabase/supabase-js';
+    import { fetchReactionTotalsBySlugs } from '../../../lib/blog-post-reactions';
+    import { fetchViewCountsMap } from '../../../lib/blog-post-views';
+
     const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
     const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
     const tbody = document.querySelector('[data-admin-posts-body]');
     const message = document.querySelector('[data-admin-posts-message]');
+    const toggleMessage = document.querySelector('[data-admin-toggle-message]');
+    const filterForm = document.querySelector('[data-admin-posts-filters]');
+    const filterStatus = document.querySelector('[data-filter-status]');
+    const filterCategory = document.querySelector('[data-filter-category]');
+    const filterDate = document.querySelector('[data-filter-date]');
+    const filterCustomWrap = document.querySelector('[data-filter-custom-dates]');
+    const filterFrom = document.querySelector('[data-filter-from]');
+    const filterTo = document.querySelector('[data-filter-to]');
+    const filterReset = document.querySelector('[data-filter-reset]');
+    const selectAllCb = document.querySelector('[data-admin-select-all]');
+    const bulkBar = document.querySelector('[data-admin-bulk-bar]');
+    const bulkCount = document.querySelector('[data-admin-bulk-count]');
+    const bulkProgress = document.querySelector('[data-admin-bulk-progress]');
+    const bulkPublishBtn = document.querySelector('[data-admin-bulk-publish]');
+    const bulkArchiveBtn = document.querySelector('[data-admin-bulk-archive]');
+    const bulkDeleteBtn = document.querySelector('[data-admin-bulk-delete]');
 
     const setMessage = (text, state = 'info') => {
       if (!message) return;
@@ -57,20 +236,34 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       message.dataset.state = state;
     };
 
+    const setToggleMessage = (text, state = 'info') => {
+      if (!toggleMessage) return;
+      toggleMessage.hidden = false;
+      toggleMessage.textContent = text;
+      toggleMessage.dataset.state = state;
+      setTimeout(() => {
+        toggleMessage.hidden = true;
+      }, 5000);
+    };
+
     const formatDate = (value) => {
       if (!value) return '-';
       return new Intl.DateTimeFormat('ko-KR', {
-        year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit'
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
       }).format(new Date(value));
     };
 
-    const escapeHtml = (value) => String(value ?? '')
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#39;');
+    const escapeHtml = (value) =>
+      String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
 
     const indexLatestJobs = (rows) => {
       const map = new Map();
@@ -81,38 +274,200 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       return map;
     };
 
-    const toggleMessage = document.querySelector('[data-admin-toggle-message]');
-
-    const setToggleMessage = (text, state = 'info') => {
-      if (!toggleMessage) return;
-      toggleMessage.hidden = false;
-      toggleMessage.textContent = text;
-      toggleMessage.dataset.state = state;
-      setTimeout(() => { toggleMessage.hidden = true; }, 5000);
+    type FilterState = {
+      status: string;
+      category: string;
+      date: string;
+      dateFrom: string;
+      dateTo: string;
+      sort: string;
+      dir: 'asc' | 'desc';
     };
 
-    const renderRows = (rows, latestJobs) => {
+    const readFiltersFromUrl = (): FilterState => {
+      const p = new URLSearchParams(location.search);
+      return {
+        status: p.get('status') ?? '',
+        category: p.get('category') ?? '',
+        date: p.get('date') ?? '',
+        dateFrom: p.get('from') ?? '',
+        dateTo: p.get('to') ?? '',
+        sort: p.get('sort') || 'published_at',
+        dir: p.get('dir') === 'asc' ? 'asc' : 'desc',
+      };
+    };
+
+    const writeFiltersToUrl = (f: FilterState) => {
+      const p = new URLSearchParams();
+      if (f.status) p.set('status', f.status);
+      if (f.category) p.set('category', f.category);
+      if (f.date) p.set('date', f.date);
+      if (f.dateFrom) p.set('from', f.dateFrom);
+      if (f.dateTo) p.set('to', f.dateTo);
+      if (f.sort && f.sort !== 'published_at') p.set('sort', f.sort);
+      if (f.dir !== 'desc') p.set('dir', f.dir);
+
+      const cur = new URLSearchParams(location.search);
+      for (const key of ['saved', 'updated']) {
+        if (cur.has(key)) p.set(key, cur.get(key) ?? '');
+      }
+
+      const s = p.toString();
+      const path = location.pathname.endsWith('/') ? location.pathname : `${location.pathname}/`;
+      history.replaceState(null, '', s ? `${path}?${s}` : path);
+    };
+
+    const readFiltersFromForm = (): FilterState => ({
+      status: filterStatus instanceof HTMLSelectElement ? filterStatus.value : '',
+      category: filterCategory instanceof HTMLSelectElement ? filterCategory.value : '',
+      date: filterDate instanceof HTMLSelectElement ? filterDate.value : '',
+      dateFrom: filterFrom instanceof HTMLInputElement ? filterFrom.value : '',
+      dateTo: filterTo instanceof HTMLInputElement ? filterTo.value : '',
+      ...(() => {
+        const u = readFiltersFromUrl();
+        return { sort: u.sort, dir: u.dir };
+      })(),
+    });
+
+    const applyFiltersToForm = (f: FilterState) => {
+      if (filterStatus instanceof HTMLSelectElement) filterStatus.value = f.status;
+      if (filterCategory instanceof HTMLSelectElement) filterCategory.value = f.category;
+      if (filterDate instanceof HTMLSelectElement) filterDate.value = f.date;
+      if (filterFrom instanceof HTMLInputElement) filterFrom.value = f.dateFrom;
+      if (filterTo instanceof HTMLInputElement) filterTo.value = f.dateTo;
+      syncCustomDateVisibility();
+    };
+
+    const syncCustomDateVisibility = () => {
+      if (!(filterDate instanceof HTMLSelectElement) || !(filterCustomWrap instanceof HTMLElement)) return;
+      filterCustomWrap.hidden = filterDate.value !== 'custom';
+    };
+
+    const startOfWeekMonday = () => {
+      const d = new Date();
+      const day = d.getDay();
+      const diff = day === 0 ? 6 : day - 1;
+      d.setDate(d.getDate() - diff);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    };
+
+    const startOfMonth = () => {
+      const d = new Date();
+      d.setDate(1);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    };
+
+    const endOfToday = () => {
+      const d = new Date();
+      d.setHours(23, 59, 59, 999);
+      return d;
+    };
+
+    const parseYmdLocalStart = (ymd: string) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return null;
+      const [y, m, d] = ymd.split('-').map(Number);
+      const dt = new Date(y, m - 1, d, 0, 0, 0, 0);
+      return Number.isNaN(dt.getTime()) ? null : dt;
+    };
+
+    const parseYmdLocalEnd = (ymd: string) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return null;
+      const [y, m, d] = ymd.split('-').map(Number);
+      const dt = new Date(y, m - 1, d, 23, 59, 59, 999);
+      return Number.isNaN(dt.getTime()) ? null : dt;
+    };
+
+    let supabase: ReturnType<typeof createClient> | null = null;
+    let selectedSlugs = new Set<string>();
+    let lastRows: any[] = [];
+
+    const updateSortIndicators = (f: FilterState) => {
+      document.querySelectorAll('[data-sort-indicator]').forEach((el) => {
+        const key = el.getAttribute('data-sort-indicator');
+        if (!key) return;
+        el.textContent = f.sort === key ? (f.dir === 'asc' ? '▲' : '▼') : '';
+      });
+    };
+
+    const toggleSort = (key: string) => {
+      const cur = readFiltersFromUrl();
+      let sort = key;
+      let dir: 'asc' | 'desc';
+      if (cur.sort === key) {
+        dir = cur.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        dir = key === 'title' || key === 'category' ? 'asc' : 'desc';
+      }
+      const f: FilterState = { ...cur, sort, dir };
+      writeFiltersToUrl(f);
+      updateSortIndicators(f);
+      void loadPosts();
+    };
+
+    const updateBulkUi = () => {
+      const n = selectedSlugs.size;
+      if (bulkBar instanceof HTMLElement) bulkBar.hidden = n === 0;
+      if (bulkCount) bulkCount.textContent = `${n}개 선택됨`;
+      if (bulkProgress instanceof HTMLElement) {
+        bulkProgress.hidden = true;
+        bulkProgress.textContent = '';
+      }
+    };
+
+    const syncSelectAllState = () => {
+      if (!(selectAllCb instanceof HTMLInputElement)) return;
+      if (!lastRows.length) {
+        selectAllCb.checked = false;
+        selectAllCb.indeterminate = false;
+        return;
+      }
+      const slugs = lastRows.map((r) => r.slug).filter(Boolean);
+      const selectedOnPage = slugs.filter((s) => selectedSlugs.has(s));
+      selectAllCb.checked = selectedOnPage.length > 0 && selectedOnPage.length === slugs.length;
+      selectAllCb.indeterminate = selectedOnPage.length > 0 && selectedOnPage.length < slugs.length;
+    };
+
+    const setBulkBusy = (busy: boolean) => {
+      [bulkPublishBtn, bulkArchiveBtn, bulkDeleteBtn].forEach((b) => {
+        if (b instanceof HTMLButtonElement) b.disabled = busy;
+      });
+    };
+
+    const renderRows = (rows, latestJobs, reactionTotals, viewCounts) => {
       if (!tbody) return;
+      lastRows = rows;
       if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="6">아직 저장된 draft가 없습니다.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9">조건에 맞는 글이 없습니다.</td></tr>';
+        syncSelectAllState();
+        updateBulkUi();
         return;
       }
 
-      tbody.innerHTML = rows.map((row) => {
-        const latestJob = latestJobs.get(row.id);
-        const latestPublish = latestJob
-          ? `<div class="admin-status-stack"><span class="admin-status ${escapeHtml(latestJob.status)}">${escapeHtml(latestJob.status)}</span><span class="admin-cell-subtle">${formatDate(latestJob.created_at)}</span></div>`
-          : '<span class="admin-cell-subtle">이력 없음</span>';
-        const commitOrError = latestJob?.status === 'failed'
-          ? `<span class="admin-cell-error">${escapeHtml(latestJob.error_message ?? 'unknown error')}</span>`
-          : `<span class="admin-cell-mono">${escapeHtml(latestJob?.commit_sha ?? '-')}</span>`;
+      tbody.innerHTML = rows
+        .map((row) => {
+          const latestJob = latestJobs.get(row.id);
+          const latestPublish = latestJob
+            ? `<div class="admin-status-stack"><span class="admin-status ${escapeHtml(latestJob.status)}">${escapeHtml(latestJob.status)}</span><span class="admin-cell-subtle">${formatDate(latestJob.created_at)}</span></div>`
+            : '<span class="admin-cell-subtle">이력 없음</span>';
+          const commitOrError =
+            latestJob?.status === 'failed'
+              ? `<span class="admin-cell-error">${escapeHtml(latestJob.error_message ?? 'unknown error')}</span>`
+              : `<span class="admin-cell-mono">${escapeHtml(latestJob?.commit_sha ?? '-')}</span>`;
 
-        const isPublished = row.status === 'published';
-        const toggleLabel = isPublished ? '비공개 전환' : '공개 발행';
-        const toggleClass = isPublished ? 'admin-btn admin-btn-sm danger' : 'admin-btn admin-btn-sm primary';
+          const isPublished = row.status === 'published';
+          const toggleLabel = isPublished ? '비공개 전환' : '공개 발행';
+          const toggleClass = isPublished ? 'admin-btn admin-btn-sm danger' : 'admin-btn admin-btn-sm primary';
+          const reactionTotal = reactionTotals?.get(row.slug) ?? 0;
+          const views = viewCounts?.get(row.slug) ?? 0;
+          const checked = selectedSlugs.has(row.slug) ? ' checked' : '';
 
-        return `
-          <tr>
+          return `
+          <tr data-post-slug="${escapeHtml(row.slug)}" data-post-status="${escapeHtml(row.status)}">
+            <td>
+              <input type="checkbox" data-post-select="${escapeHtml(row.slug)}" aria-label="선택"${checked} />
+            </td>
             <td>
               <a class="admin-table-link" href="/admin/posts/edit?slug=${encodeURIComponent(row.slug)}">${escapeHtml(row.title)}</a>
               <div class="admin-cell-subtle">${escapeHtml(row.slug)}</div>
@@ -123,7 +478,9 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
               ${latestPublish}
               <div class="admin-cell-subtle">${commitOrError}</div>
             </td>
-            <td>${formatDate(row.updated_at)}</td>
+            <td>${formatDate(row.published_at)}</td>
+            <td><span class="admin-cell-mono">${views}</span></td>
+            <td><span class="admin-cell-mono">${reactionTotal}</span></td>
             <td>
               <button
                 class="${escapeHtml(toggleClass)}"
@@ -133,27 +490,171 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
             </td>
           </tr>
         `;
-      }).join('');
+        })
+        .join('');
+
+      syncSelectAllState();
+      updateBulkUi();
+    };
+
+    const buildPostsQuery = (client: ReturnType<typeof createClient>, f: FilterState) => {
+      let q = client
+        .from('posts')
+        .select('id, title, slug, category, status, updated_at, published_at')
+        .limit(500);
+
+      if (f.status) q = q.eq('status', f.status);
+      if (f.category) q = q.eq('category', f.category);
+
+      if (f.date === 'week') {
+        q = q.gte('updated_at', startOfWeekMonday().toISOString());
+        q = q.lte('updated_at', endOfToday().toISOString());
+      } else if (f.date === 'month') {
+        q = q.gte('updated_at', startOfMonth().toISOString());
+        q = q.lte('updated_at', endOfToday().toISOString());
+      } else if (f.date === 'custom' && f.dateFrom && f.dateTo) {
+        const a = parseYmdLocalStart(f.dateFrom);
+        const b = parseYmdLocalEnd(f.dateTo);
+        if (a && b && a <= b) {
+          q = q.gte('updated_at', a.toISOString());
+          q = q.lte('updated_at', b.toISOString());
+        }
+      }
+
+      const asc = f.dir === 'asc';
+      if (f.sort === 'views') {
+        q = q.order('updated_at', { ascending: false });
+      } else if (f.sort === 'title') {
+        q = q.order('title', { ascending: asc });
+      } else if (f.sort === 'category') {
+        q = q.order('category', { ascending: asc, nullsFirst: asc });
+      } else if (f.sort === 'published_at') {
+        q = q.order('published_at', { ascending: asc, nullsFirst: asc });
+      } else {
+        q = q.order('published_at', { ascending: false, nullsFirst: false });
+      }
+
+      return q;
+    };
+
+    const sortRowsByViews = (rows, viewCounts, dir: 'asc' | 'desc') =>
+      [...rows].sort((a, b) => {
+        const va = viewCounts.get(a.slug) ?? 0;
+        const vb = viewCounts.get(b.slug) ?? 0;
+        if (va !== vb) return dir === 'asc' ? va - vb : vb - va;
+        return String(a.title ?? '').localeCompare(String(b.title ?? ''), 'ko');
+      });
+
+    const loadPosts = async () => {
+      if (!supabase || !tbody) return;
+      const f = readFiltersFromUrl();
+      applyFiltersToForm(f);
+      updateSortIndicators(f);
+
+      const postsResult = await buildPostsQuery(supabase, f);
+      const jobsResult = await supabase
+        .from('publish_jobs')
+        .select('post_id, status, commit_sha, error_message, created_at')
+        .order('created_at', { ascending: false })
+        .limit(800);
+
+      if (postsResult.error) {
+        renderRows([], new Map(), new Map(), new Map());
+        setMessage(postsResult.error.message, 'error');
+        return;
+      }
+
+      let rows = postsResult.data ?? [];
+      const slugs = rows.map((r) => r.slug).filter(Boolean);
+      const [reactionTotals, viewCounts] = await Promise.all([
+        fetchReactionTotalsBySlugs(supabase, slugs),
+        fetchViewCountsMap(supabase, slugs),
+      ]);
+
+      if (f.sort === 'views') {
+        rows = sortRowsByViews(rows, viewCounts, f.dir);
+      }
+
+      renderRows(rows, indexLatestJobs(jobsResult.data ?? []), reactionTotals, viewCounts);
+
+      if (jobsResult.error) {
+        setMessage(`글 목록은 불러왔지만 publish 이력은 읽지 못했습니다: ${jobsResult.error.message}`, 'error');
+      }
     };
 
     if (!supabaseUrl || !supabaseKey) {
-      renderRows([], new Map());
+      renderRows([], new Map(), new Map(), new Map());
       setMessage('Supabase 환경 변수가 없어 목록을 불러올 수 없습니다.', 'error');
     } else {
-      let supabase = null;
+      document.addEventListener('admin:session-ready', async () => {
+        supabase = window.__adminSupabase;
 
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('saved') === '1') {
-        setMessage('draft가 저장되었습니다.', 'success');
-      }
-      if (params.get('updated') === '1') {
-        setMessage('draft가 수정되었습니다.', 'success');
-      }
+        const params = new URLSearchParams(location.search);
+        if (params.get('saved') === '1') setMessage('draft가 저장되었습니다.', 'success');
+        if (params.get('updated') === '1') setMessage('draft가 수정되었습니다.', 'success');
 
-      // 비공개/공개 토글
+        applyFiltersToForm(readFiltersFromUrl());
+        updateSortIndicators(readFiltersFromUrl());
+        await loadPosts();
+      });
+
+      filterDate?.addEventListener('change', syncCustomDateVisibility);
+
+      filterForm?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const f = readFiltersFromForm();
+        writeFiltersToUrl(f);
+        void loadPosts();
+      });
+
+      filterReset?.addEventListener('click', () => {
+        if (filterStatus instanceof HTMLSelectElement) filterStatus.value = '';
+        if (filterCategory instanceof HTMLSelectElement) filterCategory.value = '';
+        if (filterDate instanceof HTMLSelectElement) filterDate.value = '';
+        if (filterFrom instanceof HTMLInputElement) filterFrom.value = '';
+        if (filterTo instanceof HTMLInputElement) filterTo.value = '';
+        syncCustomDateVisibility();
+        const u = readFiltersFromUrl();
+        writeFiltersToUrl({ status: '', category: '', date: '', dateFrom: '', dateTo: '', sort: u.sort, dir: u.dir });
+        void loadPosts();
+      });
+
+      document.querySelectorAll('[data-sort]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const key = btn.getAttribute('data-sort');
+          if (key) toggleSort(key);
+        });
+      });
+
+      tbody?.addEventListener('change', (e) => {
+        const t = e.target;
+        if (t instanceof HTMLInputElement && t.matches('[data-post-select]')) {
+          const slug = t.dataset.postSelect ?? '';
+          if (t.checked) selectedSlugs.add(slug);
+          else selectedSlugs.delete(slug);
+          syncSelectAllState();
+          updateBulkUi();
+        }
+      });
+
+      selectAllCb?.addEventListener('change', () => {
+        if (!(selectAllCb instanceof HTMLInputElement)) return;
+        const slugs = lastRows.map((r) => r.slug).filter(Boolean);
+        if (selectAllCb.checked) slugs.forEach((s) => selectedSlugs.add(s));
+        else slugs.forEach((s) => selectedSlugs.delete(s));
+        tbody?.querySelectorAll('[data-post-select]').forEach((el) => {
+          if (el instanceof HTMLInputElement) {
+            const s = el.dataset.postSelect ?? '';
+            el.checked = selectedSlugs.has(s);
+          }
+        });
+        syncSelectAllState();
+        updateBulkUi();
+      });
+
       document.addEventListener('click', async (e) => {
         const btn = e.target.closest('[data-toggle-slug]');
-        if (!btn) return;
+        if (!btn || !supabase) return;
 
         const slug = btn.dataset.toggleSlug;
         const currentStatus = btn.dataset.toggleStatus;
@@ -163,7 +664,6 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         btn.disabled = true;
         btn.textContent = '처리 중...';
 
-        // 1. Supabase status 업데이트
         const { error: updateError } = await supabase
           .from('posts')
           .update({ status: newStatus, updated_at: new Date().toISOString() })
@@ -176,54 +676,125 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
           return;
         }
 
-        // 2. publish 파이프라인 실행 (markdown 파일 업데이트 + GitHub 커밋)
-        const publishRes = await fetch('/api/admin/publish', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ slug }),
-        });
-
-        const publishResult = await publishRes.json().catch(() => ({}));
-
-        if (!publishRes.ok) {
-          setToggleMessage(`파일 업데이트 실패: ${publishResult.error ?? '알 수 없는 오류'}`, 'error');
-          btn.disabled = false;
-          btn.textContent = currentStatus === 'published' ? '비공개 전환' : '공개 발행';
-          return;
+        if (newStatus === 'published') {
+          const publishRes = await fetch('/api/admin/publish', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug, requestedBy: document.body.dataset.adminUserId ?? null }),
+          });
+          const publishResult = await publishRes.json().catch(() => ({}));
+          if (!publishRes.ok) {
+            setToggleMessage(`파일 업데이트 실패: ${publishResult.error ?? '알 수 없는 오류'}`, 'error');
+            btn.disabled = false;
+            btn.textContent = currentStatus === 'published' ? '비공개 전환' : '공개 발행';
+            return;
+          }
         }
 
         setToggleMessage(`"${slug}" → ${label}로 전환됨. 배포 완료까지 1~2분 소요.`, 'success');
-        // 목록 새로고침
         await loadPosts();
       });
 
-      const loadPosts = async () => {
-        const [postsResult, jobsResult] = await Promise.all([
-          supabase
-            .from('posts')
-            .select('id, title, slug, category, status, updated_at')
-            .order('updated_at', { ascending: false })
-            .limit(20),
-          supabase
-            .from('publish_jobs')
-            .select('post_id, status, commit_sha, error_message, created_at')
-            .order('created_at', { ascending: false })
-            .limit(60),
-        ]);
+      const getSelectedRows = () => {
+        const list = [...selectedSlugs].map((slug) => lastRows.find((r) => r.slug === slug)).filter(Boolean);
+        return list;
+      };
 
-        if (postsResult.error) {
-          renderRows([], new Map());
-          setMessage(postsResult.error.message, 'error');
-        } else {
-          renderRows(postsResult.data ?? [], indexLatestJobs(jobsResult.data ?? []));
-          if (jobsResult.error) {
-            setMessage(`글 목록은 불러왔지만 publish 이력은 읽지 못했습니다: ${jobsResult.error.message}`, 'error');
-          }
+      const showBulkProgress = (done: number, total: number) => {
+        if (bulkProgress instanceof HTMLElement) {
+          bulkProgress.hidden = false;
+          bulkProgress.textContent = `${done}/${total} 완료…`;
         }
       };
 
-      document.addEventListener('admin:session-ready', async () => {
-        supabase = window.__adminSupabase;
+      bulkPublishBtn?.addEventListener('click', async () => {
+        if (!supabase) return;
+        const rows = getSelectedRows();
+        if (!rows.length) return;
+        setBulkBusy(true);
+        const uid = document.body.dataset.adminUserId ?? null;
+        let done = 0;
+        const total = rows.length;
+        for (const row of rows) {
+          const slug = row.slug;
+          if (row.status === 'archived') {
+            done++;
+            showBulkProgress(done, total);
+            continue;
+          }
+          if (row.status !== 'published') {
+            await supabase
+              .from('posts')
+              .update({ status: 'published', updated_at: new Date().toISOString() })
+              .eq('slug', slug);
+          }
+          const publishRes = await fetch('/api/admin/publish', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug, requestedBy: uid }),
+          });
+          const publishResult = await publishRes.json().catch(() => ({}));
+          if (!publishRes.ok) {
+            setToggleMessage(`${slug}: 발행 실패 — ${publishResult.error ?? publishRes.status}`, 'error');
+          }
+          done++;
+          showBulkProgress(done, total);
+        }
+        setBulkBusy(false);
+        selectedSlugs.clear();
+        setToggleMessage('일괄 발행 작업이 끝났습니다. 실패한 항목은 메시지를 확인하세요.', 'info');
+        await loadPosts();
+      });
+
+      bulkArchiveBtn?.addEventListener('click', async () => {
+        if (!supabase) return;
+        const slugs = [...selectedSlugs];
+        if (!slugs.length) return;
+        setBulkBusy(true);
+        let done = 0;
+        const total = slugs.length;
+        const chunk = 40;
+        for (let i = 0; i < slugs.length; i += chunk) {
+          const part = slugs.slice(i, i + chunk);
+          const { error } = await supabase
+            .from('posts')
+            .update({ status: 'archived', updated_at: new Date().toISOString() })
+            .in('slug', part);
+          if (error) {
+            setToggleMessage(`아카이브 실패: ${error.message}`, 'error');
+            break;
+          }
+          done += part.length;
+          showBulkProgress(done, total);
+        }
+        setBulkBusy(false);
+        selectedSlugs.clear();
+        setToggleMessage('선택한 글을 아카이브했습니다.', 'success');
+        await loadPosts();
+      });
+
+      bulkDeleteBtn?.addEventListener('click', async () => {
+        if (!supabase) return;
+        const slugs = [...selectedSlugs];
+        if (!slugs.length) return;
+        if (!confirm(`선택한 ${slugs.length}개 글을 DB에서 삭제할까요? 이 작업은 되돌릴 수 없습니다.`)) return;
+        setBulkBusy(true);
+        let done = 0;
+        const total = slugs.length;
+        const chunk = 40;
+        for (let i = 0; i < slugs.length; i += chunk) {
+          const part = slugs.slice(i, i + chunk);
+          const { error } = await supabase.from('posts').delete().in('slug', part);
+          if (error) {
+            setToggleMessage(`삭제 실패: ${error.message}`, 'error');
+            break;
+          }
+          done += part.length;
+          showBulkProgress(done, total);
+        }
+        setBulkBusy(false);
+        selectedSlugs.clear();
+        setToggleMessage('삭제 요청을 처리했습니다.', 'success');
         await loadPosts();
       });
     }

@@ -1,0 +1,403 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout
+  title="발행 캘린더"
+  pageTitle="발행 캘린더"
+  pageDescription="예약 발행일(scheduled_at)이 있는 글을 월별로 확인하고 편집으로 이동합니다."
+  status="Editorial"
+>
+  <div class="admin-cal-root">
+    <section class="admin-card pad-lg admin-cal-card">
+      <div class="admin-cal-toolbar">
+        <div>
+          <h2 class="admin-section-title">콘텐츠 캘린더</h2>
+          <p class="admin-section-desc">
+            <code>scheduled_at</code>이 설정된 글만 표시됩니다. 초안·검수·예약 상태는 노란색, 발행 완료는 초록색입니다.
+          </p>
+        </div>
+        <div class="admin-cal-nav">
+          <button type="button" class="admin-btn admin-btn-sm" data-admin-cal-prev aria-label="이전 달">←</button>
+          <h3 class="admin-cal-month" data-admin-cal-label>—</h3>
+          <button type="button" class="admin-btn admin-btn-sm" data-admin-cal-next aria-label="다음 달">→</button>
+          <button type="button" class="admin-btn admin-btn-sm" data-admin-cal-today>오늘</button>
+        </div>
+      </div>
+      <p class="admin-inline-note" data-admin-cal-message hidden></p>
+      <div class="admin-cal-weekdays" aria-hidden="true">
+        <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+      </div>
+      <div class="admin-cal-grid" data-admin-cal-grid role="grid" aria-label="월별 발행 예정"></div>
+    </section>
+
+    <aside class="admin-card pad-md admin-cal-panel" data-admin-cal-panel hidden>
+      <div class="admin-cal-panel-head">
+        <h3 class="admin-section-title" data-admin-cal-panel-title>날짜를 선택하세요</h3>
+        <button type="button" class="admin-btn admin-btn-sm" data-admin-cal-panel-close aria-label="패널 닫기">닫기</button>
+      </div>
+      <ul class="admin-list admin-cal-panel-list" data-admin-cal-panel-list></ul>
+    </aside>
+  </div>
+
+  <script>
+    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+    const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+    const pad2 = (n: number) => String(n).padStart(2, '0');
+    const localDateKey = (iso: string) => {
+      const d = new Date(iso);
+      return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    };
+
+    const escapeHtml = (value: string) =>
+      String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+
+    type PostRow = { slug: string; title: string; status: string; scheduled_at: string };
+
+    const gridEl = document.querySelector('[data-admin-cal-grid]');
+    const labelEl = document.querySelector('[data-admin-cal-label]');
+    const prevBtn = document.querySelector('[data-admin-cal-prev]');
+    const nextBtn = document.querySelector('[data-admin-cal-next]');
+    const todayBtn = document.querySelector('[data-admin-cal-today]');
+    const messageEl = document.querySelector('[data-admin-cal-message]');
+    const panel = document.querySelector('[data-admin-cal-panel]');
+    const panelTitle = document.querySelector('[data-admin-cal-panel-title]');
+    const panelList = document.querySelector('[data-admin-cal-panel-list]');
+    const panelClose = document.querySelector('[data-admin-cal-panel-close]');
+
+    let view = new Date();
+    let postsByDay: Record<string, PostRow[]> = {};
+    let supabase = null;
+
+    const setMessage = (text: string, state?: string) => {
+      if (!messageEl) return;
+      if (!text) {
+        messageEl.hidden = true;
+        messageEl.textContent = '';
+        messageEl.removeAttribute('data-state');
+        return;
+      }
+      messageEl.hidden = false;
+      messageEl.textContent = text;
+      if (state) messageEl.dataset.state = state;
+    };
+
+    const statusClass = (status: string) => {
+      if (status === 'published') return 'is-published';
+      if (status === 'archived') return 'is-archived';
+      return 'is-draft';
+    };
+
+    const buildMonthGrid = (y: number, m: number) => {
+      const first = new Date(y, m, 1);
+      const startPad = first.getDay();
+      const lastDay = new Date(y, m + 1, 0).getDate();
+      const cells: { key: string | null; inMonth: boolean; dayNum: number | null }[] = [];
+      for (let i = 0; i < startPad; i++) {
+        const d = new Date(y, m, -startPad + i + 1);
+        cells.push({
+          key: `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`,
+          inMonth: false,
+          dayNum: d.getDate(),
+        });
+      }
+      for (let d = 1; d <= lastDay; d++) {
+        cells.push({ key: `${y}-${pad2(m + 1)}-${pad2(d)}`, inMonth: true, dayNum: d });
+      }
+      const tail = cells.length % 7 === 0 ? 0 : 7 - (cells.length % 7);
+      for (let i = 1; i <= tail; i++) {
+        const d = new Date(y, m + 1, i);
+        cells.push({
+          key: `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`,
+          inMonth: false,
+          dayNum: d.getDate(),
+        });
+      }
+      return cells;
+    };
+
+    const renderGrid = () => {
+      if (!gridEl || !labelEl) return;
+      const y = view.getFullYear();
+      const m = view.getMonth();
+      labelEl.textContent = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long' }).format(
+        new Date(y, m, 1),
+      );
+
+      const cells = buildMonthGrid(y, m);
+      const n = new Date();
+      const todayKey = `${n.getFullYear()}-${pad2(n.getMonth() + 1)}-${pad2(n.getDate())}`;
+
+      gridEl.innerHTML = cells
+        .map((c) => {
+          const list = c.key ? postsByDay[c.key] ?? [] : [];
+          const chips = list
+            .slice(0, 3)
+            .map(
+              (p) =>
+                `<span class="admin-cal-chip ${statusClass(p.status)}" title="${escapeHtml(p.title)}">${escapeHtml(p.title.length > 18 ? `${p.title.slice(0, 18)}…` : p.title)}</span>`,
+            )
+            .join('');
+          const more = list.length > 3 ? `<span class="admin-cal-more">+${list.length - 3}</span>` : '';
+          const isToday = c.key === todayKey;
+          return `
+            <button type="button" class="admin-cal-cell ${c.inMonth ? 'is-in-month' : 'is-out-month'} ${isToday ? 'is-today' : ''}"
+              data-date="${c.key}" role="gridcell" aria-label="${c.key}, 글 ${list.length}건">
+              <span class="admin-cal-daynum">${c.dayNum}</span>
+              <div class="admin-cal-chips">${chips}${more}</div>
+            </button>
+          `;
+        })
+        .join('');
+
+      gridEl.querySelectorAll<HTMLButtonElement>('[data-date]').forEach((btn) => {
+        btn.addEventListener('click', () => openPanel(btn.dataset.date ?? ''));
+      });
+    };
+
+    const openPanel = (dateKey: string) => {
+      if (!panel || !panelTitle || !panelList) return;
+      const list = postsByDay[dateKey] ?? [];
+      const [yy, mm, dd] = dateKey.split('-').map(Number);
+      const label = new Intl.DateTimeFormat('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        weekday: 'long',
+      }).format(new Date(yy, (mm ?? 1) - 1, dd ?? 1));
+      panelTitle.textContent = label;
+      panel.hidden = false;
+      if (!list.length) {
+        panelList.innerHTML =
+          '<li class="admin-list-row"><div><p class="admin-item-title">예정된 글이 없습니다.</p><p class="admin-item-meta">편집 화면에서 예약 발행일을 설정해 보세요.</p></div></li>';
+        return;
+      }
+      panelList.innerHTML = list
+        .map(
+          (p) => `
+        <li class="admin-list-row">
+          <div>
+            <p class="admin-item-title"><a class="admin-table-link" href="/admin/posts/edit?slug=${encodeURIComponent(p.slug)}">${escapeHtml(p.title)}</a></p>
+            <p class="admin-item-meta">${escapeHtml(p.slug)} · ${escapeHtml(p.status)}</p>
+          </div>
+          <span class="admin-status ${escapeHtml(p.status)}">${escapeHtml(p.status)}</span>
+        </li>
+      `,
+        )
+        .join('');
+    };
+
+    const closePanel = () => {
+      if (panel) panel.hidden = true;
+    };
+
+    const loadPosts = async () => {
+      if (!supabase) return;
+      setMessage('', undefined);
+      const { data, error } = await supabase
+        .from('posts')
+        .select('slug,title,status,scheduled_at')
+        .not('scheduled_at', 'is', null)
+        .order('scheduled_at', { ascending: true });
+
+      if (error) {
+        setMessage(`글을 불러오지 못했습니다: ${error.message}`, 'error');
+        postsByDay = {};
+        renderGrid();
+        return;
+      }
+
+      const map: Record<string, PostRow[]> = {};
+      for (const row of data ?? []) {
+        if (!row.scheduled_at) continue;
+        const key = localDateKey(row.scheduled_at);
+        if (!map[key]) map[key] = [];
+        map[key].push(row as PostRow);
+      }
+      postsByDay = map;
+      renderGrid();
+    };
+
+    const shiftMonth = (delta: number) => {
+      view = new Date(view.getFullYear(), view.getMonth() + delta, 1);
+      renderGrid();
+    };
+
+    prevBtn?.addEventListener('click', () => shiftMonth(-1));
+    nextBtn?.addEventListener('click', () => shiftMonth(1));
+    todayBtn?.addEventListener('click', () => {
+      view = new Date();
+      renderGrid();
+    });
+    panelClose?.addEventListener('click', closePanel);
+
+    if (!supabaseUrl || !supabaseKey) {
+      setMessage('Supabase 환경 변수가 없어 캘린더를 불러올 수 없습니다.', 'error');
+    } else {
+      document.addEventListener('admin:session-ready', async () => {
+        supabase = window.__adminSupabase;
+        view = new Date();
+        await loadPosts();
+        renderGrid();
+      });
+    }
+  </script>
+</AdminLayout>
+
+<style is:global>
+  .admin-cal-root {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+    gap: 1.25rem;
+    align-items: start;
+  }
+
+  @media (max-width: 960px) {
+    .admin-cal-root {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .admin-cal-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .admin-cal-nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .admin-cal-month {
+    margin: 0;
+    min-width: 8rem;
+    text-align: center;
+    font-family: var(--admin-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  .admin-cal-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+    margin-bottom: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--admin-text-3);
+    text-align: center;
+  }
+
+  .admin-cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .admin-cal-cell {
+    min-height: 92px;
+    padding: 6px 6px 8px;
+    border: 1px solid var(--admin-border);
+    border-radius: 10px;
+    background: var(--admin-surface);
+    text-align: left;
+    cursor: pointer;
+    transition:
+      border-color 0.15s ease,
+      background 0.15s ease;
+    font: inherit;
+    color: inherit;
+  }
+
+  .admin-cal-cell:hover {
+    border-color: var(--admin-accent);
+    background: rgba(184, 149, 106, 0.06);
+  }
+
+  .admin-cal-cell.is-out-month {
+    opacity: 0.45;
+    background: var(--admin-surface-2);
+  }
+
+  .admin-cal-cell.is-today {
+    border-color: var(--admin-accent-strong);
+    box-shadow: 0 0 0 1px rgba(140, 109, 69, 0.25);
+  }
+
+  .admin-cal-daynum {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: var(--admin-text-2);
+  }
+
+  .admin-cal-chips {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .admin-cal-chip {
+    display: block;
+    font-size: 0.65rem;
+    line-height: 1.25;
+    padding: 2px 5px;
+    border-radius: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-cal-chip.is-draft {
+    background: rgba(174, 110, 21, 0.18);
+    color: #6b4a12;
+  }
+
+  .admin-cal-chip.is-published {
+    background: rgba(39, 122, 75, 0.2);
+    color: #1a5230;
+  }
+
+  .admin-cal-chip.is-archived {
+    background: rgba(107, 114, 128, 0.2);
+    color: var(--admin-text-3);
+  }
+
+  .admin-cal-more {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--admin-text-3);
+  }
+
+  .admin-cal-panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .admin-cal-panel .admin-section-title {
+    font-size: 1rem;
+    margin: 0;
+  }
+
+  .admin-cal-panel-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+</style>

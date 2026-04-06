@@ -1,0 +1,48 @@
+---
+/**
+ * 공개 썸네일: 로컬(/public) 경로는 Astro Image, http(s)는 최적화 불가 시 네이티브 img + 치수·lazy
+ */
+import { Image } from 'astro:assets';
+
+interface Props {
+	src: string;
+	alt: string;
+	width: number;
+	height: number;
+	class?: string;
+	loading?: 'eager' | 'lazy';
+	decoding?: 'async' | 'auto' | 'sync';
+	fetchpriority?: 'high' | 'low' | 'auto';
+}
+
+const {
+	src,
+	alt,
+	width,
+	height,
+	class: className,
+	loading = 'lazy',
+	decoding = 'async',
+	fetchpriority,
+} = Astro.props;
+
+const srcTrim = src.trim();
+const isRemote = /^https?:\/\//i.test(srcTrim) || srcTrim.startsWith('//');
+---
+
+{
+	isRemote ? (
+		<img
+			src={src}
+			alt={alt}
+			width={width}
+			height={height}
+			class={className}
+			loading={loading}
+			decoding={decoding}
+			fetchpriority={fetchpriority}
+		/>
+	) : (
+		<Image src={src} alt={alt} width={width} height={height} class={className} loading={loading} decoding={decoding} />
+	)
+}

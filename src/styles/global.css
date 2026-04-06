@@ -1,4 +1,5 @@
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+/* Pretendard Variable(동적 서브셋) — 단일 가변 파일로 정적 다중 웨이트 @import 대체 */
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
 
 /*
   The CSS in this style tag is based off of Bear Blog's default CSS.
@@ -23,7 +24,7 @@ html {
 	max-width: 100%;
 }
 body {
-	font-family: "Pretendard", system-ui, sans-serif;
+	font-family: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
 	margin: 0;
 	padding: 0;
 	text-align: left;
@@ -361,6 +362,20 @@ hr {
 	color: var(--text);
 }
 
+.blog-post-view-line {
+	margin: -0.25rem 0 0.75rem;
+	text-align: center;
+	font-size: 0.88rem;
+	color: var(--t2);
+	letter-spacing: 0.02em;
+}
+
+.blog-post-view-line [data-post-view-num] {
+	font-variant-numeric: tabular-nums;
+	font-weight: 600;
+	color: var(--text);
+}
+
 .blog-post-prose {
 	line-height: 1.78;
 }
@@ -430,12 +445,25 @@ hr {
 }
 
 .blog-post-tag {
+	display: inline-block;
 	font-size: 0.75rem;
 	padding: 2px 8px;
 	border-radius: 999px;
 	background: rgba(255, 255, 255, 0.08);
 	color: var(--t2);
 	border: 1px solid var(--rule);
+	text-decoration: none;
+	font-weight: 600;
+	transition:
+		border-color 0.15s ease,
+		color 0.15s ease,
+		background 0.15s ease;
+}
+
+a.blog-post-tag:hover {
+	color: var(--accent-dark);
+	border-color: var(--accent);
+	background: rgba(184, 149, 106, 0.1);
 }
 
 .blog-post-prose hr,
@@ -466,15 +494,23 @@ hr {
 .blog-post-share-btn {
 	display: inline-flex;
 	align-items: center;
+	justify-content: center;
 	gap: 0.4rem;
-	padding: 0.4rem 1rem;
+	min-height: 44px;
+	padding: 0.45rem 1.1rem;
 	border-radius: 8px;
 	font-size: 0.875rem;
 	font-weight: 600;
 	text-decoration: none;
 	border: none;
 	cursor: pointer;
+	box-sizing: border-box;
 	transition: opacity 0.2s;
+}
+
+.blog-post-share-btn:focus-visible {
+	outline: 2px solid var(--accent, #b8956a);
+	outline-offset: 2px;
 }
 
 .blog-post-share-btn:hover {
@@ -487,6 +523,12 @@ hr {
 }
 
 .blog-post-share-btn.copy {
+	background: rgba(255, 255, 255, 0.1);
+	color: var(--text);
+	border: 1px solid var(--rule);
+}
+
+.blog-post-share-btn.print {
 	background: rgba(255, 255, 255, 0.1);
 	color: var(--text);
 	border: 1px solid var(--rule);
@@ -560,4 +602,39 @@ hr {
 	.blog-post-share-btn {
 		transition: none !important;
 	}
+}
+
+/* ── 다크 모드 — Bear Blog 호환 RGB 변수 + 본문 보조 */
+
+html[data-theme="dark"] {
+	--accent: #d4b87a;
+	--accent-dark: #e8c990;
+	--black: 232, 237, 246;
+	--gray: 130, 150, 175;
+	--gray-light: 48, 58, 76;
+	--gray-dark: 210, 220, 235;
+	--gray-gradient: rgba(var(--gray-light), 55%), rgba(37, 47, 66, 1);
+	--box-shadow:
+		0 2px 6px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.28),
+		0 16px 32px rgba(0, 0, 0, 0.22);
+}
+
+html[data-theme="dark"] .blog-post-prose :where(th),
+html[data-theme="dark"] .blog-post-shell .prose :where(th) {
+	background: rgba(212, 184, 120, 0.14);
+}
+
+html[data-theme="dark"] .blog-post-prose tr:nth-child(even) td {
+	background: rgba(212, 184, 120, 0.06);
+}
+
+html[data-theme="dark"] .blog-post-prose img:hover,
+html[data-theme="dark"] .blog-post-share-btn:hover,
+html[data-theme="dark"] .blog-post-share-btn:focus-visible {
+	box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .blog-post-share-btn.copy,
+html[data-theme="dark"] .blog-post-share-btn.print {
+	background: rgba(255, 255, 255, 0.06);
 }

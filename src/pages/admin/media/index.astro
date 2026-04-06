@@ -290,7 +290,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
     }
   };
 
-    const renderAssetList = (assets) => {
+    const renderAssetList = (assets, canArchive) => {
       if (!list) return;
 
       if (!assets?.length) {
@@ -298,14 +298,25 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         return;
       }
 
-      list.innerHTML = assets
-        .map((asset) => {
-        const markdown = escapeHtml(buildMarkdown(asset));
-        const title = escapeHtml(asset.file_name);
-        const url = escapeHtml(asset.public_url || '');
-        const isArchived = Boolean(asset.deleted_at);
+      const archiveBtn = (isArchived) =>
+        canArchive
+          ? `<button type="button" class="admin-btn admin-btn-sm" data-media-archive-action="${isArchived ? 'restore' : 'archive'}">${isArchived ? '복구' : '보관'}</button>`
+          : '';
 
-        return `
+      const tail =
+        !canArchive && assets.length
+          ? '<p class="admin-help" style="grid-column:1/-1;">보관·복구(삭제)는 owner만 사용할 수 있습니다.</p>'
+          : '';
+
+      list.innerHTML =
+        assets
+          .map((asset) => {
+            const markdown = escapeHtml(buildMarkdown(asset));
+            const title = escapeHtml(asset.file_name);
+            const url = escapeHtml(asset.public_url || '');
+            const isArchived = Boolean(asset.deleted_at);
+
+            return `
           <article class="admin-card pad-md" data-media-asset-card data-media-asset-id="${escapeHtml(asset.id)}" data-media-asset-archived="${isArchived ? 'true' : 'false'}" style="font-size:0.82rem;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:0.4rem;margin-bottom:0.45rem;">
               <p class="admin-item-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;" title="${title}">${title}</p>
@@ -316,14 +327,13 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
             <div class="admin-actions-inline" style="margin-top:0.4rem;flex-wrap:wrap;">
               <button type="button" class="admin-btn admin-btn-sm" data-copy-asset="markdown">MD</button>
               <button type="button" class="admin-btn admin-btn-sm" data-copy-asset="thumbnail">URL</button>
-              <a class="admin-btn admin-btn-sm" href="/admin/media/detail?id=${encodeURIComponent(asset.id)}">상세</a>
-              <button type="button" class="admin-btn admin-btn-sm" data-media-archive-action="${isArchived ? 'restore' : 'archive'}">${isArchived ? '복구' : '보관'}</button>
+              ${archiveBtn(isArchived)}
             </div>
           </article>
         `;
-      })
-      .join('');
-  };
+          })
+          .join('') + tail;
+    };
 
   const copyText = async (value, label) => {
     if (!value) {
@@ -354,12 +364,14 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
     setMessage('Supabase 환경 변수가 없어 media registry를 초기화할 수 없습니다.', 'error');
   } else {
     let currentSessionUserId = null;
-    document.addEventListener('admin:session-ready', ({ detail }) => {
-        supabase = window.__adminSupabase;
-      currentSessionUserId = detail.userId;
-    });
-
     let supabase = null;
+
+    document.addEventListener('admin:session-ready', ({ detail }) => {
+      supabase = window.__adminSupabase;
+      currentSessionUserId = detail.userId;
+      loadAssets();
+      loadHistory();
+    });
 
     const loadAssets = async () => {
       const { data, error } = await supabase
@@ -375,7 +387,8 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         return;
       }
 
-      renderAssetList(data || []);
+      const canArchive = document.body.dataset.adminRole === 'owner';
+      renderAssetList(data || [], canArchive);
     };
 
     const loadHistory = async () => {
@@ -444,6 +457,11 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       const button = event.target.closest('[data-media-archive-action]');
       if (!button) return;
 
+      if (document.body.dataset.adminRole !== 'owner') {
+        setMessage('미디어 보관·복구는 owner만 실행할 수 있습니다.', 'error');
+        return;
+      }
+
       const card = button.closest('[data-media-asset-card]');
       if (!card) return;
 
@@ -488,8 +506,6 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       syncHelpers();
     });
     syncHelpers();
-    loadAssets();
-    loadHistory();
 
     form?.addEventListener('submit', async (event) => {
       event.preventDefault();

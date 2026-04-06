@@ -31,14 +31,28 @@ const pathname = Astro.url.pathname;
       ))}
     </nav>
 
-    <button class="site-mobile-menu-btn" aria-label="메뉴 열기" data-mobile-menu-toggle>
+    <button
+      type="button"
+      class="site-mobile-menu-btn"
+      aria-label="메뉴 열기"
+      aria-expanded="false"
+      aria-controls="site-mobile-nav-panel"
+      data-mobile-menu-toggle
+    >
       <span></span><span></span><span></span>
     </button>
   </div>
 
   <!-- 모바일 드롭다운 메뉴 -->
-  <div class="site-mobile-nav" data-mobile-nav hidden>
-    <nav aria-label="모바일 메뉴">
+  <div
+    class="site-mobile-nav"
+    id="site-mobile-nav-panel"
+    data-mobile-nav
+    hidden
+    role="region"
+    aria-label="모바일 내비게이션"
+  >
+    <nav aria-label="모바일 주요 메뉴">
       {NAV_LINKS.map((link) => (
         <a href={link.href} class="site-mobile-nav-link">
           {link.label}
@@ -52,18 +66,22 @@ const pathname = Astro.url.pathname;
   .site-mobile-menu-btn {
     display: none;
     flex-direction: column;
-    justify-content: space-between;
-    width: 28px;
-    height: 20px;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    width: 44px;
+    height: 44px;
+    box-sizing: border-box;
     background: none;
     border: none;
     cursor: pointer;
-    padding: 0;
+    padding: 10px;
+    border-radius: 10px;
   }
 
   .site-mobile-menu-btn span {
     display: block;
-    width: 100%;
+    width: 20px;
     height: 2px;
     background: var(--text);
     border-radius: 2px;
@@ -84,12 +102,20 @@ const pathname = Astro.url.pathname;
 
   .site-mobile-nav-link {
     display: block;
-    padding: 0.75rem 0;
+    min-height: 44px;
+    line-height: 44px;
+    padding: 0;
     border-bottom: 1px solid var(--rule);
     color: var(--t2);
     font-size: 1rem;
     font-weight: 600;
     text-decoration: none;
+    box-sizing: border-box;
+  }
+
+  .site-mobile-nav-link:focus-visible {
+    outline: 2px solid var(--accent, #b8956a);
+    outline-offset: 2px;
   }
 
   .site-mobile-nav-link:last-of-type {
@@ -112,12 +138,27 @@ const pathname = Astro.url.pathname;
   const toggle = document.querySelector('[data-mobile-menu-toggle]');
   const nav = document.querySelector('[data-mobile-nav]');
 
-  toggle?.addEventListener('click', () => {
-    const isHidden = nav?.hasAttribute('hidden');
-    if (isHidden) {
-      nav?.removeAttribute('hidden');
+  const setOpen = (open) => {
+    if (!nav || !(toggle instanceof HTMLButtonElement)) return;
+    if (open) {
+      nav.removeAttribute('hidden');
+      toggle.setAttribute('aria-expanded', 'true');
+      toggle.setAttribute('aria-label', '메뉴 닫기');
     } else {
-      nav?.setAttribute('hidden', '');
+      nav.setAttribute('hidden', '');
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.setAttribute('aria-label', '메뉴 열기');
     }
+  };
+
+  toggle?.addEventListener('click', () => {
+    const open = nav?.hasAttribute('hidden');
+    setOpen(Boolean(open));
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !nav || nav.hasAttribute('hidden')) return;
+    setOpen(false);
+    if (toggle instanceof HTMLButtonElement) toggle.focus();
   });
 </script>

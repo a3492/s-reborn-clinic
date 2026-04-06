@@ -1,0 +1,195 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Sidebar from '../../components/Sidebar.astro';
+import { getCollection } from 'astro:content';
+import { CATEGORIES } from '../../consts';
+import { blogPillarLabel } from '../../data/blog-nav';
+import { isAcademyBlogPost, postPermalink } from '../../lib/academy';
+import { blogTagPageHref } from '../../lib/blog-tag-url';
+import { sortSeriesPosts } from '../../lib/blog-series';
+import ContentImage from '../../components/ContentImage.astro';
+
+export async function getStaticPaths() {
+	const posts = (await getCollection('blog', ({ data }) => !data.draft)).filter((p) => !isAcademyBlogPost(p));
+	const seen = new Set<string>();
+	for (const p of posts) {
+		const s = String(p.data.series ?? '').trim();
+		if (s) seen.add(s);
+	}
+	return [...seen].map((series) => ({
+		params: { series },
+	}));
+}
+
+const param = Astro.params.series ?? '';
+let decodedSeries = '';
+try {
+	decodedSeries = decodeURIComponent(param);
+} catch {
+	decodedSeries = param;
+}
+
+const allClinic = (await getCollection('blog', ({ data }) => !data.draft))
+	.filter((p) => !isAcademyBlogPost(p))
+	.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+
+const matched = allClinic
+	.filter((p) => String(p.data.series ?? '').trim() === decodedSeries)
+	.sort(sortSeriesPosts);
+
+const postIdsJson = JSON.stringify(matched.map((p) => p.id));
+const pageTitle = decodedSeries ? `${decodedSeries} 시리즈` : '시리즈';
+---
+
+<Layout title={pageTitle} description={`에스리본 클리닉 — ${decodedSeries} 시리즈 글 모음`}>
+	<div class="blog-layout">
+		<Sidebar tagCloudPosts={allClinic} />
+
+		<div class="blog-main">
+			<div class="blog-header">
+				<h1 class="blog-header-title">{decodedSeries || '시리즈'}</h1>
+				<p class="blog-series-meta">
+					<a href="/blog/" class="blog-series-back">← 블로그 전체</a>
+					{matched.length > 0 && (
+						<span class="blog-series-progress" data-series-hub-progress>
+							완독 진행률: <strong data-series-hub-progress-text>—</strong>
+							<span class="blog-series-progress-hint">(이 브라우저에만 저장)</span>
+						</span>
+					)}
+				</p>
+			</div>
+
+			{
+				matched.length === 0 ? (
+					<div class="blog-empty">
+						<p>이 시리즈에 해당하는 글이 없습니다.</p>
+						<a href="/blog/" class="btn btn-outline btn-sm">
+							블로그로 돌아가기
+						</a>
+					</div>
+				) : (
+					<div class="blog-grid">
+						{matched.map((post, index) => (
+							<article class="blog-post-card" data-series-card-id={post.id}>
+								<a href={postPermalink(post)} class="blog-post-card-main">
+									{post.data.thumbnail && (
+										<div class="blog-post-card-thumb">
+											<ContentImage
+												src={post.data.thumbnail}
+												alt={post.data.title}
+												width={640}
+												height={360}
+												loading="lazy"
+												decoding="async"
+											/>
+										</div>
+									)}
+									<div class="blog-post-card-body">
+										<div class="blog-post-card-badges">
+											<span class="blog-post-card-series-pill">{index + 1}편</span>
+											{post.data.pillar && (
+												<span class="blog-post-card-pillar">{blogPillarLabel(post.data.pillar)}</span>
+											)}
+											{post.data.category && (
+												<span class="blog-post-card-cat">
+													{CATEGORIES.find((c) => c.id === post.data.category)?.label ?? post.data.category}
+												</span>
+											)}
+										</div>
+										<h2 class="blog-post-card-title">{post.data.title}</h2>
+										<p class="blog-post-card-desc">{post.data.description}</p>
+									</div>
+								</a>
+								<div class="blog-post-card-footer">
+									<time class="blog-post-card-date" datetime={post.data.date.toISOString()}>
+										{
+											new Intl.DateTimeFormat('ko-KR', {
+												year: 'numeric',
+												month: 'short',
+												day: 'numeric',
+											}).format(post.data.date)
+										}
+									</time>
+									{post.data.tags &&
+										post.data.tags.slice(0, 4).map((tag) => (
+											<a href={blogTagPageHref(tag)} class="blog-post-card-tag">
+												#{tag}
+											</a>
+										))}
+								</div>
+							</article>
+						))}
+					</div>
+				)
+			}
+		</div>
+	</div>
+
+	<script is:inline define:vars={{ seriesLabel: decodedSeries, postIdsJson }}>
+		(function () {
+			var textEl = document.querySelector('[data-series-hub-progress-text]');
+			if (!textEl || !seriesLabel) return;
+			try {
+				var key = 'sreborn_series_read_v1';
+				var ids = JSON.parse(postIdsJson || '[]');
+				var raw = localStorage.getItem(key);
+				var map = raw ? JSON.parse(raw) : {};
+				var readList = map[seriesLabel] || [];
+				var readSet = {};
+				for (var i = 0; i < readList.length; i++) readSet[readList[i]] = true;
+				var n = 0;
+				for (var j = 0; j < ids.length; j++) {
+					if (readSet[ids[j]]) n++;
+				}
+				textEl.textContent = n + ' / ' + ids.length + '편 읽음';
+			} catch (e) {
+				textEl.textContent = '—';
+			}
+		})();
+	</script>
+</Layout>
+
+<style>
+	.blog-series-meta {
+		margin: 0.35rem 0 0;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.75rem 1rem;
+		font-size: 0.88rem;
+		color: var(--t2);
+	}
+
+	.blog-series-back {
+		color: var(--accent-dark);
+		font-weight: 700;
+		text-decoration: none;
+	}
+
+	.blog-series-back:hover {
+		text-decoration: underline;
+	}
+
+	.blog-series-progress strong {
+		color: var(--text);
+		font-weight: 800;
+	}
+
+	.blog-series-progress-hint {
+		margin-left: 0.35rem;
+		font-size: 0.78rem;
+		color: var(--t3);
+	}
+
+	.blog-post-card-series-pill {
+		font-size: 0.68rem;
+		font-weight: 800;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--accent-dark);
+		background: rgba(184, 149, 106, 0.16);
+		padding: 0.2rem 0.5rem;
+		border-radius: 8px;
+		border: 1px solid var(--rule);
+	}
+</style>

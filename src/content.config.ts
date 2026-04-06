@@ -20,7 +20,13 @@ const blog = defineCollection({
 			read_time: z.number().optional(),
 			difficulty: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
 			type: z.string().optional(),
+			/**
+			 * 시리즈 묶음 이름(예: "5분 AI 시리즈", "입문 시리즈"). 같은 문자열이면 한 시리즈로 묶입니다.
+			 * MD 예: `series: "5분 AI 시리즈"` (+ 선택 `series_order: 1` 로 순서 지정, 없으면 date 오름차순)
+			 * Supabase `posts` 테이블에는 `series` 컬럼이 없으면 migrations/20260407_posts_series_column.sql 적용 후 에디터·동기화에 반영하세요.
+			 */
 			series: z.string().optional(),
+			/** 같은 series 내 표시 순서(작을수록 앞). 미지정 글은 date 순으로 뒤에 이어짐 */
 			series_order: z.number().optional(),
 			/** Doctor AI Academy 섹션 — category 가 doctor-ai 일 때 필수 */
 			academy_section: z.enum(ACADEMY_SECTION_IDS).optional(),

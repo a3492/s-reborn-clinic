@@ -5,6 +5,9 @@ import { getCollection } from 'astro:content';
 import { CATEGORIES, SITE_TITLE } from '../../consts';
 import { BLOG_PILLAR_NAV, blogPillarLabel } from '../../data/blog-nav';
 import { isAcademyBlogPost, postPermalink } from '../../lib/academy';
+import { blogTagPageHref } from '../../lib/blog-tag-url';
+import { seriesHubPath } from '../../lib/blog-series';
+import ContentImage from '../../components/ContentImage.astro';
 
 const allPosts = (await getCollection('blog', ({ data }) => !data.draft))
   .filter((p) => !isAcademyBlogPost(p))
@@ -18,9 +21,9 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
 
 <Layout title="블로그" description="에스리본 클리닉 블로그 — 시술 안내, 건강 정보, 원장 칼럼">
   <div class:list={['blog-layout', { 'blog-layout--search': blogSearchFocus }]}>
-    <Sidebar blogSearchFocus={blogSearchFocus} />
+    <Sidebar blogSearchFocus={blogSearchFocus} tagCloudPosts={allPosts} />
 
-    <div class="blog-main">
+    <section class="blog-main" aria-labelledby="blog-page-title">
       <div class="blog-header">
         <h1 class="blog-header-title" id="blog-page-title">블로그</h1>
 
@@ -54,57 +57,79 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
             </div>
             <div class="blog-grid" id="blog-grid">
               {allPosts.map((post) => (
-                <a
-                  href={postPermalink(post)}
+                <article
                   class="blog-post-card"
                   data-blog-card
+                  data-blog-slug={post.id}
                   data-category={post.data.category ?? ''}
                   data-pillar={post.data.pillar ?? ''}
                   data-title={post.data.title}
                   data-description={post.data.description ?? ''}
                   data-tags={(post.data.tags ?? []).join(' ')}
+                  data-series={post.data.series ?? ''}
                 >
-                  {post.data.thumbnail && (
-                    <div class="blog-post-card-thumb">
-                      <img src={post.data.thumbnail} alt={post.data.title} loading="lazy" />
+                  <a href={postPermalink(post)} class="blog-post-card-main">
+                    {post.data.thumbnail && (
+                      <div class="blog-post-card-thumb">
+                        <ContentImage
+                          src={post.data.thumbnail}
+                          alt={post.data.title}
+                          width={640}
+                          height={360}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      </div>
+                    )}
+                    <div class="blog-post-card-body">
+                      <div class="blog-post-card-badges">
+                        {post.data.pillar && (
+                          <span class="blog-post-card-pillar">{blogPillarLabel(post.data.pillar)}</span>
+                        )}
+                        {post.data.category && (
+                          <span class="blog-post-card-cat">
+                            {CATEGORIES.find((c) => c.id === post.data.category)?.label ?? post.data.category}
+                          </span>
+                        )}
+                        {post.data.series && (
+                          <a
+                            href={seriesHubPath(post.data.series)}
+                            class="blog-post-card-series-badge"
+                            aria-label={`「${post.data.series}」 시리즈 글 목록으로 이동`}
+                          >
+                            시리즈
+                          </a>
+                        )}
+                        <span class="blog-post-card-views" data-blog-card-views aria-label="조회수">—</span>
+                      </div>
+                      <h2 class="blog-post-card-title">{post.data.title}</h2>
+                      <p class="blog-post-card-desc">{post.data.description}</p>
                     </div>
-                  )}
-                  <div class="blog-post-card-body">
-                    <div class="blog-post-card-badges">
-                      {post.data.pillar && (
-                        <span class="blog-post-card-pillar">{blogPillarLabel(post.data.pillar)}</span>
-                      )}
-                      {post.data.category && (
-                        <span class="blog-post-card-cat">
-                          {CATEGORIES.find((c) => c.id === post.data.category)?.label ?? post.data.category}
-                        </span>
-                      )}
-                    </div>
-                    <h2 class="blog-post-card-title">{post.data.title}</h2>
-                    <p class="blog-post-card-desc">{post.data.description}</p>
-                    <div class="blog-post-card-footer">
-                      <time class="blog-post-card-date" datetime={post.data.date.toISOString()}>
-                        {
-                          new Intl.DateTimeFormat('ko-KR', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                          }).format(post.data.date)
-                        }
-                      </time>
-                      {post.data.tags &&
-                        post.data.tags.slice(0, 2).map((tag) => (
-                          <span class="blog-post-card-tag">#{tag}</span>
-                        ))}
-                    </div>
+                  </a>
+                  <div class="blog-post-card-footer">
+                    <time class="blog-post-card-date" datetime={post.data.date.toISOString()}>
+                      {
+                        new Intl.DateTimeFormat('ko-KR', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        }).format(post.data.date)
+                      }
+                    </time>
+                    {post.data.tags &&
+                      post.data.tags.slice(0, 4).map((tag) => (
+                        <a href={blogTagPageHref(tag)} class="blog-post-card-tag">
+                          #{tag}
+                        </a>
+                      ))}
                   </div>
-                </a>
+                </article>
               ))}
             </div>
           </>
         )
       }
-    </div>
+    </section>
   </div>
 </Layout>
 
@@ -427,10 +452,8 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
     border: 1px solid var(--rule);
     border-radius: 18px;
     overflow: hidden;
-    text-decoration: none;
     background: var(--surface);
     color: inherit;
-    cursor: pointer;
     -webkit-tap-highlight-color: rgba(184, 138, 94, 0.15);
     transition:
       transform 0.2s,
@@ -440,6 +463,16 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
   .blog-post-card:hover {
     transform: translateY(-3px);
     box-shadow: 0 10px 24px rgba(28, 24, 20, 0.07);
+  }
+
+  .blog-post-card-main {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
   }
 
   .blog-post-card-thumb {
@@ -455,7 +488,8 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
     transition: transform 0.3s ease;
   }
 
-  .blog-post-card:hover .blog-post-card-thumb img {
+  .blog-post-card:hover .blog-post-card-thumb img,
+  .blog-post-card-main:hover .blog-post-card-thumb img {
     transform: scale(1.03);
   }
 
@@ -465,6 +499,7 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
     flex-direction: column;
     gap: 0.4rem;
     flex: 1;
+    min-height: 0;
   }
 
   .blog-post-card-badges {
@@ -492,6 +527,34 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
     letter-spacing: 0.06em;
   }
 
+  .blog-post-card-series-badge {
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: var(--text);
+    background: rgba(184, 149, 106, 0.2);
+    padding: 0.2rem 0.45rem;
+    border-radius: 6px;
+    border: 1px solid var(--rule);
+    text-decoration: none;
+  }
+
+  .blog-post-card-series-badge:hover {
+    border-color: var(--accent);
+    color: var(--accent-dark);
+  }
+
+  .blog-post-card-views {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--t2);
+    background: rgba(184, 149, 106, 0.1);
+    padding: 0.2rem 0.45rem;
+    border-radius: 999px;
+    border: 1px solid var(--rule);
+    font-variant-numeric: tabular-nums;
+    margin-left: auto;
+  }
+
   .blog-post-card-title {
     margin: 0;
     font-size: 1rem;
@@ -516,8 +579,9 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    margin-top: 0.25rem;
+    padding: 0 1.1rem 1.1rem;
     flex-wrap: wrap;
+    margin-top: auto;
   }
 
   .blog-post-card-date {
@@ -531,6 +595,14 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
     background: var(--bg2);
     padding: 0.15rem 0.5rem;
     border-radius: 999px;
+    text-decoration: none;
+    font-weight: 600;
+    border: 1px solid transparent;
+  }
+
+  .blog-post-card-tag:hover {
+    color: var(--accent-dark);
+    border-color: var(--rule);
   }
 
   @media (max-width: 900px) {
@@ -544,3 +616,34 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
     }
   }
 </style>
+
+<script>
+  import { createClient } from '@supabase/supabase-js';
+  import { fetchViewCountsMap, formatViewCount } from '../../lib/blog-post-views';
+
+  const url = import.meta.env.PUBLIC_SUPABASE_URL;
+  const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+  async function fillBlogGridViews() {
+    if (!url || !key) return;
+    const grid = document.getElementById('blog-grid');
+    if (!grid) return;
+    const cards = grid.querySelectorAll('[data-blog-slug]');
+    const slugs = [...cards]
+      .map((el) => (el instanceof HTMLElement ? el.dataset.blogSlug?.trim() : ''))
+      .filter(Boolean);
+    if (!slugs.length) return;
+    const supabase = createClient(url, key);
+    const map = await fetchViewCountsMap(supabase, slugs);
+    cards.forEach((card) => {
+      if (!(card instanceof HTMLElement)) return;
+      const slug = card.dataset.blogSlug?.trim() ?? '';
+      const badge = card.querySelector('[data-blog-card-views]');
+      if (!slug || !badge) return;
+      const n = map.get(slug) ?? 0;
+      badge.textContent = `조회 ${formatViewCount(n)}`;
+    });
+  }
+
+  fillBlogGridViews();
+</script>

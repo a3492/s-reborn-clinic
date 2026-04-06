@@ -1,6 +1,15 @@
 ---
+import { getCollection } from 'astro:content';
 import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { isAcademyBlogPost } from '../../../lib/academy';
 
+const recentClinicPostsForFeatured = (await getCollection('blog', ({ data }) => !data.draft))
+  .filter((p) => !isAcademyBlogPost(p))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+  .slice(0, 20)
+  .map((p) => ({ id: p.id, title: p.data.title }));
+
+const featuredPickerJson = JSON.stringify(recentClinicPostsForFeatured).replace(/</g, '\\u003c');
 ---
 
 <AdminLayout
@@ -31,10 +40,32 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
           <textarea id="site-description" name="site_description" class="admin-textarea" style="min-height: 110px;" placeholder="사이트 기본 메타 설명"></textarea>
         </div>
 
-        <div class="admin-field">
-          <label class="admin-label" for="featured-slug">Featured slug</label>
-          <input id="featured-slug" name="featured_slug" class="admin-input" type="text" placeholder="ai-agent-explained" />
+        <div class="admin-field full">
+          <label class="admin-label" for="featured-slug">홈 피처드 글 (클리닉 블로그)</label>
+          <p class="admin-help" style="margin-bottom: 0.5rem;">
+            저장된 slug: <strong data-admin-featured-slug-current>(불러오는 중)</strong>
+            <span class="admin-cell-subtle"> · <code>site_settings.homepage.featured_slug</code></span>
+          </p>
+          <div class="admin-field-row" style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: flex-end; margin-bottom: 0.5rem;">
+            <div class="admin-field" style="flex: 1; min-width: 220px; margin-bottom: 0;">
+              <label class="admin-label" for="featured-slug-picker">최근 글에서 선택</label>
+              <select id="featured-slug-picker" class="admin-select" data-featured-slug-picker>
+                <option value="">— 선택 —</option>
+              </select>
+            </div>
+          </div>
+          <input
+            id="featured-slug"
+            name="featured_slug"
+            class="admin-input"
+            type="text"
+            placeholder="doctor-column/welcome-skin-aging"
+            autocomplete="off"
+          />
+          <span class="admin-help">블로그 글 id(경로)와 동일해야 합니다. 비우면 홈에서 클리닉 최신 글 1편이 피처드로 쓰입니다.</span>
         </div>
+
+        <script type="application/json" id="admin-featured-post-picker-data" set:html={featuredPickerJson}></script>
 
         <div class="admin-field">
           <label class="admin-label" for="default-og-image">기본 OG 이미지</label>
@@ -103,6 +134,31 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
     </section>
   </div>
 
+  <section class="admin-card pad-lg" style="margin-top: 1.25rem;">
+    <h2 class="admin-section-title">운영자 관리</h2>
+    <p class="admin-section-desc">
+      <code>admin_profiles</code>에 등록된 관리자입니다. 역할 변경과 프로필 삭제는 owner만 할 수 있습니다.
+    </p>
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>이메일</th>
+            <th>역할</th>
+            <th>등록일</th>
+            <th>작업</th>
+          </tr>
+        </thead>
+        <tbody data-admin-operators-tbody>
+          <tr>
+            <td colspan="4"><p class="admin-help">세션 준비 후 목록을 불러옵니다.</p></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="admin-inline-note" data-admin-operators-message hidden></p>
+  </section>
+
   <script>
     import { createClient } from '@supabase/supabase-js';
     const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
@@ -118,7 +174,119 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
     const validationList = document.querySelector('[data-settings-validation]');
     const validationSummary = document.querySelector('[data-settings-validation-summary]');
     const historyList = document.querySelector('[data-settings-history]');
+    const featuredSlugCurrentEl = document.querySelector('[data-admin-featured-slug-current]');
+    const operatorsTbody = document.querySelector('[data-admin-operators-tbody]');
+    const operatorsMessage = document.querySelector('[data-admin-operators-message]');
+    let featuredPickerPosts = [];
+    let featuredSlugPickerInitialized = false;
+    let operatorRows = [];
+    let operatorsUiBound = false;
     const getCurrentRole = () => document.body.dataset.adminRole || '';
+
+    const setOperatorsMessage = (text, state = 'info') => {
+      if (!operatorsMessage) return;
+      if (!text) {
+        operatorsMessage.hidden = true;
+        operatorsMessage.textContent = '';
+        return;
+      }
+      operatorsMessage.hidden = false;
+      operatorsMessage.textContent = text;
+      operatorsMessage.dataset.state = state;
+    };
+
+    const countOwners = () => operatorRows.filter((r) => r.role === 'owner').length;
+
+    const renderOperatorsTable = () => {
+      if (!operatorsTbody) return;
+      const myId = document.body.dataset.adminUserId || '';
+      const oc = countOwners();
+
+      if (!operatorRows.length) {
+        operatorsTbody.innerHTML =
+          '<tr><td colspan="4"><p class="admin-help">등록된 운영자가 없습니다.</p></td></tr>';
+        return;
+      }
+
+      operatorsTbody.innerHTML = operatorRows
+        .map((row) => {
+          const onlyOwner = row.role === 'owner' && oc <= 1;
+          const disableMutate = onlyOwner ? ' disabled' : '';
+          return `
+            <tr data-admin-op-row data-op-id="${escapeHtml(row.id)}">
+              <td>${escapeHtml(row.email)}</td>
+              <td>
+                <select class="admin-select" data-admin-op-role${disableMutate} aria-label="역할">
+                  <option value="owner" ${row.role === 'owner' ? 'selected' : ''}>owner</option>
+                  <option value="editor" ${row.role === 'editor' ? 'selected' : ''}>editor</option>
+                </select>
+              </td>
+              <td>${formatDate(row.created_at)}</td>
+              <td>
+                <button type="button" class="admin-btn admin-btn-sm" data-admin-op-delete${disableMutate}>삭제</button>
+                ${row.id === myId ? '<span class="admin-cell-subtle">(나)</span>' : ''}
+              </td>
+            </tr>
+          `;
+        })
+        .join('');
+    };
+
+    const loadOperators = async (supabaseClient) => {
+      if (!supabaseClient || !operatorsTbody) return;
+      setOperatorsMessage('');
+      const { data, error } = await supabaseClient
+        .from('admin_profiles')
+        .select('id, email, role, created_at')
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        setOperatorsMessage(error.message, 'error');
+        operatorsTbody.innerHTML = `<tr><td colspan="4"><p class="admin-help admin-help-error">${escapeHtml(error.message)}</p></td></tr>`;
+        return;
+      }
+
+      operatorRows = data || [];
+      renderOperatorsTable();
+    };
+
+    const syncFeaturedSlugPickerFromInput = () => {
+      const picker = document.querySelector('[data-featured-slug-picker]');
+      if (!picker || !form || !featuredPickerPosts.length) return;
+      const v = String(form.elements.featured_slug.value || '').trim();
+      picker.value = featuredPickerPosts.some((p) => p.id === v) ? v : '';
+    };
+
+    const initFeaturedSlugPicker = () => {
+      if (featuredSlugPickerInitialized) return;
+      const dataEl = document.getElementById('admin-featured-post-picker-data');
+      const picker = document.querySelector('[data-featured-slug-picker]');
+      if (!dataEl || !picker || !form) return;
+      featuredSlugPickerInitialized = true;
+      try {
+        featuredPickerPosts = JSON.parse(dataEl.textContent || '[]');
+      } catch {
+        featuredPickerPosts = [];
+        return;
+      }
+      picker.replaceChildren();
+      const optEmpty = document.createElement('option');
+      optEmpty.value = '';
+      optEmpty.textContent = '— 선택 —';
+      picker.appendChild(optEmpty);
+      featuredPickerPosts.forEach(({ id, title }) => {
+        const o = document.createElement('option');
+        o.value = id;
+        o.textContent = `${id} — ${title}`;
+        picker.appendChild(o);
+      });
+      picker.addEventListener('change', () => {
+        if (picker.value) {
+          form.elements.featured_slug.value = picker.value;
+        }
+        renderPreview();
+      });
+    };
 
     const setMessage = (text, state = 'info') => {
       if (!message) return;
@@ -233,6 +401,13 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       if (previewFeatured) previewFeatured.textContent = featuredSlug ? `featured: ${featuredSlug}` : 'featured: 자동 선택';
       if (previewOg) previewOg.textContent = defaultOgImage ? `OG: ${defaultOgImage}` : 'OG: 미설정';
 
+      if (featuredSlugCurrentEl) {
+        featuredSlugCurrentEl.textContent = featuredSlug
+          ? featuredSlug
+          : '(비어 있음 — 홈은 클리닉 최신 글을 피처드로 사용)';
+      }
+      syncFeaturedSlugPickerFromInput();
+
       if (socialPreview) {
         const entries = Object.entries(socialLinks);
         socialPreview.innerHTML = entries.length
@@ -336,6 +511,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 
       document.addEventListener('admin:session-ready', async () => {
         supabase = window.__adminSupabase;
+        initFeaturedSlugPicker();
         const { data, error } = await supabase
           .from('site_settings')
           .select('key, value_json')
@@ -358,6 +534,74 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
           form.elements.social_links.value = JSON.stringify(socialLinks, null, 2);
           renderPreview();
           loadHistory(supabase);
+        }
+
+        await loadOperators(supabase);
+
+        if (!operatorsUiBound && operatorsTbody) {
+          operatorsUiBound = true;
+
+          operatorsTbody.addEventListener('change', async (event) => {
+            const sel = event.target.closest('[data-admin-op-role]');
+            if (!sel || sel.disabled) return;
+            const tr = sel.closest('[data-admin-op-row]');
+            const id = tr?.dataset.opId;
+            const sb = window.__adminSupabase;
+            if (!id || !sb) return;
+
+            const prev = operatorRows.find((r) => r.id === id);
+            const nextRole = sel.value;
+            if (!prev || prev.role === nextRole) return;
+
+            if (prev.role === 'owner' && nextRole === 'editor' && countOwners() <= 1) {
+              setOperatorsMessage('유일한 owner는 editor로 바꿀 수 없습니다.', 'error');
+              sel.value = 'owner';
+              return;
+            }
+
+            setOperatorsMessage('역할을 저장하는 중입니다…', 'info');
+            const { error: upErr } = await sb.from('admin_profiles').update({ role: nextRole }).eq('id', id);
+            if (upErr) {
+              setOperatorsMessage(upErr.message, 'error');
+              sel.value = prev.role;
+              return;
+            }
+
+            prev.role = nextRole;
+            setOperatorsMessage('역할을 반영했습니다.', 'success');
+            renderOperatorsTable();
+          });
+
+          operatorsTbody.addEventListener('click', async (event) => {
+            const btn = event.target.closest('[data-admin-op-delete]');
+            if (!btn || btn.disabled) return;
+            const tr = btn.closest('[data-admin-op-row]');
+            const id = tr?.dataset.opId;
+            const sb = window.__adminSupabase;
+            if (!id || !sb) return;
+
+            const prev = operatorRows.find((r) => r.id === id);
+            if (!prev) return;
+            if (prev.role === 'owner' && countOwners() <= 1) {
+              setOperatorsMessage('유일한 owner 계정은 삭제할 수 없습니다.', 'error');
+              return;
+            }
+
+            if (!confirm(`${prev.email} 운영자 프로필을 삭제할까요? (Auth 사용자는 Supabase 콘솔에서 별도 관리할 수 있습니다.)`)) {
+              return;
+            }
+
+            setOperatorsMessage('삭제하는 중입니다…', 'info');
+            const { error: delErr } = await sb.from('admin_profiles').delete().eq('id', id);
+            if (delErr) {
+              setOperatorsMessage(delErr.message, 'error');
+              return;
+            }
+
+            operatorRows = operatorRows.filter((r) => r.id !== id);
+            setOperatorsMessage('프로필을 삭제했습니다.', 'success');
+            renderOperatorsTable();
+          });
         }
 
         form?.addEventListener('input', () => {

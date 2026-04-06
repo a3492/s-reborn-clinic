@@ -13,11 +13,22 @@ interface Props {
 	jsonLd?: Record<string, unknown>;
 	/** 관리자 등 비공개 페이지 — 검색·AI 인덱싱 제외 */
 	noindex?: boolean;
+	/** false면 테마 FOUC 방지 스크립트 미삽입 (어드민 전용) */
+	applyVisitorTheme?: boolean;
 }
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
-const { title, description, image, siteTitle = SITE_TITLE, ogType: ogTypeProp, jsonLd, noindex } = Astro.props;
+const {
+	title,
+	description,
+	image,
+	siteTitle = SITE_TITLE,
+	ogType: ogTypeProp,
+	jsonLd,
+	noindex,
+	applyVisitorTheme = true,
+} = Astro.props;
 
 const pathNorm = Astro.url.pathname.replace(/\/$/, '') || '/';
 const afterBlog = pathNorm.startsWith('/blog/') ? pathNorm.slice(6) : '';
@@ -35,6 +46,26 @@ const ogImage = image
 <!-- Global Metadata -->
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+{applyVisitorTheme && (
+	<script is:inline>
+		(function () {
+			try {
+				var k = 'clinic-theme';
+				var d = document.documentElement;
+				var s = localStorage.getItem(k);
+				var t =
+					s === 'light' || s === 'dark'
+						? s
+						: window.matchMedia('(prefers-color-scheme: dark)').matches
+							? 'dark'
+							: 'light';
+				d.setAttribute('data-theme', t);
+			} catch (e) {
+				document.documentElement.setAttribute('data-theme', 'light');
+			}
+		})();
+	</script>
+)}
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="icon" href="/favicon.ico" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />

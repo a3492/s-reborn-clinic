@@ -1,0 +1,318 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout
+  title="에린 FAQ"
+  pageTitle="에린이 코너 FAQ"
+  pageDescription="홈에 노출되는 FAQ 항목을 추가·수정·순서 변경합니다."
+  status="FAQ"
+  requiredRole="editor"
+>
+  <div class="admin-panel-stack">
+    <section class="admin-card pad-lg">
+      <div class="admin-actions-row">
+        <div>
+          <h2 class="admin-section-title">FAQ 항목 편집</h2>
+          <p class="admin-section-desc">질문·답변을 저장하면 빌드 후 홈 &quot;에린이 코너 FAQ&quot;에 반영됩니다.</p>
+        </div>
+      </div>
+
+      <form class="admin-form-grid" data-faq-editor-form>
+        <input type="hidden" name="edit_id" value="" data-faq-edit-id />
+        <div class="admin-field full">
+          <label class="admin-label" for="faq-question">질문</label>
+          <input id="faq-question" name="question" class="admin-input" type="text" required placeholder="질문을 입력하세요" />
+        </div>
+        <div class="admin-field full">
+          <label class="admin-label" for="faq-answer">답변</label>
+          <textarea id="faq-answer" name="answer" class="admin-textarea" style="min-height: 120px;" required placeholder="답변 전문"></textarea>
+        </div>
+        <div class="admin-actions-inline" style="flex-wrap: wrap;">
+          <button type="submit" class="admin-btn primary" data-faq-submit-btn>추가</button>
+          <button type="button" class="admin-btn" data-faq-cancel-edit hidden>편집 취소</button>
+        </div>
+      </form>
+
+      <p class="admin-inline-note" data-faq-message hidden></p>
+    </section>
+
+    <section class="admin-card pad-lg">
+      <div class="admin-actions-row">
+        <div>
+          <h2 class="admin-section-title">목록</h2>
+          <p class="admin-section-desc">순서 · 공개 여부 · 수정 · 삭제</p>
+        </div>
+        <button type="button" class="admin-btn" data-faq-reload>새로고침</button>
+      </div>
+
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th style="width: 5rem;">순서</th>
+              <th>질문</th>
+              <th>답변 미리보기</th>
+              <th style="width: 6rem;">공개</th>
+              <th style="width: 12rem;">동작</th>
+            </tr>
+          </thead>
+          <tbody data-faq-tbody>
+            <tr>
+              <td colspan="5">불러오는 중...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+    const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+    const tbody = document.querySelector('[data-faq-tbody]');
+    const message = document.querySelector('[data-faq-message]');
+    const form = document.querySelector('[data-faq-editor-form]');
+    const editIdInput = document.querySelector('[data-faq-edit-id]');
+    const submitBtn = document.querySelector('[data-faq-submit-btn]');
+    const cancelEditBtn = document.querySelector('[data-faq-cancel-edit]');
+    const reloadBtn = document.querySelector('[data-faq-reload]');
+
+    let supabase = null;
+    let cachedRows = [];
+
+    const setMessage = (text, state = 'info') => {
+      if (!message) return;
+      message.hidden = false;
+      message.textContent = text;
+      message.dataset.state = state;
+    };
+
+    const escapeHtml = (value) =>
+      String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+    const truncate = (s, n) => {
+      const t = String(s || '').replace(/\s+/g, ' ').trim();
+      return t.length <= n ? t : `${t.slice(0, n)}…`;
+    };
+
+    const sortRows = (rows) =>
+      [...rows].sort((a, b) => {
+        if (a.order_index !== b.order_index) return a.order_index - b.order_index;
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      });
+
+    const resetEditor = () => {
+      if (!form || !editIdInput || !submitBtn || !cancelEditBtn) return;
+      form.reset();
+      editIdInput.value = '';
+      submitBtn.textContent = '추가';
+      cancelEditBtn.hidden = true;
+    };
+
+    const renderTable = () => {
+      if (!tbody) return;
+      const sorted = sortRows(cachedRows);
+      if (!sorted.length) {
+        tbody.innerHTML = '<tr><td colspan="5">등록된 FAQ가 없습니다.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = sorted
+        .map((row, idx) => {
+          const isFirst = idx === 0;
+          const isLast = idx === sorted.length - 1;
+          return `
+            <tr data-faq-row-id="${escapeHtml(row.id)}">
+              <td>
+                <div style="display:flex;flex-direction:column;gap:0.25rem;align-items:flex-start;">
+                  <span class="admin-cell-subtle">${idx + 1}</span>
+                  <div style="display:flex;gap:0.25rem;">
+                    <button type="button" class="admin-btn admin-btn-sm" data-faq-move="up" ${isFirst ? 'disabled' : ''} aria-label="이 항목을 위로 이동">↑</button>
+                    <button type="button" class="admin-btn admin-btn-sm" data-faq-move="down" ${isLast ? 'disabled' : ''} aria-label="이 항목을 아래로 이동">↓</button>
+                  </div>
+                </div>
+              </td>
+              <td><strong>${escapeHtml(row.question)}</strong></td>
+              <td class="admin-cell-subtle">${escapeHtml(truncate(row.answer, 100))}</td>
+              <td>
+                <button type="button" class="admin-btn admin-btn-sm ${row.is_visible ? 'primary' : ''}" data-faq-toggle="${escapeHtml(row.id)}">
+                  ${row.is_visible ? '공개' : '숨김'}
+                </button>
+              </td>
+              <td style="display:flex;flex-wrap:wrap;gap:0.35rem;">
+                <button type="button" class="admin-btn admin-btn-sm" data-faq-edit="${escapeHtml(row.id)}">수정</button>
+                <button type="button" class="admin-btn admin-btn-sm" data-faq-delete="${escapeHtml(row.id)}">삭제</button>
+              </td>
+            </tr>
+          `;
+        })
+        .join('');
+    };
+
+    const loadList = async () => {
+      if (!supabase || !tbody) return;
+      tbody.innerHTML = '<tr><td colspan="5">불러오는 중...</td></tr>';
+      const { data, error } = await supabase
+        .from('faq_items')
+        .select('id, question, answer, order_index, is_visible, created_at')
+        .order('order_index', { ascending: true })
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        tbody.innerHTML = `<tr><td colspan="5">${escapeHtml(error.message)}</td></tr>`;
+        setMessage(error.message, 'error');
+        return;
+      }
+
+      cachedRows = data || [];
+      renderTable();
+    };
+
+    const swapOrder = async (id, direction) => {
+      const sorted = sortRows(cachedRows);
+      const idx = sorted.findIndex((r) => r.id === id);
+      const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+      if (idx < 0 || swapIdx < 0 || swapIdx >= sorted.length) return;
+
+      const a = sorted[idx];
+      const b = sorted[swapIdx];
+      const oa = a.order_index;
+      const ob = b.order_index;
+
+      const { error: e1 } = await supabase.from('faq_items').update({ order_index: ob }).eq('id', a.id);
+      if (e1) {
+        setMessage(e1.message, 'error');
+        return;
+      }
+      const { error: e2 } = await supabase.from('faq_items').update({ order_index: oa }).eq('id', b.id);
+      if (e2) {
+        setMessage(e2.message, 'error');
+        return;
+      }
+
+      setMessage('순서를 변경했습니다.', 'success');
+      await loadList();
+    };
+
+    if (!supabaseUrl || !supabaseKey) {
+      setMessage('Supabase 환경 변수가 없습니다.', 'error');
+    } else {
+      document.addEventListener('admin:session-ready', async () => {
+        supabase = window.__adminSupabase;
+        await loadList();
+
+        reloadBtn?.addEventListener('click', () => loadList());
+
+        cancelEditBtn?.addEventListener('click', () => {
+          resetEditor();
+          setMessage('편집을 취소했습니다.', 'info');
+        });
+
+        form?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          if (!supabase || !form) return;
+
+          const q = String(form.elements.question.value || '').trim();
+          const a = String(form.elements.answer.value || '').trim();
+          const editId = String(editIdInput?.value || '').trim();
+
+          if (!q || !a) {
+            setMessage('질문과 답변을 모두 입력하세요.', 'error');
+            return;
+          }
+
+          if (editId) {
+            const { error } = await supabase.from('faq_items').update({ question: q, answer: a }).eq('id', editId);
+            if (error) {
+              setMessage(error.message, 'error');
+              return;
+            }
+            setMessage('FAQ를 수정했습니다.', 'success');
+          } else {
+            const maxOrder = cachedRows.reduce((m, r) => Math.max(m, r.order_index ?? 0), -1);
+            const { error } = await supabase.from('faq_items').insert({
+              question: q,
+              answer: a,
+              order_index: maxOrder + 1,
+              is_visible: true,
+            });
+            if (error) {
+              setMessage(error.message, 'error');
+              return;
+            }
+            setMessage('FAQ를 추가했습니다.', 'success');
+          }
+
+          resetEditor();
+          await loadList();
+        });
+
+        tbody?.addEventListener('click', async (event) => {
+          const target = event.target;
+          if (!(target instanceof HTMLElement)) return;
+
+          const moveBtn = target.closest('[data-faq-move]');
+          if (moveBtn && tbody.contains(moveBtn)) {
+            const tr = moveBtn.closest('tr');
+            const id = tr?.getAttribute('data-faq-row-id');
+            const dir = moveBtn.getAttribute('data-faq-move');
+            if (id && (dir === 'up' || dir === 'down')) await swapOrder(id, dir);
+            return;
+          }
+
+          const toggleBtn = target.closest('[data-faq-toggle]');
+          if (toggleBtn && tbody.contains(toggleBtn)) {
+            const id = toggleBtn.getAttribute('data-faq-toggle');
+            if (!id) return;
+            const row = cachedRows.find((r) => r.id === id);
+            if (!row) return;
+            const { error } = await supabase.from('faq_items').update({ is_visible: !row.is_visible }).eq('id', id);
+            if (error) {
+              setMessage(error.message, 'error');
+              return;
+            }
+            setMessage(row.is_visible ? '비공개로 전환했습니다.' : '공개로 전환했습니다.', 'success');
+            await loadList();
+            return;
+          }
+
+          const editBtn = target.closest('[data-faq-edit]');
+          if (editBtn && tbody.contains(editBtn)) {
+            const id = editBtn.getAttribute('data-faq-edit');
+            const row = cachedRows.find((r) => r.id === id);
+            if (!row || !form || !editIdInput || !submitBtn || !cancelEditBtn) return;
+            editIdInput.value = row.id;
+            form.elements.question.value = row.question;
+            form.elements.answer.value = row.answer;
+            submitBtn.textContent = '저장';
+            cancelEditBtn.hidden = false;
+            form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            setMessage('항목을 수정 중입니다. 저장하면 반영됩니다.', 'info');
+            return;
+          }
+
+          const delBtn = target.closest('[data-faq-delete]');
+          if (delBtn && tbody.contains(delBtn)) {
+            const id = delBtn.getAttribute('data-faq-delete');
+            if (!id || !confirm('이 FAQ를 삭제할까요?')) return;
+            const { error } = await supabase.from('faq_items').delete().eq('id', id);
+            if (error) {
+              setMessage(error.message, 'error');
+              return;
+            }
+            if (editIdInput?.value === id) resetEditor();
+            setMessage('삭제했습니다.', 'success');
+            await loadList();
+          }
+        });
+      });
+    }
+  </script>
+</AdminLayout>

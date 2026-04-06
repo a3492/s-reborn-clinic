@@ -2,6 +2,7 @@
 import '../styles/design.css';
 import '../styles/global.css';
 import BaseHead from '../components/BaseHead.astro';
+import AnalyticsScripts from '../components/AnalyticsScripts.astro';
 import Header from '../components/Header.astro';
 import Topbar from '../components/Topbar.astro';
 import Footer from '../components/Footer.astro';
@@ -13,9 +14,11 @@ interface Props {
   title?: string;
   description?: string;
   image?: string;
+  /** 오프라인 안내 등 검색 제외 페이지 */
+  noindex?: boolean;
 }
 
-const { title, description = SITE_DESCRIPTION, image } = Astro.props;
+const { title, description = SITE_DESCRIPTION, image, noindex } = Astro.props;
 const siteSettings = await getPublicSiteSettings();
 const resolvedSiteTitle = siteSettings.siteTitle || SITE_TITLE;
 const resolvedDescription = description || siteSettings.siteDescription || SITE_DESCRIPTION;
@@ -31,13 +34,25 @@ const jsonLd = buildOrganizationAndWebSiteJsonLd(Astro.site);
       image={image || siteSettings.defaultOgImage || undefined}
       siteTitle={resolvedSiteTitle}
       jsonLd={jsonLd}
+      noindex={noindex}
     />
+    <!-- PWA: 홈 화면 아이콘은 public/icon-192.png, public/icon-512.png 를 추가하세요 (manifest.json 참고). -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#1a1a2e" />
+    <!-- Pretendard: global.css @import 보다 먼저 DNS 연결 -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <AnalyticsScripts />
+    <script is:inline>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js');
+      }
+    </script>
   </head>
   <body>
     <div class="site-wrap">
       <Header />
       <Topbar />
-      <main class="site-main">
+      <main class="site-main" id="main-content">
         <slot />
       </main>
       <Footer siteTitle={resolvedSiteTitle} socialLinks={siteSettings.socialLinks} />

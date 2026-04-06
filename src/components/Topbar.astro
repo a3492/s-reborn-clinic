@@ -1,24 +1,92 @@
 ---
-// 클리닉 블로그 상단 검색 + 상담 버튼 바
+import { CATEGORIES } from '../consts';
+import { readerLoginHref } from '../lib/reader-auth';
+
+const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label]));
+const readerLoginReturn = readerLoginHref(`${Astro.url.pathname}${Astro.url.search}`);
 ---
 
 <div class="topbar">
   <div class="topbar-inner">
-    <form class="topbar-search" action="/blog/" method="get" role="search">
-      <input
-        class="topbar-search-input"
-        type="search"
-        name="q"
-        placeholder="시술명, 증상, 키워드 검색..."
-        aria-label="블로그 검색"
-      />
-      <button type="submit" class="topbar-search-btn" aria-label="검색">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+    <div class="topbar-search-wrap" data-topbar-search-wrap>
+      <form class="topbar-search" action="/blog/" method="get" role="search" data-topbar-search-form>
+        <input
+          class="topbar-search-input"
+          type="search"
+          name="q"
+          placeholder="시술명, 증상, 키워드 검색..."
+          role="combobox"
+          aria-label="블로그 검색"
+          aria-autocomplete="list"
+          aria-haspopup="listbox"
+          aria-expanded="false"
+          aria-controls="topbar-search-dropdown-panel topbar-search-listbox"
+          data-topbar-search-input
+          id="topbar-blog-search-input"
+        />
+        <button type="submit" class="topbar-search-btn" aria-label="검색">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </button>
+      </form>
+      <div
+        id="topbar-search-dropdown-panel"
+        class="topbar-search-dropdown"
+        hidden
+        data-topbar-search-dropdown
+      >
+        <div class="topbar-search-loading" hidden data-topbar-search-loading>
+          <span class="topbar-search-spinner" aria-hidden="true"></span>
+          <span>검색 중…</span>
+        </div>
+        <ul
+          id="topbar-search-listbox"
+          class="topbar-search-results"
+          data-topbar-search-results
+          hidden
+          role="listbox"
+          aria-label="블로그 검색 제안"
+        ></ul>
+        <p class="topbar-search-empty" hidden data-topbar-search-empty>
+          검색 결과가 없습니다. 다른 키워드를 시도해보세요.
+        </p>
+      </div>
+    </div>
+
+    <div class="topbar-auth" data-topbar-auth>
+      <a href={readerLoginReturn} class="topbar-auth-login" data-topbar-login>로그인</a>
+      <div class="topbar-auth-user" data-topbar-user hidden>
+        <img class="topbar-auth-avatar" alt="" width="28" height="28" data-topbar-avatar hidden />
+        <span class="topbar-auth-avatar-fallback" data-topbar-avatar-fallback aria-hidden="true"></span>
+        <span class="topbar-auth-name" data-topbar-name></span>
+        <button type="button" class="topbar-auth-logout" data-topbar-logout aria-label="로그아웃">
+          로그아웃
+        </button>
+      </div>
+    </div>
+
+    <button
+      type="button"
+      class="topbar-theme-toggle"
+      data-theme-toggle
+      aria-label="색 테마 전환"
+      aria-pressed="false"
+      title="라이트 / 다크 모드"
+    >
+      <span class="topbar-theme-icon" data-theme-icon-moon aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
         </svg>
-      </button>
-    </form>
+      </span>
+      <span class="topbar-theme-icon" data-theme-icon-sun aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+        </svg>
+      </span>
+    </button>
   </div>
 </div>
 
@@ -37,18 +105,153 @@
     display: flex;
     align-items: center;
     gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .topbar-search-wrap {
+    position: relative;
+    flex: 1;
+    max-width: 480px;
   }
 
   .topbar-search {
     display: flex;
     align-items: center;
     gap: 0;
-    flex: 1;
-    max-width: 480px;
+    width: 100%;
     border: 1px solid var(--rule);
     border-radius: 999px;
     background: var(--surface);
     overflow: hidden;
+  }
+
+  .topbar-search-dropdown {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 6px);
+    z-index: 80;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 14px;
+    box-shadow: 0 12px 32px rgba(28, 24, 20, 0.12);
+    max-height: min(70vh, 380px);
+    overflow: auto;
+    padding: 0.35rem 0;
+  }
+
+  .topbar-search-dropdown[hidden] {
+    display: none !important;
+  }
+
+  .topbar-search-loading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1rem;
+    font-size: 0.86rem;
+    color: var(--t2);
+  }
+
+  .topbar-search-spinner {
+    width: 1.1rem;
+    height: 1.1rem;
+    border: 2px solid var(--rule);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: topbar-spin 0.65s linear infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes topbar-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .topbar-search-results {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .topbar-search-results[hidden],
+  .topbar-search-empty[hidden],
+  .topbar-search-loading[hidden] {
+    display: none !important;
+  }
+
+  .topbar-search-hit {
+    margin: 0;
+  }
+
+  .topbar-search-hit a {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.2rem;
+    padding: 0.55rem 1rem;
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.12s ease;
+  }
+
+  .topbar-search-hit a:hover {
+    background: var(--bg2);
+  }
+
+  .topbar-search-hit a:focus-visible {
+    background: var(--bg2);
+    outline: 2px solid var(--accent, #b8956a);
+    outline-offset: -2px;
+  }
+
+  .topbar-search-hit.is-active a {
+    background: rgba(184, 149, 106, 0.14);
+  }
+
+  .topbar-search-hit-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.35;
+  }
+
+  .topbar-search-hit-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    width: 100%;
+  }
+
+  .topbar-search-hit-badge {
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--accent-dark);
+    flex-shrink: 0;
+  }
+
+  .topbar-search-hit-desc {
+    margin: 0;
+    font-size: 0.78rem;
+    color: var(--t2);
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .topbar-search-empty {
+    margin: 0;
+    padding: 0.75rem 1rem;
+    font-size: 0.86rem;
+    color: var(--t2);
+    line-height: 1.5;
   }
 
   .topbar-search-input {
@@ -59,7 +262,14 @@
     font: inherit;
     font-size: 0.9rem;
     color: var(--text);
+  }
+
+  .topbar-search-input:focus {
     outline: none;
+  }
+
+  .topbar-search-input:focus-visible {
+    box-shadow: inset 0 0 0 2px var(--accent, #b8956a);
   }
 
   .topbar-search-input::placeholder {
@@ -70,6 +280,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
     padding: 0.55rem 0.9rem;
     border: none;
     background: transparent;
@@ -80,6 +292,150 @@
 
   .topbar-search-btn:hover {
     color: var(--accent);
+  }
+
+  .topbar-search-btn:focus-visible {
+    outline: 2px solid var(--accent, #b8956a);
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+
+  .topbar-auth {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-left: auto;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    max-width: min(100%, 220px);
+  }
+
+  .topbar-auth-login {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--accent-dark);
+    text-decoration: none;
+    padding: 0.35rem 0.5rem;
+    border-radius: 8px;
+    white-space: nowrap;
+  }
+
+  .topbar-auth-login:hover {
+    text-decoration: underline;
+  }
+
+  .topbar-auth-login:focus-visible {
+    outline: 2px solid var(--accent, #b8956a);
+    outline-offset: 2px;
+  }
+
+  .topbar-auth-user {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+  }
+
+  .topbar-auth-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid var(--rule);
+  }
+
+  .topbar-auth-avatar-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    background: var(--bg2);
+    border: 1px solid var(--rule);
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: var(--accent-dark);
+    flex-shrink: 0;
+  }
+
+  .topbar-auth-name {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text);
+    max-width: 6.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .topbar-auth-logout {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.3rem 0.45rem;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--surface);
+    color: var(--t2);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .topbar-auth-logout:hover {
+    border-color: var(--accent);
+    color: var(--accent-dark);
+  }
+
+  .topbar-auth-logout:focus-visible {
+    outline: 2px solid var(--accent, #b8956a);
+    outline-offset: 2px;
+  }
+
+  .topbar-theme-toggle {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--t2);
+    cursor: pointer;
+    transition:
+      color 0.15s ease,
+      border-color 0.15s ease,
+      background 0.15s ease;
+  }
+
+  .topbar-theme-toggle:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .topbar-theme-toggle:focus-visible {
+    outline: 2px solid var(--accent, #b8956a);
+    outline-offset: 2px;
+  }
+
+  .topbar-theme-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* 라이트: 달 아이콘(다크로 전환) / 다크: 해 아이콘(라이트로 전환) */
+  html[data-theme='light'] [data-theme-icon-sun],
+  html[data-theme='dark'] [data-theme-icon-moon] {
+    display: none;
+  }
+
+  html[data-theme='light'] [data-theme-icon-moon],
+  html[data-theme='dark'] [data-theme-icon-sun] {
+    display: flex;
   }
 
 </style>
@@ -93,4 +449,448 @@
     var input = document.querySelector('.topbar-search-input');
     if (input) input.value = q;
   })();
+</script>
+
+<script is:inline>
+  (function () {
+    var KEY = 'clinic-theme';
+    function current() {
+      return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    }
+    function apply(t) {
+      document.documentElement.setAttribute('data-theme', t);
+      try {
+        localStorage.setItem(KEY, t);
+      } catch (e) {}
+      syncToggle();
+    }
+    function syncToggle() {
+      var btn = document.querySelector('[data-theme-toggle]');
+      if (!btn) return;
+      var dark = current() === 'dark';
+      btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+      btn.setAttribute('aria-label', dark ? '라이트 모드로 전환' : '다크 모드로 전환');
+    }
+    document.querySelector('[data-theme-toggle]')?.addEventListener('click', function () {
+      apply(current() === 'dark' ? 'light' : 'dark');
+    });
+    syncToggle();
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') syncToggle();
+    });
+  })();
+</script>
+
+<script>
+  import { createClient } from '@supabase/supabase-js';
+  import type { User } from '@supabase/supabase-js';
+
+  const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+  const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+  const authRoot = document.querySelector('[data-topbar-auth]');
+  const loginLink = document.querySelector('[data-topbar-login]');
+  const userEl = document.querySelector('[data-topbar-user]');
+  const avatar = document.querySelector('[data-topbar-avatar]') as HTMLImageElement | null;
+  const avatarFb = document.querySelector('[data-topbar-avatar-fallback]');
+  const nameEl = document.querySelector('[data-topbar-name]');
+  const logoutBtn = document.querySelector('[data-topbar-logout]');
+
+  function displayName(u: User) {
+    const m = u.user_metadata || {};
+    return (
+      (m.full_name as string) ||
+      (m.name as string) ||
+      (m.preferred_username as string) ||
+      u.email?.split('@')[0] ||
+      '사용자'
+    );
+  }
+
+  function pickAvatarUrl(u: User) {
+    const m = u.user_metadata || {};
+    const id0 = u.identities?.[0]?.identity_data as { avatar_url?: string; picture?: string } | undefined;
+    return (
+      (m.avatar_url as string) ||
+      (m.picture as string) ||
+      id0?.avatar_url ||
+      id0?.picture
+    );
+  }
+
+  function renderUser(user: User | null) {
+    if (!loginLink || !userEl || !nameEl) return;
+    if (!user) {
+      loginLink.removeAttribute('hidden');
+      userEl.setAttribute('hidden', '');
+      return;
+    }
+    loginLink.setAttribute('hidden', '');
+    userEl.removeAttribute('hidden');
+    const nm = displayName(user);
+    nameEl.textContent = nm;
+    const url = pickAvatarUrl(user);
+    if (avatar && url) {
+      avatar.src = url;
+      avatar.alt = `${nm} 프로필`;
+      avatar.removeAttribute('hidden');
+      avatarFb?.setAttribute('hidden', '');
+    } else {
+      avatar?.setAttribute('hidden', '');
+      if (avatarFb) {
+        avatarFb.removeAttribute('hidden');
+        avatarFb.textContent = nm.slice(0, 1).toUpperCase();
+      }
+    }
+  }
+
+  if (supabaseUrl && supabaseKey && authRoot) {
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: false,
+      },
+    });
+
+    const sync = async () => {
+      const { data } = await supabase.auth.getSession();
+      renderUser(data.session?.user ?? null);
+    };
+
+    await sync();
+    supabase.auth.onAuthStateChange(() => {
+      void sync();
+    });
+
+    logoutBtn?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      await sync();
+    });
+  }
+</script>
+
+<script define:vars={{ categoryLabels }}>
+  import { createClient } from '@supabase/supabase-js';
+  import Fuse from 'fuse.js';
+
+  const DEBOUNCE_MS = 300;
+  const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+  const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+  let supabaseSingleton: ReturnType<typeof createClient> | null = null;
+  const getSupabase = () => {
+    if (!supabaseUrl || !supabaseKey) return null;
+    if (!supabaseSingleton) {
+      supabaseSingleton = createClient(supabaseUrl, supabaseKey);
+    }
+    return supabaseSingleton;
+  };
+
+  type Hit = {
+    slug: string;
+    title: string;
+    description: string | null;
+    category: string | null;
+    tags?: string[] | null;
+  };
+
+  const wrap = document.querySelector('[data-topbar-search-wrap]');
+  const form = document.querySelector('[data-topbar-search-form]');
+  const input = document.querySelector('[data-topbar-search-input]');
+  const dropdown = document.querySelector('[data-topbar-search-dropdown]');
+  const loadingEl = document.querySelector('[data-topbar-search-loading]');
+  const resultsEl = document.querySelector('[data-topbar-search-results]');
+  const emptyEl = document.querySelector('[data-topbar-search-empty]');
+
+  if (
+    wrap instanceof HTMLElement &&
+    form instanceof HTMLFormElement &&
+    input instanceof HTMLInputElement &&
+    dropdown instanceof HTMLElement &&
+    loadingEl instanceof HTMLElement &&
+    resultsEl instanceof HTMLUListElement &&
+    emptyEl instanceof HTMLElement
+  ) {
+    let fuse: InstanceType<typeof Fuse<Hit>> | null = null;
+    let fuseLoadPromise: Promise<void> | null = null;
+    let debounceId = 0;
+    let requestId = 0;
+    let activeIndex = -1;
+    let pendingKeyboardSelect = false;
+
+    const escapeHtml = (value: string) =>
+      String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+    const blogHref = (slug: string) => {
+      const segs = String(slug || '')
+        .split('/')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map((s) => encodeURIComponent(s));
+      return `/blog/${segs.join('/')}/`;
+    };
+
+    const oneLine = (text: string, max = 140) => {
+      const t = String(text || '').replace(/\s+/g, ' ').trim();
+      return t.length > max ? `${t.slice(0, max)}…` : t;
+    };
+
+    const setExpanded = (open: boolean) => {
+      input.setAttribute('aria-expanded', open ? 'true' : 'false');
+    };
+
+    const getOptionCount = () => resultsEl.querySelectorAll('[role="option"]').length;
+
+    const syncActiveVisual = () => {
+      resultsEl.querySelectorAll('[role="option"]').forEach((el, idx) => {
+        el.classList.toggle('is-active', idx === activeIndex);
+      });
+      if (activeIndex >= 0) {
+        input.setAttribute('aria-activedescendant', `topbar-opt-${activeIndex}`);
+      } else {
+        input.removeAttribute('aria-activedescendant');
+      }
+    };
+
+    const setActiveIndex = (next: number) => {
+      const n = getOptionCount();
+      if (n <= 0) {
+        activeIndex = -1;
+        syncActiveVisual();
+        return;
+      }
+      activeIndex = ((next % n) + n) % n;
+      syncActiveVisual();
+    };
+
+    const hideDropdown = () => {
+      activeIndex = -1;
+      pendingKeyboardSelect = false;
+      input.removeAttribute('aria-activedescendant');
+      resultsEl.querySelectorAll('.topbar-search-hit.is-active').forEach((el) => el.classList.remove('is-active'));
+      dropdown.hidden = true;
+      setExpanded(false);
+      loadingEl.hidden = true;
+      resultsEl.hidden = true;
+      emptyEl.hidden = true;
+    };
+
+    const showDropdown = () => {
+      dropdown.hidden = false;
+      setExpanded(true);
+    };
+
+    const ensureFuse = async () => {
+      if (fuse) return;
+      if (!fuseLoadPromise) {
+        fuseLoadPromise = (async () => {
+          const res = await fetch('/blog/search-index.json');
+          if (!res.ok) throw new Error(`search-index ${res.status}`);
+          const data = (await res.json()) as Hit[];
+          fuse = new Fuse(data, {
+            keys: [
+              { name: 'title', weight: 0.45 },
+              { name: 'description', weight: 0.3 },
+              { name: 'category', weight: 0.15 },
+              { name: 'tags', weight: 0.2 },
+            ],
+            threshold: 0.38,
+            ignoreLocation: true,
+            minMatchCharLength: 1,
+          });
+        })();
+      }
+      await fuseLoadPromise;
+    };
+
+    const renderHits = (hits: Hit[]) => {
+      activeIndex = -1;
+      input.removeAttribute('aria-activedescendant');
+      resultsEl.innerHTML = hits
+        .map((row, i) => {
+          const cat = row.category || '';
+          const badge = categoryLabels[cat] || cat || '블로그';
+          const desc = oneLine(row.description || '');
+          return `<li class="topbar-search-hit" role="option" id="topbar-opt-${i}">
+            <a href="${escapeHtml(blogHref(row.slug))}">
+              <span class="topbar-search-hit-title">${escapeHtml(row.title)}</span>
+              <span class="topbar-search-hit-meta">
+                <span class="topbar-search-hit-badge">${escapeHtml(badge)}</span>
+              </span>
+              ${desc ? `<p class="topbar-search-hit-desc">${escapeHtml(desc)}</p>` : ''}
+            </a>
+          </li>`;
+        })
+        .join('');
+      resultsEl.hidden = hits.length === 0;
+      emptyEl.hidden = hits.length > 0;
+      loadingEl.hidden = true;
+    };
+
+    const runSearch = async (raw: string) => {
+      const q = raw.trim();
+      const myId = ++requestId;
+
+      if (!q) {
+        hideDropdown();
+        return;
+      }
+
+      showDropdown();
+      loadingEl.hidden = false;
+      resultsEl.hidden = true;
+      emptyEl.hidden = true;
+
+      let supabaseHits: Hit[] | null = null;
+
+      if (supabaseUrl && supabaseKey) {
+        try {
+          const supabase = getSupabase();
+          if (!supabase) throw new Error('no supabase');
+          const { data, error } = await supabase
+            .from('posts')
+            .select('slug, title, description, category, tags')
+            .textSearch('search_vector', q, { type: 'websearch', config: 'simple' })
+            .eq('status', 'published')
+            .limit(10);
+
+          if (myId !== requestId) return;
+          if (!error && data?.length) {
+            supabaseHits = data as Hit[];
+          }
+        } catch {
+          if (myId !== requestId) return;
+        }
+      }
+
+      if (myId !== requestId) return;
+
+      if (supabaseHits?.length) {
+        renderHits(supabaseHits);
+        showDropdown();
+        if (pendingKeyboardSelect) {
+          pendingKeyboardSelect = false;
+          requestAnimationFrame(() => setActiveIndex(0));
+        }
+        return;
+      }
+
+      try {
+        await ensureFuse();
+      } catch {
+        if (myId !== requestId) return;
+        pendingKeyboardSelect = false;
+        loadingEl.hidden = true;
+        resultsEl.hidden = true;
+        emptyEl.hidden = false;
+        showDropdown();
+        return;
+      }
+
+      if (myId !== requestId) return;
+
+      const fused = fuse
+        ? fuse.search(q, { limit: 10 }).map((r) => r.item as Hit)
+        : [];
+
+      loadingEl.hidden = true;
+      if (fused.length) {
+        renderHits(fused);
+        if (pendingKeyboardSelect) {
+          pendingKeyboardSelect = false;
+          requestAnimationFrame(() => setActiveIndex(0));
+        }
+      } else {
+        pendingKeyboardSelect = false;
+        resultsEl.innerHTML = '';
+        resultsEl.hidden = true;
+        emptyEl.hidden = false;
+      }
+      showDropdown();
+    };
+
+    const scheduleSearch = (value: string) => {
+      window.clearTimeout(debounceId);
+      debounceId = window.setTimeout(() => {
+        void runSearch(value);
+      }, DEBOUNCE_MS);
+    };
+
+    input.addEventListener('input', () => {
+      activeIndex = -1;
+      input.removeAttribute('aria-activedescendant');
+      resultsEl.querySelectorAll('.topbar-search-hit.is-active').forEach((el) => el.classList.remove('is-active'));
+      scheduleSearch(input.value);
+    });
+
+    input.addEventListener('focus', () => {
+      if (input.value.trim()) scheduleSearch(input.value);
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        pendingKeyboardSelect = false;
+        hideDropdown();
+        input.blur();
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const q = input.value.trim();
+        if (!q) return;
+        if (dropdown.hidden) {
+          pendingKeyboardSelect = true;
+          void runSearch(q);
+          return;
+        }
+        const n = getOptionCount();
+        if (n === 0) return;
+        setActiveIndex(activeIndex < 0 ? 0 : activeIndex + 1);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (dropdown.hidden || !input.value.trim()) return;
+        const n = getOptionCount();
+        if (n === 0) return;
+        setActiveIndex(activeIndex <= 0 ? n - 1 : activeIndex - 1);
+        return;
+      }
+      if (e.key === 'Enter') {
+        if (!dropdown.hidden && activeIndex >= 0) {
+          const holder = document.getElementById(`topbar-opt-${activeIndex}`);
+          const a = holder?.querySelector('a');
+          if (a instanceof HTMLAnchorElement) {
+            e.preventDefault();
+            hideDropdown();
+            window.location.assign(a.href);
+          }
+        }
+      }
+    });
+
+    wrap.addEventListener('focusout', () => {
+      window.setTimeout(() => {
+        if (!wrap.contains(document.activeElement)) hideDropdown();
+      }, 0);
+    });
+
+    form.addEventListener('submit', () => {
+      hideDropdown();
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!wrap.contains(e.target as Node)) hideDropdown();
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') hideDropdown();
+    });
+  }
 </script>

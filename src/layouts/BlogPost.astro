@@ -1,20 +1,34 @@
 ---
 import '../styles/design.css';
 import '../styles/global.css';
+import '../styles/blog-print.css';
 import type { CollectionEntry } from 'astro:content';
 import { getCollection } from 'astro:content';
 import BaseHead from '../components/BaseHead.astro';
+import AnalyticsScripts from '../components/AnalyticsScripts.astro';
 import Header from '../components/Header.astro';
 import Topbar from '../components/Topbar.astro';
 import Footer from '../components/Footer.astro';
 import Sidebar from '../components/Sidebar.astro';
+import TagCloud from '../components/TagCloud.astro';
+import ContentImage from '../components/ContentImage.astro';
+import SubscribeForm from '../components/SubscribeForm.astro';
 import { CATEGORIES, SITE_TITLE } from '../consts';
+import { ACADEMY_CONTENT_ID_PREFIX, ACADEMY_PUBLIC_PATH } from '../lib/academy-constants';
 import { buildArticlePageGraph } from '../lib/structured-data';
+import { isAcademyBlogPost, postPermalink } from '../lib/academy';
+import { blogTagPageHref } from '../lib/blog-tag-url';
+import { entryIsAcademyBlogId, sortSeriesPosts, seriesHubPath } from '../lib/blog-series';
 
 type Props = CollectionEntry<'blog'>['data'] & { slug?: string };
 
-const { title, description, date, thumbnail, category, tags } = Astro.props;
-const slug = Astro.url.pathname.replace(/^\/blog\//, '').replace(/\/$/, '');
+const { title, description, date, thumbnail, category, tags, series: postSeries } = Astro.props;
+const pathNorm = Astro.url.pathname.replace(/\/$/, '');
+const slug = pathNorm.startsWith('/blog/')
+	? pathNorm.slice('/blog/'.length)
+	: pathNorm.startsWith(`${ACADEMY_PUBLIC_PATH}/`)
+		? `${ACADEMY_CONTENT_ID_PREFIX}${pathNorm.slice(ACADEMY_PUBLIC_PATH.length + 1)}`
+		: pathNorm.replace(/^\//, '');
 
 const pageUrl = Astro.url.href;
 const encodedUrl = encodeURIComponent(pageUrl);
@@ -26,6 +40,22 @@ const shareLinks = {
 };
 
 const allPosts = await getCollection('blog', ({ data }) => !data.draft);
+const clinicPostsForTagCloud = allPosts.filter((p) => !isAcademyBlogPost(p));
+
+const seriesName = (postSeries ?? '').trim();
+const onAcademyArticle = entryIsAcademyBlogId(slug);
+const seriesSiblings = seriesName
+	? allPosts
+			.filter((p) => (p.data.series ?? '').trim() === seriesName)
+			.filter((p) => (onAcademyArticle ? entryIsAcademyBlogId(p.id) : !entryIsAcademyBlogId(p.id)))
+			.sort(sortSeriesPosts)
+	: [];
+const seriesIndex = seriesName ? seriesSiblings.findIndex((p) => p.id === slug) : -1;
+const seriesPosition = seriesIndex >= 0 ? seriesIndex + 1 : 0;
+const seriesTotal = seriesSiblings.length;
+const seriesPrev = seriesIndex > 0 ? seriesSiblings[seriesIndex - 1] : null;
+const seriesNext =
+	seriesIndex >= 0 && seriesIndex < seriesSiblings.length - 1 ? seriesSiblings[seriesIndex + 1] : null;
 
 const articleJsonLd = buildArticlePageGraph(Astro.site, {
   title,
@@ -35,6 +65,7 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
   image: thumbnail,
   category,
 });
+
 ---
 
 <html lang="ko">
@@ -47,6 +78,16 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
       ogType="article"
       jsonLd={articleJsonLd}
     />
+    <!-- PWA: 아이콘은 public/icon-192.png, public/icon-512.png (manifest.json). -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#1a1a2e" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <AnalyticsScripts contentId={slug} />
+    <script is:inline>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js');
+      }
+    </script>
   </head>
 
   <body class="blog-post-shell">
@@ -54,14 +95,22 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
       <Header />
       <Topbar />
 
-      <div class="site-main blog-with-sidebar">
-        <Sidebar />
+      <main class="site-main blog-with-sidebar" id="main-content">
+        <Sidebar tagCloudPosts={clinicPostsForTagCloud} />
 
-        <main class="blog-content blog-post-main">
+        <div class="blog-content blog-post-main">
           <article class="blog-post-article">
+            <div
+              id="blog-print-banner"
+              class="blog-print-banner"
+              aria-hidden="true"
+              data-print-site={SITE_TITLE}
+              data-print-url={pageUrl}
+              data-print-date=""
+            />
             {thumbnail && (
               <div class="blog-post-hero">
-                <img src={thumbnail} alt={title} />
+                <ContentImage src={thumbnail} alt={title} width={960} height={540} loading="eager" decoding="async" fetchpriority="high" />
               </div>
             )}
             <div class="blog-post-prose prose">
@@ -79,14 +128,90 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
                   )}
                 </div>
                 <h1>{title}</h1>
+                <p class="blog-post-view-line" id="blog-post-view-line" data-post-slug={slug}>
+                  조회 <span data-post-view-num>—</span>회
+                </p>
                 {tags && tags.length > 0 && (
                   <div class="blog-post-tags tags">
-                    {tags.map((tag) => <span class="blog-post-tag tag">#{tag}</span>)}
+                    {tags.map((tag) => (
+                      <a class="blog-post-tag tag" href={blogTagPageHref(tag)}>
+                        #{tag}
+                      </a>
+                    ))}
                   </div>
                 )}
                 <hr />
               </div>
+
+              {seriesName && seriesTotal > 0 && (
+                <nav class="blog-post-series" aria-label="시리즈 네비게이션">
+                  <div class="blog-post-series-head">
+                    <a href={seriesHubPath(seriesName)} class="blog-post-series-hub">
+                      {seriesName}
+                    </a>
+                    <span class="blog-post-series-pos">
+                      {seriesPosition} / {seriesTotal}편
+                    </span>
+                  </div>
+                  <div class="blog-post-series-nav">
+                    {seriesPrev ? (
+                      <a class="blog-post-series-btn" href={postPermalink(seriesPrev)}>
+                        ← 이전 편
+                      </a>
+                    ) : (
+                      <span class="blog-post-series-btn is-disabled" aria-disabled="true">← 이전 편</span>
+                    )}
+                    {seriesNext ? (
+                      <a class="blog-post-series-btn" href={postPermalink(seriesNext)}>
+                        다음 편 →
+                      </a>
+                    ) : (
+                      <span class="blog-post-series-btn is-disabled" aria-disabled="true">다음 편 →</span>
+                    )}
+                  </div>
+                  <details class="blog-post-series-details">
+                    <summary class="blog-post-series-summary">시리즈 전체 목록</summary>
+                    <ol class="blog-post-series-list">
+                      {seriesSiblings.map((p, i) => (
+                        <li class:list={{ 'is-current': p.id === slug }}>
+                          <a href={postPermalink(p)}>
+                            {i + 1}. {p.data.title}
+                          </a>
+                        </li>
+                      ))}
+                    </ol>
+                  </details>
+                </nav>
+              )}
+
               <slot />
+
+              {tags && tags.length > 0 && (
+                <div class="blog-post-tag-cloud-wrap">
+                  <TagCloud variant="post" tags={tags} title="이 글의 태그" />
+                </div>
+              )}
+
+              <div class="blog-post-reactions" id="blog-post-reactions" data-post-slug={slug}>
+                <p class="blog-post-reactions-intro">이 글은 어떠셨나요?</p>
+                <div class="blog-post-reaction-buttons" role="group" aria-label="독자 반응">
+                  <button type="button" class="blog-post-reaction-btn" data-reaction="helpful" aria-pressed="false">
+                    <span class="blog-post-reaction-emoji" aria-hidden="true">👍</span>
+                    <span class="blog-post-reaction-label">도움돼요</span>
+                    <span class="blog-post-reaction-count" data-reaction-count>0</span>
+                  </button>
+                  <button type="button" class="blog-post-reaction-btn" data-reaction="like" aria-pressed="false">
+                    <span class="blog-post-reaction-emoji" aria-hidden="true">✅</span>
+                    <span class="blog-post-reaction-label">유용해요</span>
+                    <span class="blog-post-reaction-count" data-reaction-count>0</span>
+                  </button>
+                  <button type="button" class="blog-post-reaction-btn" data-reaction="bookmark" aria-pressed="false">
+                    <span class="blog-post-reaction-emoji" aria-hidden="true">🔖</span>
+                    <span class="blog-post-reaction-label">저장할게요</span>
+                    <span class="blog-post-reaction-count" data-reaction-count>0</span>
+                  </button>
+                </div>
+              </div>
 
               <div class="blog-post-share-section share-section">
                 <p>이 글이 도움이 됐다면 공유해 주세요.</p>
@@ -106,13 +231,22 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
                   >
                     링크 복사
                   </button>
+                  <button
+                    id="blog-print-btn"
+                    class="blog-post-share-btn share-btn print"
+                    type="button"
+                  >
+                    인쇄
+                  </button>
                 </div>
                 <p id="share-feedback" class="blog-post-share-feedback" aria-live="polite"></p>
               </div>
+
+              <SubscribeForm source={onAcademyArticle ? 'academy' : 'blog'} />
             </div>
           </article>
-        </main>
-      </div>
+        </div>
+      </main>
 
       <Footer />
     </div>
@@ -140,13 +274,144 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
       window.addEventListener('popstate', applyBlogSidebarMergeLinks);
     </script>
 
-    <script define:vars={{ pageUrl }}>
+    <script>
+      import { createClient } from '@supabase/supabase-js';
+      import { formatViewCount, trackBlogPostView } from '../lib/blog-post-views';
+
+      const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+      const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+      (async () => {
+        const line = document.getElementById('blog-post-view-line');
+        const numEl = line?.querySelector('[data-post-view-num]');
+        const postSlug = line?.dataset.postSlug?.trim() ?? '';
+        if (!line || !numEl || !postSlug) {
+          line?.remove();
+          return;
+        }
+        if (!supabaseUrl || !supabaseKey) {
+          line.hidden = true;
+          return;
+        }
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        const count = await trackBlogPostView(supabase, postSlug);
+        if (count === null) {
+          numEl.textContent = '—';
+        } else {
+          numEl.textContent = formatViewCount(count);
+        }
+      })();
+    </script>
+
+    <script>
+      import { createClient } from '@supabase/supabase-js';
+      import {
+        fetchMyReactions,
+        fetchReactionCounts,
+        getReactionIdentity,
+        togglePostReaction,
+        type ReactionIdentity,
+        type ReactionType,
+      } from '../lib/blog-post-reactions';
+
+      const reactionUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+      const reactionKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+      (async () => {
+        const root = document.getElementById('blog-post-reactions');
+        if (!root) return;
+        const postSlug = root.dataset.postSlug?.trim() ?? '';
+        if (!postSlug || !reactionUrl || !reactionKey) {
+          root.hidden = true;
+          return;
+        }
+        const supabase = createClient(reactionUrl, reactionKey, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: false,
+          },
+        });
+
+        let identity: ReactionIdentity = await getReactionIdentity(supabase);
+        let counts = await fetchReactionCounts(supabase, postSlug);
+        let mine = await fetchMyReactions(supabase, postSlug, identity);
+        const buttons = root.querySelectorAll('[data-reaction]');
+
+        const syncUi = () => {
+          buttons.forEach((node) => {
+            const btn = node as HTMLButtonElement;
+            const r = btn.dataset.reaction as ReactionType | undefined;
+            if (!r) return;
+            const countEl = btn.querySelector('[data-reaction-count]');
+            btn.setAttribute('aria-pressed', mine.has(r) ? 'true' : 'false');
+            btn.classList.toggle('is-active', mine.has(r));
+            if (countEl) countEl.textContent = String(counts[r] ?? 0);
+          });
+        };
+
+        const refreshAll = async () => {
+          identity = await getReactionIdentity(supabase);
+          counts = await fetchReactionCounts(supabase, postSlug);
+          mine = await fetchMyReactions(supabase, postSlug, identity);
+          syncUi();
+        };
+
+        syncUi();
+
+        supabase.auth.onAuthStateChange(() => {
+          void refreshAll();
+        });
+
+        buttons.forEach((node) => {
+          const btn = node as HTMLButtonElement;
+          btn.addEventListener('click', async () => {
+            const r = btn.dataset.reaction as ReactionType | undefined;
+            if (!r) return;
+            btn.disabled = true;
+            identity = await getReactionIdentity(supabase);
+            const result = await togglePostReaction(supabase, postSlug, identity, r);
+            if (result === 'added') mine.add(r);
+            else if (result === 'removed') mine.delete(r);
+            globalThis.gtag?.('event', 'reaction', { type: r, slug: postSlug });
+            counts = await fetchReactionCounts(supabase, postSlug);
+            syncUi();
+            btn.disabled = false;
+          });
+        });
+      })();
+    </script>
+
+    <script is:inline>
+      (function () {
+        const banner = document.getElementById('blog-print-banner');
+        if (!banner) return;
+        window.addEventListener('beforeprint', function () {
+          banner.setAttribute(
+            'data-print-date',
+            new Date().toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }),
+          );
+        });
+      })();
+    </script>
+
+    <script define:vars={{ pageUrl, contentId: slug }}>
+      const tw = document.querySelector('a.blog-post-share-btn.share-btn.twitter');
+      tw?.addEventListener('click', () => {
+        globalThis.gtag?.('event', 'share', { method: 'twitter', content_id: contentId });
+      });
+
       const copyButton = document.getElementById('copy-link-btn');
       const feedback = document.getElementById('share-feedback');
+
+      document.getElementById('blog-print-btn')?.addEventListener('click', () => {
+        window.print();
+      });
 
       copyButton?.addEventListener('click', async () => {
         try {
           await navigator.clipboard.writeText(pageUrl);
+          globalThis.gtag?.('event', 'share', { method: 'copy_link', content_id: contentId });
           if (copyButton) {
             copyButton.textContent = '복사됨!';
             setTimeout(() => { copyButton.textContent = '링크 복사'; }, 2000);
@@ -157,10 +422,113 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
         }
       });
     </script>
+
+    {seriesName && seriesTotal > 0 && (
+      <script is:inline define:vars={{ seriesStoreName: seriesName, seriesStoreSlug: slug }}>
+        (function () {
+          try {
+            var key = 'sreborn_series_read_v1';
+            var raw = localStorage.getItem(key);
+            var map = raw ? JSON.parse(raw) : {};
+            var list = map[seriesStoreName] || [];
+            if (list.indexOf(seriesStoreSlug) === -1) list.push(seriesStoreSlug);
+            map[seriesStoreName] = list;
+            localStorage.setItem(key, JSON.stringify(map));
+          } catch (e) {}
+        })();
+      </script>
+    )}
   </body>
 </html>
 
 <style>
+  .blog-post-tag-cloud-wrap {
+    margin: 2rem 0 0;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--rule);
+  }
+
+  :global(.blog-post-reactions) {
+    margin: 1.75rem 0 0;
+    padding: 1.25rem 0 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  :global(.blog-post-reactions-intro) {
+    margin: 0 0 0.75rem;
+    font-size: 0.92rem;
+    color: var(--t2);
+    text-align: center;
+  }
+
+  :global(.blog-post-reaction-buttons) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    align-items: stretch;
+  }
+
+  :global(.blog-post-reaction-btn) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.45rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid var(--rule);
+    background: var(--surface, rgba(255, 255, 255, 0.06));
+    color: var(--text);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      border-color 0.15s ease,
+      background 0.15s ease,
+      color 0.15s ease;
+  }
+
+  :global(.blog-post-reaction-btn:hover:not(:disabled)) {
+    border-color: var(--accent, #b8956a);
+    color: var(--accent-dark, #8c6d45);
+  }
+
+  :global(.blog-post-reaction-btn.is-active) {
+    border-color: var(--accent, #b8956a);
+    background: rgba(184, 149, 106, 0.14);
+    color: var(--accent-dark, #8c6d45);
+  }
+
+  :global(.blog-post-reaction-btn:disabled) {
+    opacity: 0.65;
+    cursor: wait;
+  }
+
+  :global(.blog-post-reaction-emoji) {
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  :global(.blog-post-reaction-count) {
+    min-width: 1.25rem;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.78rem;
+    color: var(--t2);
+    padding: 0.1rem 0.35rem;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  :global(html[data-theme='dark'] .blog-post-reaction-count) {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  :global(.blog-post-reaction-btn.is-active .blog-post-reaction-count) {
+    color: var(--accent-dark, #8c6d45);
+  }
+
   /*
    * 블로그 포스트 사이드바+본문 레이아웃
    * !important 로 혹시라도 남아있는 인라인 style 속성을 강제 오버라이드
@@ -199,5 +567,113 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
       max-width: 100% !important;
       padding: 0 !important;
     }
+  }
+
+  .blog-post-series {
+    margin: 1.25rem 0 1.75rem;
+    padding: 1rem 1.15rem;
+    border: 1px solid var(--rule);
+    border-radius: 14px;
+    background: var(--bg2);
+  }
+
+  .blog-post-series-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .blog-post-series-hub {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--accent-dark);
+    text-decoration: none;
+  }
+
+  .blog-post-series-hub:hover {
+    text-decoration: underline;
+  }
+
+  .blog-post-series-pos {
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: var(--t2);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .blog-post-series-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .blog-post-series-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.4rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid var(--rule);
+    background: var(--surface);
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--accent-dark);
+    text-decoration: none;
+    transition:
+      border-color 0.15s ease,
+      background 0.15s ease;
+  }
+
+  a.blog-post-series-btn:hover {
+    border-color: var(--accent);
+    background: rgba(184, 149, 106, 0.1);
+  }
+
+  .blog-post-series-btn.is-disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    color: var(--t3);
+    pointer-events: none;
+  }
+
+  .blog-post-series-details {
+    margin-top: 0.35rem;
+    font-size: 0.88rem;
+  }
+
+  .blog-post-series-summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--text);
+    list-style: none;
+  }
+
+  .blog-post-series-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .blog-post-series-list {
+    margin: 0.65rem 0 0;
+    padding-left: 1.25rem;
+    color: var(--t2);
+    line-height: 1.55;
+  }
+
+  .blog-post-series-list a {
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .blog-post-series-list a:hover {
+    color: var(--accent-dark);
+    text-decoration: underline;
+  }
+
+  .blog-post-series-list li.is-current a {
+    color: var(--accent-dark);
   }
 </style>

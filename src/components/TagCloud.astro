@@ -1,0 +1,149 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { blogTagPageHref } from '../lib/blog-tag-url';
+
+interface Props {
+	/** 전체 클라우드: 글 목록에서 태그 집계 */
+	variant?: 'cloud' | 'post';
+	posts?: CollectionEntry<'blog'>[];
+	/** 글 본문용: 이 태그만 링크 (크기 균일) */
+	tags?: string[];
+	title?: string;
+}
+
+const { variant = 'cloud', posts = [], tags: postTags = [], title } = Astro.props;
+
+const cloudTitle = title ?? '태그';
+
+function aggregateTags(entries: CollectionEntry<'blog'>[]): Map<string, number> {
+	const m = new Map<string, number>();
+	for (const p of entries) {
+		for (const raw of p.data.tags ?? []) {
+			const t = String(raw || '').trim();
+			if (!t) continue;
+			m.set(t, (m.get(t) ?? 0) + 1);
+		}
+	}
+	return m;
+}
+
+let items: { tag: string; count: number; tier: 1 | 2 | 3 }[] = [];
+
+if (variant === 'cloud' && posts.length > 0) {
+	const map = aggregateTags(posts);
+	const sorted = [...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ko'));
+	const n = sorted.length;
+	items = sorted.map(([tag, count], i) => {
+		let tier: 1 | 2 | 3 = 2;
+		if (n <= 1) tier = 2;
+		else if (i < n / 3) tier = 3;
+		else if (i < (2 * n) / 3) tier = 2;
+		else tier = 1;
+		return { tag, count, tier };
+	});
+} else if (variant === 'post' && postTags.length > 0) {
+	items = [...new Set(postTags.map((t) => String(t || '').trim()).filter(Boolean))].map((tag) => ({
+		tag,
+		count: 1,
+		tier: 2 as const,
+	}));
+}
+---
+
+{
+	items.length > 0 && (
+		<div class:list={['tag-cloud', variant === 'post' && 'tag-cloud--post']}>
+			<h2 class="tag-cloud-title">{cloudTitle}</h2>
+			<ul class="tag-cloud-list">
+				{items.map(({ tag, count, tier }) => (
+					<li>
+						<a
+							href={blogTagPageHref(tag)}
+							class:list={['tag-cloud-link', `tag-cloud-link--t${tier}`]}
+							title={`「${tag}」 태그가 달린 글 목록`}
+						>
+							#{tag}
+							{variant === 'cloud' && <span class="tag-cloud-count">{count}</span>}
+						</a>
+					</li>
+				))}
+			</ul>
+		</div>
+	)
+}
+
+<style>
+	.tag-cloud {
+		margin: 0;
+	}
+
+	.tag-cloud-title {
+		margin: 0 0 0.5rem;
+		font-size: 0.82rem;
+		font-weight: 800;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--t3);
+	}
+
+	.tag-cloud-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.35rem 0.5rem;
+		align-items: center;
+	}
+
+	.tag-cloud-link {
+		display: inline-flex;
+		align-items: baseline;
+		gap: 0.2rem;
+		text-decoration: none;
+		font-weight: 700;
+		color: var(--accent-dark);
+		border-radius: 999px;
+		padding: 0.2rem 0.55rem;
+		background: var(--bg2);
+		border: 1px solid var(--rule);
+		transition:
+			background 0.15s ease,
+			color 0.15s ease,
+			border-color 0.15s ease;
+		line-height: 1.3;
+	}
+
+	.tag-cloud-link:hover {
+		background: var(--bg3);
+		border-color: var(--accent);
+		color: var(--text);
+	}
+
+	.tag-cloud-link--t1 {
+		font-size: 0.72rem;
+	}
+
+	.tag-cloud-link--t2 {
+		font-size: 0.82rem;
+	}
+
+	.tag-cloud-link--t3 {
+		font-size: 0.95rem;
+	}
+
+	.tag-cloud--post .tag-cloud-link {
+		font-size: 0.8rem;
+	}
+
+	.tag-cloud-count {
+		font-size: 0.65em;
+		font-weight: 800;
+		color: var(--t3);
+		opacity: 0.9;
+	}
+
+	.tag-cloud-link:hover .tag-cloud-count {
+		color: var(--t2);
+	}
+</style>

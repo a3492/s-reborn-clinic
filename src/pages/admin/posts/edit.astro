@@ -57,6 +57,12 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
         </div>
 
         <div class="admin-field">
+          <label class="admin-label" for="scheduled_at_date">예약 발행일</label>
+          <input id="scheduled_at_date" name="scheduled_at_date" class="admin-input" type="date" />
+          <span class="admin-help">캘린더에 표시할 예정일입니다. 비우면 일정에서 제외됩니다.</span>
+        </div>
+
+        <div class="admin-field">
           <label class="admin-label" for="status">상태</label>
           <select id="status" name="status" class="admin-select">
             <option value="draft">draft</option>
@@ -208,6 +214,13 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
       const date = new Date(value);
       const pad = (n) => String(n).padStart(2, '0');
       return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    };
+
+    const formatDateOnlyInput = (value) => {
+      if (!value) return '';
+      const date = new Date(value);
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
     };
 
     const formatDate = (value) => {
@@ -384,7 +397,7 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
       const loadPost = async () => {
         const { data: post, error } = await supabase
           .from('posts')
-          .select('id, title, description, slug, category, subcategory, tags, body_markdown, status, published_at, updated_at, thumbnail_url, seo_title, seo_description, canonical_url')
+          .select('id, title, description, slug, category, subcategory, tags, body_markdown, status, published_at, scheduled_at, updated_at, thumbnail_url, seo_title, seo_description, canonical_url')
           .eq('slug', currentSlug)
           .single();
 
@@ -402,6 +415,7 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
         form.elements.body.value = post.body_markdown || '';
         form.elements.status.value = post.status || 'draft';
         form.elements.date.value = formatDateInput(post.published_at);
+        form.elements.scheduled_at_date.value = formatDateOnlyInput(post.scheduled_at);
         form.elements.thumbnail_url.value = post.thumbnail_url || '';
         form.elements.seo_title.value = post.seo_title || '';
         form.elements.seo_description.value = post.seo_description || '';
@@ -610,6 +624,10 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
           const status = String(formData.get('status') || 'draft');
           const category = String(formData.get('category') || '') || null;
           const publishedAt = String(formData.get('date') || '') || null;
+          const scheduledDateRaw = String(formData.get('scheduled_at_date') || '').trim();
+          const scheduled_at = scheduledDateRaw
+            ? new Date(`${scheduledDateRaw}T12:00:00`).toISOString()
+            : null;
           const thumbnailUrl = String(formData.get('thumbnail_url') || '').trim() || null;
           const seoTitle = String(formData.get('seo_title') || '').trim() || null;
           const seoDescription = String(formData.get('seo_description') || '').trim() || null;
@@ -655,6 +673,7 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
             status,
             category,
             published_at: publishedAt,
+            scheduled_at,
             thumbnail_url: thumbnailUrl,
             seo_title: seoTitle,
             seo_description: seoDescription,
@@ -672,7 +691,7 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
           const { error: revisionError } = await supabase.from('post_revisions').insert({
             post_id: currentPostId,
             body_markdown: body,
-            meta_snapshot: { title, description, slug: nextSlug, category, tags, status, thumbnail_url: thumbnailUrl, seo_title: seoTitle, seo_description: seoDescription, canonical_url: canonicalUrl },
+            meta_snapshot: { title, description, slug: nextSlug, category, tags, status, thumbnail_url: thumbnailUrl, seo_title: seoTitle, seo_description: seoDescription, canonical_url: canonicalUrl, scheduled_at },
             created_by: currentUserId,
           });
           if (revisionError) {

@@ -1,14 +1,21 @@
 ---
+import type { CollectionEntry } from 'astro:content';
 import { CATEGORIES } from '../consts';
 import { ACADEMY_PUBLIC_PATH } from '../lib/academy-constants';
 import { BLOG_PILLAR_NAV } from '../data/blog-nav';
+import TagCloud from './TagCloud.astro';
 
 interface Props {
   /** 블로그 목록에서 키워드 검색 중일 때 사이드 메뉴 전체 숨김 */
   blogSearchFocus?: boolean;
+  /** 태그 클라우드용 클리닉 블로그 글 목록 */
+  tagCloudPosts?: CollectionEntry<'blog'>[];
 }
 
-const { blogSearchFocus = false } = Astro.props;
+const { blogSearchFocus = false, tagCloudPosts = [] } = Astro.props;
+
+const showTagCloud =
+  tagCloudPosts.length > 0 && tagCloudPosts.some((p) => (p.data.tags?.length ?? 0) > 0);
 
 const PROCEDURES_CATS = ['procedures', 'faq', 'myth', 'before-after', 'patient-story'];
 const LIFESTYLE_CATS = ['health-tips', 'doctor-column', 'clinic-news'];
@@ -22,6 +29,7 @@ const lifestyleCats = CATEGORIES.filter((c) => LIFESTYLE_CATS.includes(c.id));
   id="blog-sidebar"
   hidden={blogSearchFocus}
   aria-hidden={blogSearchFocus ? 'true' : undefined}
+  aria-label="블로그 필터·카테고리·태그"
 >
   <!-- ── 트랙 탭 (전체 / 시술 정보 / 건강·라이프) ── -->
   <div class="sidebar-track-tabs">
@@ -111,6 +119,14 @@ const lifestyleCats = CATEGORIES.filter((c) => LIFESTYLE_CATS.includes(c.id));
     </div>
   </div>
 
+  {
+    showTagCloud && (
+      <div class="sidebar-widget sidebar-tag-cloud">
+        <TagCloud variant="cloud" posts={tagCloudPosts} title="태그" />
+      </div>
+    )
+  }
+
   <!-- ── Doctor AI Academy 링크 ── -->
   <div class="sidebar-widget sidebar-academy">
     <h2 class="sidebar-title">Doctor AI Academy</h2>
@@ -141,7 +157,11 @@ const lifestyleCats = CATEGORIES.filter((c) => LIFESTYLE_CATS.includes(c.id));
   .sidebar-track-tab {
     flex: 1;
     text-align: center;
-    padding: 0.4rem 0.3rem;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem 0.35rem;
     border-radius: 7px;
     font-size: 0.78rem;
     font-weight: 600;
@@ -149,6 +169,12 @@ const lifestyleCats = CATEGORIES.filter((c) => LIFESTYLE_CATS.includes(c.id));
     text-decoration: none;
     transition: background 0.15s, color 0.15s;
     white-space: nowrap;
+    box-sizing: border-box;
+  }
+
+  .sidebar-track-tab:focus-visible {
+    outline: 2px solid var(--accent, #b8956a);
+    outline-offset: 2px;
   }
 
   .sidebar-track-tab:hover {
@@ -190,6 +216,12 @@ const lifestyleCats = CATEGORIES.filter((c) => LIFESTYLE_CATS.includes(c.id));
   .sidebar-section .sidebar-widget + .sidebar-widget {
     margin-top: 1.25rem;
     padding-top: 1.25rem;
+    border-top: 1px solid var(--rule);
+  }
+
+  .sidebar-tag-cloud {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
     border-top: 1px solid var(--rule);
   }
 
@@ -240,12 +272,20 @@ const lifestyleCats = CATEGORIES.filter((c) => LIFESTYLE_CATS.includes(c.id));
 
   .sidebar-cat-link {
     display: block;
-    padding: 0.4rem 0.5rem;
+    min-height: 40px;
+    padding: 0.45rem 0.5rem;
     border-radius: 8px;
     font-size: 0.84rem;
     color: var(--t2);
     text-decoration: none;
     transition: background 0.15s, color 0.15s;
+    box-sizing: border-box;
+    line-height: 1.35;
+  }
+
+  .sidebar-cat-link:focus-visible {
+    outline: 2px solid var(--accent, #b8956a);
+    outline-offset: 1px;
   }
 
   .sidebar-cat-link:hover {

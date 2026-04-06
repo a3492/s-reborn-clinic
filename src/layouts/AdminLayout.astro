@@ -28,7 +28,7 @@ const pathname = Astro.url.pathname;
 <!doctype html>
 <html lang="ko" class="admin-shell">
   <head>
-    <BaseHead title={`${title} | Admin`} description={description} noindex />
+    <BaseHead title={`${title} | Admin`} description={description} noindex applyVisitorTheme={false} />
   </head>
   <body class="admin-shell admin-guarded" data-required-role={requiredRole}>
     <div class="admin-auth-loading" data-admin-auth-loading>
@@ -89,10 +89,15 @@ const pathname = Astro.url.pathname;
 
       const deny = (text) => {
         loading?.setAttribute('hidden', '');
-        app?.removeAttribute('hidden');
-        accessDenied?.removeAttribute('hidden');
+        app?.setAttribute('hidden', '');
         if (slot) slot.innerHTML = '';
-        if (accessDeniedText) accessDeniedText.textContent = text;
+        accessDenied?.removeAttribute('hidden');
+        if (accessDeniedText) {
+          accessDeniedText.textContent = `${text} 잠시 후 대시보드로 이동합니다.`;
+        }
+        window.setTimeout(() => {
+          window.location.replace('/admin/');
+        }, 2000);
       };
 
       const syncRoleCopy = (role) => {

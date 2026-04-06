@@ -1,0 +1,48 @@
+---
+/**
+ * Cloudflare Web Analytics + Google Analytics 4 (선택)
+ * PUBLIC_* 변수가 없으면 아무 것도 출력하지 않음.
+ */
+interface Props {
+  /** 블로그 글 등 — GA4 config에 content_id로 전달(맞춤 차원 등록 시 활용) */
+  contentId?: string;
+}
+
+const { contentId = '' } = Astro.props;
+const cfToken = import.meta.env.PUBLIC_CF_ANALYTICS_TOKEN?.trim() ?? '';
+const gaId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID?.trim() ?? '';
+const cfBeacon = cfToken ? JSON.stringify({ token: cfToken }) : '';
+const gaConfigExtra = contentId.trim()
+  ? JSON.stringify({ content_id: contentId.trim() })
+  : '';
+---
+
+{
+  cfToken && (
+    <script
+      defer
+      src="https://static.cloudflareinsights.com/beacon.min.js"
+      data-cf-beacon={cfBeacon}
+    />
+  )
+}
+
+{
+  gaId && (
+    <>
+      <script async src={`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(gaId)}`} />
+      <script is:inline define:vars={{ gaId, gaConfigExtra }}>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() {
+          dataLayer.push(arguments);
+        }
+        gtag('js', new Date());
+        var _extra = {};
+        try {
+          _extra = gaConfigExtra ? JSON.parse(gaConfigExtra) : {};
+        } catch (e) {}
+        gtag('config', gaId, Object.assign({ anonymize_ip: true }, _extra));
+      </script>
+    </>
+  )
+}

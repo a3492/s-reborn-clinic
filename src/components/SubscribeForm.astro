@@ -1,0 +1,153 @@
+---
+interface Props {
+  source?: string;
+  heading?: string;
+}
+
+const { source = 'blog', heading = '새 글 알림 받기' } = Astro.props;
+---
+
+<section class="subscribe-form-card" aria-labelledby="subscribe-form-heading">
+  <h2 id="subscribe-form-heading" class="subscribe-form-title">{heading}</h2>
+  <p class="subscribe-form-desc">이메일만 남겨 주시면 새 글이 올라올 때 안내해 드립니다.</p>
+  <form class="subscribe-form" data-subscribe-form data-source={source} novalidate>
+    <div class="subscribe-form-row">
+      <label class="visually-hidden" for={`subscribe-email-${source}`}>이메일</label>
+      <input
+        id={`subscribe-email-${source}`}
+        class="subscribe-form-input"
+        type="email"
+        name="email"
+        inputmode="email"
+        autocomplete="email"
+        placeholder="you@example.com"
+        required
+      />
+      <button type="submit" class="subscribe-form-btn">구독하기</button>
+    </div>
+    <p class="subscribe-form-msg" data-subscribe-msg role="status" aria-live="polite"></p>
+  </form>
+</section>
+
+<script>
+  document.querySelectorAll<HTMLFormElement>('[data-subscribe-form]').forEach((form) => {
+    const msg = form.querySelector('[data-subscribe-msg]');
+    const source = form.dataset.source || 'blog';
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const input = form.querySelector<HTMLInputElement>('input[name="email"]');
+      const email = input?.value.trim() ?? '';
+      if (!input || !email) {
+        if (msg) msg.textContent = '이메일 주소를 입력해 주세요.';
+        return;
+      }
+      if (msg) msg.textContent = '처리 중…';
+      const btn = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+      if (btn) btn.disabled = true;
+      try {
+        const res = await fetch('/api/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, source }),
+        });
+        const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+        if (msg) {
+          msg.textContent = res.ok && data.ok
+            ? '구독해 주셔서 감사합니다. 새 글이 올라오면 알려드릴게요.'
+            : data.error || '요청에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+        }
+        if (res.ok && data.ok) {
+          globalThis.gtag?.('event', 'subscribe', { source });
+        }
+      } catch {
+        if (msg) msg.textContent = '네트워크 오류가 발생했습니다.';
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
+  });
+</script>
+
+<style>
+  .subscribe-form-card {
+    margin: 2rem 0 0;
+    padding: 1.35rem 1.25rem 1.5rem;
+    border: 1px solid var(--rule);
+    border-radius: 14px;
+    background: var(--bg2, rgba(0, 0, 0, 0.02));
+  }
+
+  .subscribe-form-title {
+    margin: 0 0 0.4rem;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--text);
+  }
+
+  .subscribe-form-desc {
+    margin: 0 0 1rem;
+    font-size: 0.88rem;
+    color: var(--t2);
+    line-height: 1.5;
+  }
+
+  .subscribe-form-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: stretch;
+  }
+
+  .subscribe-form-input {
+    flex: 1 1 200px;
+    min-width: 0;
+    padding: 0.55rem 0.75rem;
+    border-radius: 10px;
+    border: 1px solid var(--rule);
+    background: var(--surface, #fff);
+    color: var(--text);
+    font-size: 0.95rem;
+  }
+
+  .subscribe-form-btn {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 0.55rem 1.1rem;
+    border-radius: 10px;
+    border: none;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    background: var(--accent, #b8956a);
+    color: #fff;
+  }
+
+  .subscribe-form-btn:hover:not(:disabled) {
+    filter: brightness(1.05);
+  }
+
+  .subscribe-form-btn:disabled {
+    opacity: 0.65;
+    cursor: wait;
+  }
+
+  .subscribe-form-msg {
+    margin: 0.75rem 0 0;
+    font-size: 0.86rem;
+    min-height: 1.25em;
+    color: var(--t2);
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+</style>

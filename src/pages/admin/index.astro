@@ -24,6 +24,100 @@ const draftPreviews = localDrafts.map(post => {
   status="Live Ops"
 >
   <div class="admin-grid">
+    <section class="admin-card pad-lg span-12">
+      <h2 class="admin-section-title">사이트 현황</h2>
+      <p class="admin-section-desc">
+        Supabase 기준 실시간에 가까운 집계입니다. 숫자는 로그인 후 불러옵니다.
+        <a href="/admin/calendar/" class="admin-table-link" style="margin-left: 0.35rem;">발행 캘린더</a>
+      </p>
+    </section>
+
+    <section class="admin-card pad-lg span-4 admin-stat-card">
+      <div class="admin-stat-card-inner">
+        <span class="admin-stat-icon" aria-hidden="true">📚</span>
+        <div class="admin-stat-body">
+          <strong class="admin-kpi-value" data-admin-stat-published-total>—</strong>
+          <span class="admin-kpi-label">전체 발행 글</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="admin-card pad-lg span-4 admin-stat-card">
+      <div class="admin-stat-card-inner">
+        <span class="admin-stat-icon" aria-hidden="true">📅</span>
+        <div class="admin-stat-body">
+          <strong class="admin-kpi-value" data-admin-stat-published-month>—</strong>
+          <span class="admin-kpi-label">이번 달 발행</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="admin-card pad-lg span-4 admin-stat-card">
+      <div class="admin-stat-card-inner">
+        <span class="admin-stat-icon" aria-hidden="true">✏️</span>
+        <div class="admin-stat-body">
+          <strong class="admin-kpi-value" data-admin-stat-drafts>—</strong>
+          <span class="admin-kpi-label">초안(draft)</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="admin-card pad-lg span-4 admin-stat-card">
+      <div class="admin-stat-card-inner">
+        <span class="admin-stat-icon" aria-hidden="true">👁</span>
+        <div class="admin-stat-body">
+          <strong class="admin-kpi-value" data-admin-stat-views-today>—</strong>
+          <span class="admin-kpi-label">누적 조회(합계)</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="admin-card pad-lg span-4 admin-stat-card">
+      <div class="admin-stat-card-inner">
+        <span class="admin-stat-icon" aria-hidden="true">💬</span>
+        <div class="admin-stat-body">
+          <strong class="admin-kpi-value" data-admin-stat-reactions>—</strong>
+          <span class="admin-kpi-label">전체 반응 수</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="admin-card pad-lg span-4 admin-stat-card">
+      <div class="admin-stat-card-inner">
+        <span class="admin-stat-icon" aria-hidden="true">⏳</span>
+        <div class="admin-stat-body">
+          <strong class="admin-kpi-value" data-admin-stat-jobs>—</strong>
+          <span class="admin-kpi-label">대기·처리 중 배포</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="admin-card pad-lg span-4 admin-stat-card">
+      <div class="admin-stat-card-inner">
+        <span class="admin-stat-icon" aria-hidden="true">📆</span>
+        <div class="admin-stat-body">
+          <strong class="admin-kpi-value" data-admin-stat-week-scheduled>—</strong>
+          <span class="admin-kpi-label">이번 주 예정</span>
+        </div>
+      </div>
+      <p class="admin-help" style="margin: 0.65rem 0 0; font-size: 0.78rem;">
+        <code>scheduled_at</code>이 이번 주(월~일)에 있고 아직 발행 전인 글
+      </p>
+    </section>
+
+    <section class="admin-card pad-lg span-12">
+      <h2 class="admin-section-title">최근 발행 글</h2>
+      <p class="admin-section-desc">published 상태 기준 최신 5건 · 편집으로 이동합니다.</p>
+      <ul class="admin-list" data-admin-recent-published>
+        <li class="admin-list-row">
+          <div>
+            <p class="admin-item-title">—</p>
+            <p class="admin-item-meta">불러오는 중…</p>
+          </div>
+        </li>
+      </ul>
+    </section>
+
     {draftPreviews.length > 0 && (
       <section class="admin-card pad-lg span-12">
         <h2 class="admin-section-title">Local Draft Files</h2>
@@ -42,47 +136,11 @@ const draftPreviews = localDrafts.map(post => {
       </section>
     )}
 
-    <section class="admin-card pad-lg span-3">
-      <h2 class="admin-section-title">Draft Posts</h2>
-      <p class="admin-section-desc">임시 저장된 글 수</p>
-      <div class="admin-kpi">
-        <strong class="admin-kpi-value" data-admin-kpi-drafts>-</strong>
-        <span class="admin-kpi-label">현재 draft 상태 글 개수</span>
-      </div>
-    </section>
-
-    <section class="admin-card pad-lg span-3">
-      <h2 class="admin-section-title">Published Posts</h2>
-      <p class="admin-section-desc">현재 published 상태 글 수</p>
-      <div class="admin-kpi">
-        <strong class="admin-kpi-value" data-admin-kpi-published>-</strong>
-        <span class="admin-kpi-label">최신 게시 상태 기준</span>
-      </div>
-    </section>
-
-    <section class="admin-card pad-lg span-3">
-      <h2 class="admin-section-title">상담 신청</h2>
-      <p class="admin-section-desc">대기 중인 상담 요청</p>
-      <div class="admin-kpi">
-        <strong class="admin-kpi-value" data-admin-kpi-consults>-</strong>
-        <span class="admin-kpi-label">pending 상담 요청 수</span>
-      </div>
-    </section>
-
-    <section class="admin-card pad-lg span-3">
-      <h2 class="admin-section-title">Running Jobs</h2>
-      <p class="admin-section-desc">현재 처리 중인 publish job</p>
-      <div class="admin-kpi">
-        <strong class="admin-kpi-value" data-admin-kpi-jobs>-</strong>
-        <span class="admin-kpi-label">pending + processing</span>
-      </div>
-    </section>
-
     <section class="admin-card pad-lg span-7">
       <div class="admin-actions-row">
         <div>
           <h2 class="admin-section-title">Recent Drafts</h2>
-          <p class="admin-section-desc">최근 저장된 글과 최신 배포 상태를 함께 보여줍니다.</p>
+          <p class="admin-section-desc">Supabase에 저장된 draft · 최근 수정 순</p>
         </div>
         <span class="admin-live-badge" data-admin-dashboard-live>Auto refresh</span>
       </div>
@@ -99,7 +157,9 @@ const draftPreviews = localDrafts.map(post => {
 
     <section class="admin-card pad-lg span-5">
       <h2 class="admin-section-title">최근 상담 신청</h2>
-      <p class="admin-section-desc">최근 접수된 상담 요청 5건을 표시합니다.</p>
+      <p class="admin-section-desc">
+        최근 접수 5건 · 대기 <strong data-admin-kpi-consults>—</strong>건
+      </p>
       <ul class="admin-list" data-admin-dashboard-consults>
         <li class="admin-list-row">
           <div>
@@ -114,14 +174,18 @@ const draftPreviews = localDrafts.map(post => {
   </div>
 
   <script>
-    import { createClient } from '@supabase/supabase-js';
     const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
     const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
-    const draftsKpi = document.querySelector('[data-admin-kpi-drafts]');
-    const publishedKpi = document.querySelector('[data-admin-kpi-published]');
+    const statPublishedTotal = document.querySelector('[data-admin-stat-published-total]');
+    const statPublishedMonth = document.querySelector('[data-admin-stat-published-month]');
+    const statDrafts = document.querySelector('[data-admin-stat-drafts]');
+    const statViewsToday = document.querySelector('[data-admin-stat-views-today]');
+    const statReactions = document.querySelector('[data-admin-stat-reactions]');
+    const statJobs = document.querySelector('[data-admin-stat-jobs]');
+    const statWeekScheduled = document.querySelector('[data-admin-stat-week-scheduled]');
+    const recentPublishedList = document.querySelector('[data-admin-recent-published]');
     const consultsKpi = document.querySelector('[data-admin-kpi-consults]');
-    const jobsKpi = document.querySelector('[data-admin-kpi-jobs]');
     const draftList = document.querySelector('[data-admin-dashboard-drafts]');
     const consultList = document.querySelector('[data-admin-dashboard-consults]');
     const message = document.querySelector('[data-admin-dashboard-message]');
@@ -135,10 +199,37 @@ const draftPreviews = localDrafts.map(post => {
       .replaceAll("'", '&#39;');
 
     const formatDate = (value) => {
-      if (!value) return '-';
+      if (!value) return '—';
       return new Intl.DateTimeFormat('ko-KR', {
         year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
       }).format(new Date(value));
+    };
+
+    const setStat = (el, value) => {
+      if (!el) return;
+      el.textContent = value === null || value === undefined ? '—' : String(value);
+    };
+
+    const startOfLocalMonthIso = () => {
+      const d = new Date();
+      const start = new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
+      return start.toISOString();
+    };
+
+    /** 이번 주 월요일 00:00 로컬 → ISO */
+    const startOfWeekMonday = (d) => {
+      const x = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+      const day = x.getDay();
+      const diff = day === 0 ? -6 : 1 - day;
+      x.setDate(x.getDate() + diff);
+      return x;
+    };
+
+    const endOfWeekMondayExclusive = (d) => {
+      const s = startOfWeekMonday(d);
+      const e = new Date(s);
+      e.setDate(e.getDate() + 7);
+      return e;
     };
 
     const renderDrafts = (rows) => {
@@ -154,6 +245,23 @@ const draftPreviews = localDrafts.map(post => {
             <p class="admin-item-meta">${escapeHtml(row.slug)} · ${formatDate(row.updated_at)}</p>
           </div>
           <span class="admin-status ${escapeHtml(row.status)}">${escapeHtml(row.status)}</span>
+        </li>
+      `).join('');
+    };
+
+    const renderRecentPublished = (rows) => {
+      if (!recentPublishedList) return;
+      if (!rows.length) {
+        recentPublishedList.innerHTML = '<li class="admin-list-row"><div><p class="admin-item-title">발행된 글이 없습니다.</p><p class="admin-item-meta">posts에서 status를 published로 바꾸면 여기에 표시됩니다.</p></div></li>';
+        return;
+      }
+      recentPublishedList.innerHTML = rows.map((row) => `
+        <li class="admin-list-row">
+          <div>
+            <p class="admin-item-title"><a class="admin-table-link" href="/admin/posts/edit?slug=${encodeURIComponent(row.slug)}">${escapeHtml(row.title)}</a></p>
+            <p class="admin-item-meta">${escapeHtml(row.slug)} · ${formatDate(row.published_at)}</p>
+          </div>
+          <a class="admin-btn admin-btn-sm" href="/admin/posts/edit?slug=${encodeURIComponent(row.slug)}">편집</a>
         </li>
       `).join('');
     };
@@ -183,35 +291,92 @@ const draftPreviews = localDrafts.map(post => {
       }
       renderDrafts([]);
       renderConsults([]);
+      renderRecentPublished([]);
     } else {
       let supabase = null;
 
       const loadDashboard = async (silent = false) => {
+        const monthStart = startOfLocalMonthIso();
+        const weekStartIso = startOfWeekMonday(new Date()).toISOString();
+        const weekEndIso = endOfWeekMondayExclusive(new Date()).toISOString();
+
         const [
-          { data: posts, error: postsError },
-          { data: jobs, error: jobsError },
-          { data: consults, error: consultsError },
+          pubTotalRes,
+          pubMonthRes,
+          draftRes,
+          viewsRes,
+          reactionsRes,
+          jobsRes,
+          weekScheduledRes,
+          recentPubRes,
+          draftsRes,
+          consultsRes,
+          consultPendingRes,
         ] = await Promise.all([
-          supabase.from('posts').select('id, title, slug, status, updated_at').order('updated_at', { ascending: false }).limit(5),
-          supabase.from('publish_jobs').select('status').in('status', ['pending', 'processing']),
+          supabase.from('posts').select('*', { count: 'exact', head: true }).eq('status', 'published'),
+          supabase.from('posts').select('*', { count: 'exact', head: true }).eq('status', 'published').gte('published_at', monthStart),
+          supabase.from('posts').select('*', { count: 'exact', head: true }).eq('status', 'draft'),
+          supabase.from('post_views').select('view_count'),
+          supabase.from('post_reactions').select('*', { count: 'exact', head: true }),
+          supabase.from('publish_jobs').select('*', { count: 'exact', head: true }).in('status', ['pending', 'processing']),
+          supabase
+            .from('posts')
+            .select('*', { count: 'exact', head: true })
+            .not('scheduled_at', 'is', null)
+            .gte('scheduled_at', weekStartIso)
+            .lt('scheduled_at', weekEndIso)
+            .in('status', ['draft', 'review', 'scheduled']),
+          supabase.from('posts').select('slug, title, published_at').eq('status', 'published').order('published_at', { ascending: false, nullsFirst: false }).limit(5),
+          supabase.from('posts').select('id, title, slug, status, updated_at').eq('status', 'draft').order('updated_at', { ascending: false }).limit(5),
           supabase.from('consult_requests').select('id, name, phone, interest, status, created_at').order('created_at', { ascending: false }).limit(5),
+          supabase.from('consult_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
         ]);
 
-        if (postsError) {
-          renderDrafts([]);
+        setStat(statPublishedTotal, pubTotalRes.error ? null : pubTotalRes.count ?? 0);
+        setStat(statPublishedMonth, pubMonthRes.error ? null : pubMonthRes.count ?? 0);
+        setStat(statDrafts, draftRes.error ? null : draftRes.count ?? 0);
+
+        if (viewsRes.error) {
+          setStat(statViewsToday, null);
         } else {
-          const rows = posts ?? [];
-          if (draftsKpi) draftsKpi.textContent = String(rows.filter(r => r.status === 'draft').length);
-          if (publishedKpi) publishedKpi.textContent = String(rows.filter(r => r.status === 'published').length);
-          renderDrafts(rows);
+          const sumAll = (viewsRes.data ?? []).reduce((s, r) => s + Number(r.view_count ?? 0), 0);
+          setStat(statViewsToday, sumAll);
         }
 
-        if (jobsKpi) jobsKpi.textContent = String((jobs ?? []).length);
+        setStat(statReactions, reactionsRes.error ? null : reactionsRes.count ?? 0);
+        setStat(statJobs, jobsRes.error ? null : jobsRes.count ?? 0);
+        setStat(statWeekScheduled, weekScheduledRes.error ? null : weekScheduledRes.count ?? 0);
 
-        if (!consultsError) {
-          const pendingCount = (consults ?? []).filter(c => c.status === 'pending').length;
-          if (consultsKpi) consultsKpi.textContent = String(pendingCount);
-          renderConsults(consults ?? []);
+        if (recentPubRes.error) {
+          renderRecentPublished([]);
+        } else {
+          renderRecentPublished(recentPubRes.data ?? []);
+        }
+
+        if (draftsRes.error) {
+          renderDrafts([]);
+        } else {
+          renderDrafts(draftsRes.data ?? []);
+        }
+
+        if (!consultsRes.error) {
+          renderConsults(consultsRes.data ?? []);
+        } else {
+          renderConsults([]);
+        }
+        setStat(consultsKpi, consultPendingRes.error ? null : consultPendingRes.count ?? 0);
+
+        if (!silent && message) {
+          const errs = [pubTotalRes.error, pubMonthRes.error, draftRes.error, viewsRes.error, reactionsRes.error, jobsRes.error, weekScheduledRes.error, recentPubRes.error, draftsRes.error, consultsRes.error, consultPendingRes.error].filter(Boolean);
+          if (errs.length) {
+            message.hidden = false;
+            message.textContent = '일부 지표를 불러오지 못했습니다. 테이블·RLS·마이그레이션을 확인하세요.';
+            message.dataset.state = 'warn';
+          } else {
+            message.hidden = true;
+            message.textContent = '';
+            message.removeAttribute('data-state');
+          }
         }
       };
 

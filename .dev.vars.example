@@ -1,0 +1,18 @@
+# Cloudflare Pages 로컬 Functions (`wrangler pages dev`)용 예시
+# 이 파일을 복사해 `.dev.vars`로 저장한 뒤 값을 채우세요.
+
+# Astro 빌드 시 클라이언트 애널리틱스(선택)
+PUBLIC_CF_ANALYTICS_TOKEN=
+PUBLIC_GA_MEASUREMENT_ID=
+
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+
+RESEND_API_KEY=
+FROM_EMAIL=noreply@s-reborn.com
+
+# 발행 후 구독자 일괄 알림 (`/api/notify-subscribers`) — 임의의 긴 문자열
+NOTIFY_SUBSCRIBERS_SECRET=
+
+# 프로덕션 공개 사이트 원점 URL (알림 메일 링크용, 선택)
+PUBLIC_SITE_URL=https://s-reborn-clinic.pages.dev

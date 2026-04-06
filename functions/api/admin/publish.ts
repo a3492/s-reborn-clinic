@@ -62,6 +62,24 @@ function buildTargetPath(post: any) {
   return segments.join('/');
 }
 
+/** 발행된 마크다운 경로 → 공개 사이트 글 URL (트레일링 슬래시) */
+function absolutePostUrl(siteBase: string, targetPath: string) {
+  const base = siteBase.replace(/\/$/, '');
+  const m = targetPath.match(/^src\/content\/blog\/(.+)\.md$/i);
+  if (!m) return `${base}/blog/`;
+  const rel = m[1];
+  const enc = (s: string) => s.split('/').map((seg) => encodeURIComponent(seg)).join('/');
+  if (rel.startsWith('doctor-ai-academy/')) {
+    const rest = rel.slice('doctor-ai-academy/'.length);
+    return `${base}/doctor-ai-academy/${enc(rest)}/`;
+  }
+  if (rel.startsWith('doctor-ai/')) {
+    const rest = rel.slice('doctor-ai/'.length);
+    return `${base}/doctor-ai-academy/${enc(rest)}/`;
+  }
+  return `${base}/blog/${enc(rel)}/`;
+}
+
 function validatePublishablePost(post: any) {
   const issues: string[] = [];
   if (!post?.title?.trim()) issues.push('title');
@@ -275,6 +293,32 @@ export const onRequestPost = async (context: any) => {
         commit_sha: githubJson?.commit?.sha ?? null,
       },
     });
+
+    const notifySecret = env.NOTIFY_SUBSCRIBERS_SECRET?.trim();
+    const resendKey = env.RESEND_API_KEY?.trim();
+    const fromEmail = env.FROM_EMAIL?.trim();
+    if (notifySecret && resendKey && fromEmail) {
+      try {
+        const origin = new URL(request.url).origin;
+        const siteBase = String(env.PUBLIC_SITE_URL || origin).replace(/\/$/, '');
+        const postUrl = absolutePostUrl(siteBase, targetPath);
+        await fetch(`${origin}/api/notify-subscribers`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-notify-secret': notifySecret,
+          },
+          body: JSON.stringify({
+            slug: post.slug,
+            title: post.title,
+            description: post.description ?? '',
+            postUrl,
+          }),
+        });
+      } catch {
+        // 구독자 알림 실패는 발행 성공과 분리
+      }
+    }
 
     return jsonResponse({
       ok: true,

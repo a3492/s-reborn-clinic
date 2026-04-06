@@ -1,0 +1,38 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import SubscribeForm from '../../components/SubscribeForm.astro';
+---
+
+<Layout
+  title="LAB · 알림 구독"
+  description="에스리본 클리닉 LAB — 새 소식과 실험 기능 알림을 이메일로 받아보세요."
+>
+  <div class="lab-page">
+    <h1 class="lab-page-title">LAB</h1>
+    <p class="lab-page-lead">
+      클리닉 실험실 소식과 업데이트를 이메일로 받아보실 수 있습니다.
+    </p>
+    <SubscribeForm source="lab" heading="LAB 알림 구독" />
+  </div>
+</Layout>
+
+<style>
+  .lab-page {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 3rem;
+  }
+
+  .lab-page-title {
+    margin: 0 0 0.75rem;
+    font-size: 1.75rem;
+    font-weight: 800;
+  }
+
+  .lab-page-lead {
+    margin: 0 0 1.5rem;
+    color: var(--t2);
+    line-height: 1.6;
+    font-size: 0.95rem;
+  }
+</style>

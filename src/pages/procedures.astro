@@ -36,7 +36,7 @@ import { PROCEDURE_CATALOG, PROCEDURE_PILLAR_SUMMARIES } from '../data/procedure
       제목 줄을 누르면 세부 분류와 항목이 차례로 펼쳐집니다. 처음엔 한 축씩 열어 보셔도 좋아요.
     </p>
 
-    <div class="proc-tree-toolbar" role="group" aria-label="목록 펼침 제어">
+    <div class="proc-tree-toolbar" role="toolbar" aria-label="시술 분류 목록 펼침·접기">
       <button type="button" class="proc-tree-toggle" id="proc-tree-expand-all">
         모두 펼치기
       </button>
@@ -259,12 +259,13 @@ import { PROCEDURE_CATALOG, PROCEDURE_PILLAR_SUMMARIES } from '../data/procedure
   .proc-tree-toolbar {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.65rem;
     margin: 0 0 1.25rem;
   }
 
   .proc-tree-toggle {
-    padding: 0.5rem 1rem;
+    min-height: 44px;
+    padding: 0.5rem 1.1rem;
     border-radius: 10px;
     border: 1px solid var(--rule);
     background: var(--surface);

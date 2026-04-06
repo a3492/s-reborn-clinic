@@ -34,8 +34,8 @@
   --rule:        var(--color-gray-light);
 
   /* 타이포그래피 */
-  --font-sans:    'Pretendard', 'Apple SD Gothic Neo', -apple-system, sans-serif;
-  --font-display: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+  --font-sans:    'Pretendard Variable', Pretendard, 'Apple SD Gothic Neo', -apple-system, sans-serif;
+  --font-display: 'Pretendard Variable', Pretendard, 'Apple SD Gothic Neo', sans-serif;
   --font-mono:    ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* 스페이싱 */
@@ -184,6 +184,10 @@ body {
 }
 
 .site-nav-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   padding: 0.45rem 0.9rem;
   border-radius: var(--radius-full);
   font-size: 0.92rem;
@@ -191,6 +195,18 @@ body {
   color: var(--t2);
   text-decoration: none;
   transition: background 0.15s ease, color 0.15s ease;
+  box-sizing: border-box;
+}
+
+.site-nav-link:focus-visible {
+  outline: 2px solid var(--color-gold, #c9a96e);
+  outline-offset: 2px;
+}
+
+.site-logo:focus-visible {
+  outline: 2px solid var(--color-gold, #c9a96e);
+  outline-offset: 3px;
+  border-radius: 6px;
 }
 
 .site-nav-link:hover,
@@ -206,6 +222,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: var(--space-xs);
+  min-height: 44px;
   padding: 0.65rem 1.4rem;
   border-radius: var(--radius-md);
   border: none;
@@ -216,6 +233,12 @@ body {
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
   white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--color-gold, #c9a96e);
+  outline-offset: 2px;
 }
 
 .btn:hover {
@@ -491,10 +514,17 @@ body {
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.form-input:focus,
-.form-textarea:focus,
-.form-select:focus {
+.form-input:focus:not(:focus-visible),
+.form-textarea:focus:not(:focus-visible),
+.form-select:focus:not(:focus-visible) {
   outline: none;
+}
+
+.form-input:focus-visible,
+.form-textarea:focus-visible,
+.form-select:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
   border-color: var(--color-gold);
   box-shadow: 0 0 0 3px rgba(201, 169, 110, 0.18);
 }
@@ -524,7 +554,7 @@ body {
 
 .site-footer {
   background: var(--color-brown-dark);
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.82);
   padding: var(--space-2xl) 0 var(--space-lg);
 }
 
@@ -568,10 +598,16 @@ body {
 }
 
 .site-footer-link {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.78);
   font-size: 0.85rem;
   text-decoration: none;
   transition: color 0.15s ease;
+}
+
+.site-footer-link:focus-visible {
+  outline: 2px solid var(--color-gold, #c9a96e);
+  outline-offset: 3px;
+  border-radius: 2px;
 }
 
 .site-footer-link:hover {
@@ -583,7 +619,7 @@ body {
   align-items: center;
   justify-content: space-between;
   font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.58);
 }
 
 /* ── 사이드바 ──────────────────────────────────────────────── */
@@ -791,4 +827,94 @@ body {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ── 다크 모드 (눈에 부담 적은 네이비 톤) — data-theme 은 BaseHead 인라인 스크립트로 선적용 */
+
+html[data-theme="dark"] {
+  --color-white: #2a3548;
+  --color-soft-white: #1a2332;
+  --color-cream: #1e2a3c;
+  --color-blush: #243044;
+  --color-pink-light: #2d2838;
+  --color-pink: #8f5a5a;
+  --color-pink-mid: #a87070;
+  --color-rose: #c98888;
+  --color-gold-light: #3d3428;
+  --color-gold: #d4b87a;
+  --color-gold-deep: #e8c990;
+  --color-charcoal: #e8edf4;
+  --color-brown-dark: #121a26;
+  --color-brown-mid: #b8c4d4;
+  --color-brown-soft: #9aacbf;
+  --color-gray-warm: #8a9ab0;
+  --color-gray-light: #3d4f66;
+
+  --bg: #1a2332;
+  --bg2: #1e2a3c;
+  --bg3: #243044;
+  --surface: #252f42;
+  --text: #e8edf4;
+  --t2: #b8c4d4;
+  --t3: #8a9ab0;
+  --accent: #d4b87a;
+  --accent-dark: #e8c990;
+  --accent-pink: #d4a0a0;
+  --rule: #3d4f66;
+
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.32);
+  --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.38);
+  --shadow-xl: 0 32px 64px rgba(0, 0, 0, 0.42);
+}
+
+html[data-theme="dark"] .site-header {
+  background: rgba(26, 35, 50, 0.94);
+  border-bottom-color: var(--rule);
+}
+
+html[data-theme="dark"] .hero {
+  background:
+    radial-gradient(circle at 70% 30%, rgba(212, 184, 120, 0.1), transparent 52%),
+    radial-gradient(circle at 20% 80%, rgba(200, 140, 140, 0.08), transparent 48%),
+    var(--color-soft-white);
+}
+
+html[data-theme="dark"] .hero-image-wrap {
+  background: var(--bg3);
+}
+
+html[data-theme="dark"] .btn-primary {
+  box-shadow: 0 6px 18px rgba(212, 184, 120, 0.22);
+}
+
+html[data-theme="dark"] .btn-primary:hover {
+  box-shadow: 0 12px 28px rgba(212, 184, 120, 0.28);
+}
+
+html[data-theme="dark"] .btn-pink {
+  box-shadow: 0 6px 18px rgba(200, 120, 120, 0.2);
+}
+
+html[data-theme="dark"] .form-input:focus,
+html[data-theme="dark"] .form-textarea:focus,
+html[data-theme="dark"] .form-select:focus {
+  box-shadow: 0 0 0 3px rgba(212, 184, 120, 0.22);
+}
+
+html[data-theme="dark"] .site-footer {
+  background: #121a26;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+html[data-theme="dark"] .site-footer-top {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
 }

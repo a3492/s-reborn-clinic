@@ -4,15 +4,32 @@ import { getCollection } from 'astro:content';
 import { CATEGORIES, CLINIC_INFO } from '../consts';
 import { PROCEDURE_PILLAR_SUMMARIES } from '../data/procedure-catalog';
 import { ACADEMY_PUBLIC_PATH, isAcademyBlogPost, postPermalink } from '../lib/academy';
+import { getPublicSiteSettings } from '../lib/site-settings';
+import { getVisibleFaqItems } from '../lib/faq-items';
+import ContentImage from '../components/ContentImage.astro';
 
 const allPosts = (await getCollection('blog', ({ data }) => !data.draft))
   .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
 
 const clinicPosts = allPosts.filter((p) => !isAcademyBlogPost(p));
-const latestPosts = clinicPosts.slice(0, 6);
+const publicSettings = await getPublicSiteSettings();
+const featuredSlugConfigured = publicSettings.featuredSlug?.trim() || '';
+
+let featuredPost =
+  featuredSlugConfigured.length > 0
+    ? clinicPosts.find((p) => p.id === featuredSlugConfigured)
+    : null;
+if (!featuredPost && clinicPosts.length > 0) {
+  featuredPost = clinicPosts[0];
+}
+
+const latestPosts = clinicPosts
+  .filter((p) => !featuredPost || p.id !== featuredPost.id)
+  .slice(0, 6);
 const academyPreview = allPosts.filter(isAcademyBlogPost).slice(0, 3);
 const doctorColumn = allPosts.filter(p => p.data.category === 'doctor-column').slice(0, 3);
 const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
+const homeFaqItems = await getVisibleFaqItems();
 const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
 ---
 
@@ -29,6 +46,44 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
       </div>
     </div>
   </section>
+
+  <!-- 피처드 글 (site_settings.homepage.featured_slug, 없으면 클리닉 최신 1편) -->
+  {featuredPost && (
+    <section class="section featured-section">
+      <div class="section-header">
+        <h2 class="section-title">추천 콘텐츠</h2>
+        <a href="/blog/" class="section-more">클리닉 블로그 전체 글 보기 →</a>
+      </div>
+      <a href={postPermalink(featuredPost)} class="featured-hero-card" data-home-slug={featuredPost.id}>
+        {featuredPost.data.thumbnail && (
+          <div class="featured-hero-thumb">
+            <ContentImage
+              src={featuredPost.data.thumbnail}
+              alt={featuredPost.data.title}
+              width={960}
+              height={540}
+              loading="eager"
+              decoding="async"
+              fetchpriority="high"
+            />
+          </div>
+        )}
+        <div class="featured-hero-body">
+          <div class="featured-hero-meta-row">
+            {featuredPost.data.category && (
+              <span class="featured-hero-cat">
+                {CATEGORIES.find((c) => c.id === featuredPost.data.category)?.label ?? featuredPost.data.category}
+              </span>
+            )}
+            <span class="featured-hero-views" data-home-view-badge aria-label="조회수">조회 —</span>
+          </div>
+          <h3 class="featured-hero-title">{featuredPost.data.title}</h3>
+          <p class="featured-hero-desc">{featuredPost.data.description}</p>
+          <span class="featured-hero-cta">자세히 읽기 →</span>
+        </div>
+      </a>
+    </section>
+  )}
 
   <!-- 신뢰 지표 바 -->
   <section class="trust-bar">
@@ -84,22 +139,25 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
     <section class="section">
       <div class="section-header">
         <h2 class="section-title">최신 콘텐츠</h2>
-        <a href="/blog/" class="section-more">전체 보기 →</a>
+        <a href="/blog/" class="section-more">최신 콘텐츠 전체 보기 →</a>
       </div>
       <div class="post-grid">
         {latestPosts.map(post => (
-          <a href={postPermalink(post)} class="post-card">
+          <a href={postPermalink(post)} class="post-card" data-home-slug={post.id}>
             {post.data.thumbnail && (
               <div class="post-card-thumb">
                 <img src={post.data.thumbnail} alt={post.data.title} loading="lazy" />
               </div>
             )}
             <div class="post-card-body">
-              {post.data.category && (
-                <span class="post-card-cat">
-                  {CATEGORIES.find(c => c.id === post.data.category)?.label ?? post.data.category}
-                </span>
-              )}
+              <div class="post-card-meta">
+                {post.data.category && (
+                  <span class="post-card-cat">
+                    {CATEGORIES.find(c => c.id === post.data.category)?.label ?? post.data.category}
+                  </span>
+                )}
+                <span class="post-card-views" data-home-view-badge aria-label="조회수">조회 —</span>
+              </div>
               <h3 class="post-card-title">{post.data.title}</h3>
               <p class="post-card-desc">{post.data.description}</p>
             </div>
@@ -114,7 +172,7 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
     <section class="section section-alt">
       <div class="section-header">
         <h2 class="section-title">원장 칼럼</h2>
-        <a href="/blog/?category=doctor-column" class="section-more">더 보기 →</a>
+        <a href="/blog/?category=doctor-column" class="section-more">원장 칼럼 글 더 보기 →</a>
       </div>
       <div class="column-list">
         {doctorColumn.map(post => (
@@ -128,23 +186,35 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
     </section>
   )}
 
-  <!-- FAQ -->
-  {faqPosts.length > 0 && (
+  <!-- 에린이 코너 FAQ (Supabase faq_items, 없으면 블로그 FAQ 글 fallback) -->
+  {(homeFaqItems.length > 0 || faqPosts.length > 0) && (
     <section class="section">
       <div class="section-header">
-        <h2 class="section-title">FAQ · 자주 묻는 질문</h2>
-        <a href="/blog/?category=faq" class="section-more">모두 보기 →</a>
+        <h2 class="section-title">에린이 코너 FAQ</h2>
+        <a href="/blog/?category=faq" class="section-more">블로그 FAQ 카테고리 글 전체 보기 →</a>
       </div>
       <div class="faq-list">
-        {faqPosts.map(post => (
-          <a href={postPermalink(post)} class="faq-item">
-            <span class="faq-q">Q</span>
-            <div>
-              <p class="faq-title">{post.data.title}</p>
-              <p class="faq-desc">{post.data.description}</p>
-            </div>
-          </a>
-        ))}
+        {homeFaqItems.length > 0 ? (
+          homeFaqItems.map((item) => (
+            <article class="faq-item faq-item-static">
+              <span class="faq-q" aria-hidden="true">Q</span>
+              <div>
+                <p class="faq-title">{item.question}</p>
+                <p class="faq-desc faq-desc-answer">{item.answer}</p>
+              </div>
+            </article>
+          ))
+        ) : (
+          faqPosts.map((post) => (
+            <a href={postPermalink(post)} class="faq-item">
+              <span class="faq-q">Q</span>
+              <div>
+                <p class="faq-title">{post.data.title}</p>
+                <p class="faq-desc">{post.data.description}</p>
+              </div>
+            </a>
+          ))
+        )}
       </div>
     </section>
   )}
@@ -154,7 +224,7 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
     <section class="section section-alt">
       <div class="section-header">
         <h2 class="section-title">MYTH · 자주하는 오해</h2>
-        <a href="/blog/?category=myth" class="section-more">모두 보기 →</a>
+        <a href="/blog/?category=myth" class="section-more">MYTH·오해 카테고리 글 전체 보기 →</a>
       </div>
       <div class="myth-list">
         {mythPosts.map(post => (
@@ -175,7 +245,7 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
     <section class="section">
       <div class="section-header">
         <h2 class="section-title">Doctor AI Academy</h2>
-        <a href={`${ACADEMY_PUBLIC_PATH}/`} class="section-more">Academy 전체 →</a>
+        <a href={`${ACADEMY_PUBLIC_PATH}/`} class="section-more">Doctor AI Academy 글 전체 보기 →</a>
       </div>
       <div class="post-grid">
         {academyPreview.map((post) => (
@@ -279,16 +349,27 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
   }
 
   .hero-consult-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0.5rem 0.75rem;
     font-size: 0.95rem;
     font-weight: 600;
     color: var(--t2);
     text-decoration: underline;
     text-underline-offset: 0.2em;
-    padding: 0.5rem 0.25rem;
+    box-sizing: border-box;
   }
 
   .hero-consult-link:hover {
     color: var(--accent-dark);
+  }
+
+  .hero-consult-link:focus-visible {
+    outline: 2px solid var(--accent, #b8956a);
+    outline-offset: 2px;
+    border-radius: 6px;
   }
 
   .section {
@@ -325,12 +406,128 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
     font-size: 0.92rem;
   }
 
+  .featured-section {
+    padding-bottom: 0;
+  }
+
+  .featured-hero-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr);
+    gap: 0;
+    border: 1px solid var(--rule);
+    border-radius: 22px;
+    overflow: hidden;
+    text-decoration: none;
+    background: var(--surface);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s;
+    box-shadow: 0 4px 20px rgba(28, 24, 20, 0.06);
+  }
+
+  .featured-hero-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(201, 169, 110, 0.18);
+    border-color: var(--color-gold);
+  }
+
+  .featured-hero-thumb {
+    min-height: 200px;
+    max-height: 320px;
+    overflow: hidden;
+    background: var(--bg2);
+  }
+
+  .featured-hero-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .featured-hero-body {
+    padding: clamp(1.25rem, 3vw, 2rem);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    justify-content: center;
+  }
+
+  .featured-hero-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem 0.75rem;
+  }
+
+  .featured-hero-views {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--t2);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .featured-hero-cat {
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--accent-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .featured-hero-title {
+    margin: 0;
+    font-size: clamp(1.15rem, 2vw + 0.6rem, 1.55rem);
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.35;
+    letter-spacing: -0.02em;
+  }
+
+  .featured-hero-desc {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--t2);
+    line-height: 1.65;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .featured-hero-cta {
+    margin-top: 0.35rem;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--accent-dark);
+  }
+
+  @media (max-width: 720px) {
+    .featured-hero-card {
+      grid-template-columns: 1fr;
+    }
+
+    .featured-hero-thumb {
+      max-height: 220px;
+      min-height: 180px;
+    }
+  }
+
   .section-more {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0.35rem 0.15rem;
     color: var(--accent-dark);
     font-size: 0.9rem;
     font-weight: 700;
     text-decoration: none;
     white-space: nowrap;
+    box-sizing: border-box;
+  }
+
+  .section-more:focus-visible {
+    outline: 2px solid var(--accent, #b8956a);
+    outline-offset: 2px;
+    border-radius: 4px;
   }
 
   .procedure-grid {
@@ -436,6 +633,21 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
     flex: 1;
   }
 
+  .post-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.6rem;
+  }
+
+  .post-card-views {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--t2);
+    font-variant-numeric: tabular-nums;
+    margin-left: auto;
+  }
+
   .post-card-cat {
     font-size: 0.74rem;
     font-weight: 700;
@@ -527,6 +739,23 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
   .faq-item:hover {
     border-color: var(--accent);
     transform: translateX(4px);
+  }
+
+  .faq-item-static {
+    cursor: default;
+  }
+
+  .faq-item-static:hover {
+    transform: none;
+    border-color: var(--rule);
+  }
+
+  .faq-desc-answer {
+    white-space: pre-wrap;
+    -webkit-line-clamp: unset;
+    display: block;
+    -webkit-box-orient: unset;
+    overflow: visible;
   }
 
   .faq-q {
@@ -690,4 +919,53 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
       padding: 3rem 0;
     }
   }
+
+  html[data-theme="dark"] .hero-badge {
+    background: rgba(212, 184, 120, 0.14);
+    border-color: rgba(212, 184, 120, 0.32);
+  }
+
+  html[data-theme="dark"] .featured-hero-card {
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+  }
+
+  html[data-theme="dark"] .featured-hero-card:hover {
+    box-shadow: 0 12px 36px rgba(212, 184, 120, 0.12);
+  }
+
+  html[data-theme="dark"] .procedure-card:hover {
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+  }
+
+  html[data-theme="dark"] .post-card:hover {
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+  }
 </style>
+
+<script>
+  import { createClient } from '@supabase/supabase-js';
+  import { fetchViewCountsMap, formatViewCount } from '../lib/blog-post-views';
+
+  const url = import.meta.env.PUBLIC_SUPABASE_URL;
+  const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+  async function fillHomeViewBadges() {
+    if (!url || !key) return;
+    const roots = document.querySelectorAll('[data-home-slug]');
+    const slugs = [...roots]
+      .map((el) => (el instanceof HTMLElement ? el.dataset.homeSlug?.trim() : ''))
+      .filter(Boolean);
+    if (!slugs.length) return;
+    const supabase = createClient(url, key);
+    const map = await fetchViewCountsMap(supabase, slugs);
+    document.querySelectorAll('[data-home-view-badge]').forEach((badge) => {
+      const root = badge.closest('[data-home-slug]');
+      const slug = root instanceof HTMLElement ? root.dataset.homeSlug?.trim() ?? '' : '';
+      if (!slug) return;
+      const n = map.get(slug) ?? 0;
+      badge.textContent = `조회 ${formatViewCount(n)}`;
+    });
+  }
+
+  fillHomeViewBadges();
+</script>

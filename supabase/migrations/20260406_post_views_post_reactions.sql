@@ -1,0 +1,3 @@
+-- post_views: supabase/post_views.sql
+-- post_reactions: supabase/post_reactions.sql
+-- (레거시 uuid/post_id 스키마 제거 — slug 기반 공개 블로그용 SQL 파일 사용)

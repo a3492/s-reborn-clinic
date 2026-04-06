@@ -1008,8 +1008,13 @@ const kakaoChannelUrl = `http://pf.kakao.com/${KAKAO_CHANNEL_ID}`;
     box-sizing: border-box;
   }
 
-  .wiz-input:focus {
+  .wiz-input:focus:not(:focus-visible) {
     outline: none;
+  }
+
+  .wiz-input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
     border-color: var(--accent);
     box-shadow: 0 0 0 3px rgba(201, 169, 110, 0.15);
     background: var(--surface);
