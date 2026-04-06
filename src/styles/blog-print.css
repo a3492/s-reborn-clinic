@@ -45,6 +45,8 @@
   body.blog-post-shell .subscribe-form-card,
   body.blog-post-shell .blog-post-tags,
   body.blog-post-shell .blog-post-view-line,
+  body.blog-post-shell .blog-post-report-line,
+  body.blog-post-shell .post-report-modal-root,
   body.blog-post-shell a[href*='/admin'] {
     display: none !important;
   }

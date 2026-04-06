@@ -7,95 +7,134 @@ import { PROCEDURE_CATALOG, PROCEDURE_PILLAR_SUMMARIES } from '../data/procedure
   title="시술 안내"
   description="에스리본 클리닉 시술 안내 — EBD·주사·경구약·외용제를 영역별로 정리했습니다."
 >
-  <div class="proc-page">
-    <header class="proc-hero">
-      <p class="proc-hero-badge">Treatments</p>
-      <h1 class="proc-hero-title">시술 안내</h1>
-      <p class="proc-hero-lead">
-        블로그와 별도로, 클리닉에서 다루는 치료를 <strong>EBD(기기)</strong> · <strong>주사</strong> · <strong>경구약</strong> ·
-        <strong>외용제</strong> 네 축으로 정리했습니다. 실제 시행·적응증은 내원 시 의료진이 판단합니다.
-      </p>
-    </header>
+  <div class="proc-layout">
+    <aside class="proc-sidebar" aria-label="시술 영역 바로가기">
+      <div class="sidebar-widget">
+        <h2 class="sidebar-title">시술 영역</h2>
+        <nav class="proc-sidebar-nav" aria-label="시술 영역 앵커">
+          <ul class="sidebar-cat-list">
+            {PROCEDURE_PILLAR_SUMMARIES.map((p) => (
+              <li>
+                <a
+                  href={`#${p.id}`}
+                  class="sidebar-cat-link proc-nav-link"
+                  data-proc-nav={p.id}
+                >
+                  <span class="proc-nav-stack">
+                    <span class="proc-nav-label">{p.label}</span>
+                    <span class="proc-nav-short">{p.short}</span>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
+    </aside>
 
-    <nav class="proc-toc" aria-label="시술 영역 바로가기">
-      {PROCEDURE_PILLAR_SUMMARIES.map((p) => (
-        <a href={`#${p.id}`} class="proc-toc-link">
-          <span class="proc-toc-label">{p.label}</span>
-          <span class="proc-toc-short">{p.short}</span>
-        </a>
-      ))}
-    </nav>
+    <div class="proc-main">
+      <div class="proc-main-inner">
+        <header class="proc-hero">
+          <p class="proc-hero-badge">Treatments</p>
+          <h1 class="proc-hero-title">시술 안내</h1>
+          <p class="proc-hero-lead">
+            블로그와 별도로, 클리닉에서 다루는 치료를 <strong>EBD(기기)</strong> · <strong>주사</strong> · <strong>경구약</strong> ·
+            <strong>외용제</strong> 네 축으로 정리했습니다. 실제 시행·적응증은 내원 시 의료진이 판단합니다.
+          </p>
+        </header>
 
-    <p class="proc-disclaimer" role="note">
-      아래 목록은 <strong>의학적 정보 안내용 분류</strong>이며, 모든 항목이 본원에서 시행된다는 뜻은 아닙니다. 약물·시술은 부작용·금기가 있을 수 있으니
-      반드시 진료를 통해 결정합니다.
-    </p>
+        <p class="proc-disclaimer" role="note">
+          아래 목록은 <strong>의학적 정보 안내용 분류</strong>이며, 모든 항목이 본원에서 시행된다는 뜻은 아닙니다. 약물·시술은 부작용·금기가 있을 수 있으니
+          반드시 진료를 통해 결정합니다.
+        </p>
 
-    <p class="proc-tree-hint">
-      <span class="proc-tree-hint-icon" aria-hidden="true">◇</span>
-      제목 줄을 누르면 세부 분류와 항목이 차례로 펼쳐집니다. 처음엔 한 축씩 열어 보셔도 좋아요.
-    </p>
+        <p class="proc-tree-hint">
+          <span class="proc-tree-hint-icon" aria-hidden="true">◇</span>
+          제목 줄을 누르면 세부 분류와 항목이 차례로 펼쳐집니다. 처음엔 한 축씩 열어 보셔도 좋아요.
+        </p>
 
-    <div class="proc-tree-toolbar" role="toolbar" aria-label="시술 분류 목록 펼침·접기">
-      <button type="button" class="proc-tree-toggle" id="proc-tree-expand-all">
-        모두 펼치기
-      </button>
-      <button type="button" class="proc-tree-toggle" id="proc-tree-collapse-all">
-        모두 접기
-      </button>
+        <div class="proc-tree-toolbar" role="toolbar" aria-label="시술 분류 목록 펼침·접기">
+          <button type="button" class="proc-tree-toggle" id="proc-tree-expand-all">
+            모두 펼치기
+          </button>
+          <button type="button" class="proc-tree-toggle" id="proc-tree-collapse-all">
+            모두 접기
+          </button>
+        </div>
+
+        <div class="proc-tree-root" aria-label="시술 분류 목록">
+          {PROCEDURE_CATALOG.map((pillar) => (
+            <section class="proc-pillar" id={pillar.id} aria-labelledby={`heading-${pillar.id}`}>
+              <details class="proc-tree-branch" data-proc-branch={pillar.id}>
+                <summary class="proc-tree-branch-summary">
+                  <span class="proc-tree-chevron" aria-hidden="true"></span>
+                  <span class="proc-tree-branch-text">
+                    <span class="proc-tree-branch-eyebrow">{pillar.subtitle}</span>
+                    <span class="proc-tree-branch-title" id={`heading-${pillar.id}`}>
+                      {pillar.title}
+                    </span>
+                  </span>
+                </summary>
+                <div class="proc-tree-branch-panel">
+                  <p class="proc-pillar-intro">{pillar.intro}</p>
+                  <div class="proc-subtree" role="group" aria-label={`${pillar.title} 하위 분류`}>
+                    {pillar.subgroups.map((sub) => (
+                      <details class="proc-tree-leaf">
+                        <summary class="proc-tree-leaf-summary">
+                          <span class="proc-tree-chevron proc-tree-chevron--sm" aria-hidden="true"></span>
+                          <span class="proc-tree-leaf-title">{sub.title}</span>
+                        </summary>
+                        <ul class="proc-item-list">
+                          {sub.items.map((item) => (
+                            <li>
+                              <span class="proc-item-name">{item.name}</span>
+                              {item.note && <span class="proc-item-note">{item.note}</span>}
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    ))}
+                  </div>
+                </div>
+              </details>
+            </section>
+          ))}
+        </div>
+
+        <footer class="proc-footer">
+          <p>
+            시술·약에 대한 <strong>심화 글·FAQ</strong>는 <a href="/blog/">블로그</a>에서 확인하실 수 있습니다.
+          </p>
+          <p>
+            위치·연락은 <a href="/about#location">오시는 길</a>, 문의는 <a href="/consult">온라인 상담</a>을 이용해 주세요.
+          </p>
+        </footer>
+      </div>
     </div>
-
-    <div class="proc-tree-root" aria-label="시술 분류 목록">
-      {PROCEDURE_CATALOG.map((pillar) => (
-        <section class="proc-pillar" id={pillar.id} aria-labelledby={`heading-${pillar.id}`}>
-          <details class="proc-tree-branch" data-proc-branch={pillar.id}>
-            <summary class="proc-tree-branch-summary">
-              <span class="proc-tree-chevron" aria-hidden="true"></span>
-              <span class="proc-tree-branch-text">
-                <span class="proc-tree-branch-eyebrow">{pillar.subtitle}</span>
-                <span class="proc-tree-branch-title" id={`heading-${pillar.id}`}>
-                  {pillar.title}
-                </span>
-              </span>
-            </summary>
-            <div class="proc-tree-branch-panel">
-              <p class="proc-pillar-intro">{pillar.intro}</p>
-              <div class="proc-subtree" role="group" aria-label={`${pillar.title} 하위 분류`}>
-                {pillar.subgroups.map((sub) => (
-                  <details class="proc-tree-leaf">
-                    <summary class="proc-tree-leaf-summary">
-                      <span class="proc-tree-chevron proc-tree-chevron--sm" aria-hidden="true"></span>
-                      <span class="proc-tree-leaf-title">{sub.title}</span>
-                    </summary>
-                    <ul class="proc-item-list">
-                      {sub.items.map((item) => (
-                        <li>
-                          <span class="proc-item-name">{item.name}</span>
-                          {item.note && <span class="proc-item-note">{item.note}</span>}
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                ))}
-              </div>
-            </div>
-          </details>
-        </section>
-      ))}
-    </div>
-
-    <footer class="proc-footer">
-      <p>
-        시술·약에 대한 <strong>심화 글·FAQ</strong>는 <a href="/blog/">블로그</a>에서 확인하실 수 있습니다.
-      </p>
-      <p>
-        위치·연락은 <a href="/about#location">오시는 길</a>, 문의는 <a href="/consult">온라인 상담</a>을 이용해 주세요.
-      </p>
-    </footer>
   </div>
 
   <script is:inline>
     (function () {
+      var HEADER_OFFSET = 96;
+
+      function setNavActive(id) {
+        if (!id) return;
+        document.querySelectorAll('.proc-nav-link').forEach(function (a) {
+          var want = a.getAttribute('data-proc-nav') || '';
+          a.classList.toggle('is-active', want === id);
+        });
+      }
+
+      function updateNavFromScroll() {
+        var pillars = document.querySelectorAll('.proc-pillar');
+        if (!pillars.length) return;
+        var current = pillars[0].id;
+        for (var i = 0; i < pillars.length; i++) {
+          if (pillars[i].getBoundingClientRect().top <= HEADER_OFFSET) current = pillars[i].id;
+        }
+        setNavActive(current);
+      }
+
       function openBranchForHash() {
         var raw = (location.hash || '').slice(1);
         if (!raw) return;
@@ -130,26 +169,137 @@ import { PROCEDURE_CATALOG, PROCEDURE_PILLAR_SUMMARIES } from '../data/procedure
         }
       }
 
+      var scrollTick = false;
+      function onScroll() {
+        if (!scrollTick) {
+          scrollTick = true;
+          requestAnimationFrame(function () {
+            updateNavFromScroll();
+            scrollTick = false;
+          });
+        }
+      }
+
       document.addEventListener('DOMContentLoaded', function () {
         bindExpandCollapse();
         openBranchForHash();
+        updateNavFromScroll();
+        if (location.hash) {
+          setTimeout(updateNavFromScroll, 480);
+        }
+        window.addEventListener('scroll', onScroll, { passive: true });
       });
-      window.addEventListener('hashchange', openBranchForHash);
+      window.addEventListener('hashchange', function () {
+        openBranchForHash();
+        updateNavFromScroll();
+        if (location.hash) {
+          setTimeout(updateNavFromScroll, 480);
+        }
+      });
     })();
   </script>
 </Layout>
 
 <style>
-  .proc-page {
-    max-width: 960px;
-    margin: 0 auto;
-    padding: 0 0 3.5rem;
+  /* 블로그 `.blog-layout`과 동일 리듬: 좌측 고정폭 네비 + 본문 flex */
+  .proc-layout {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+    padding: 1.5rem 0 3.5rem;
     word-break: keep-all;
+  }
+
+  .proc-sidebar {
+    width: 200px;
+    flex-shrink: 0;
+    position: sticky;
+    top: calc(var(--header-height, 68px) + 1rem);
+    max-height: calc(100vh - var(--header-height, 68px) - 2rem);
+    overflow-y: auto;
+    align-self: flex-start;
+  }
+
+  /* 블로그 Sidebar.astro 와 동일 톤의 섹션 제목 */
+  .proc-sidebar .sidebar-title {
+    margin: 0 0 0.4rem;
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--t3);
+  }
+
+  .proc-sidebar .sidebar-cat-list {
+    gap: 0.1rem;
+  }
+
+  .proc-sidebar .sidebar-cat-link {
+    align-items: flex-start;
+    justify-content: flex-start;
+    min-height: 40px;
+    box-sizing: border-box;
+  }
+
+  .proc-sidebar .sidebar-cat-link:focus-visible {
+    outline: 2px solid var(--accent, #b8956a);
+    outline-offset: 1px;
+  }
+
+  .proc-sidebar .sidebar-cat-link:hover {
+    background: var(--bg2);
+    color: var(--text);
+  }
+
+  .proc-sidebar .sidebar-cat-link.is-active {
+    background: rgba(184, 138, 94, 0.14);
+    color: var(--accent-dark);
+    font-weight: 700;
+  }
+
+  .proc-nav-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.12rem;
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .proc-nav-label {
+    font-size: 0.84rem;
+    line-height: 1.35;
+    font-weight: inherit;
+  }
+
+  .proc-nav-short {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--t3);
+    line-height: 1.3;
+  }
+
+  .proc-sidebar .sidebar-cat-link.is-active .proc-nav-short,
+  .proc-sidebar .sidebar-cat-link:hover .proc-nav-short {
+    color: inherit;
+    opacity: 0.85;
+  }
+
+  .proc-main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* 블로그 본문과 유사: 가독 폭 상한 + 영역 내 중앙 정렬 */
+  .proc-main-inner {
+    width: 100%;
+    max-width: 920px;
+    margin-inline: auto;
   }
 
   .proc-hero {
     text-align: center;
-    padding: 3.5rem 0 2rem;
+    padding: 2.25rem 0 2rem;
   }
 
   .proc-hero-badge {
@@ -185,43 +335,6 @@ import { PROCEDURE_CATALOG, PROCEDURE_PILLAR_SUMMARIES } from '../data/procedure
   .proc-hero-lead strong {
     color: var(--text);
     font-weight: 700;
-  }
-
-  .proc-toc {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 0.75rem;
-    margin-bottom: 2rem;
-  }
-
-  .proc-toc-link {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-    padding: 1rem 1.1rem;
-    border-radius: var(--radius-md, 14px);
-    border: 1px solid var(--rule);
-    background: var(--surface);
-    text-decoration: none;
-    color: inherit;
-    transition: border-color 0.15s, box-shadow 0.15s;
-  }
-
-  .proc-toc-link:hover {
-    border-color: var(--accent);
-    box-shadow: var(--shadow-sm);
-  }
-
-  .proc-toc-label {
-    font-size: 0.92rem;
-    font-weight: 800;
-    color: var(--text);
-  }
-
-  .proc-toc-short {
-    font-size: 0.78rem;
-    color: var(--t3);
-    font-weight: 600;
   }
 
   .proc-disclaimer {
@@ -500,11 +613,44 @@ import { PROCEDURE_CATALOG, PROCEDURE_PILLAR_SUMMARIES } from '../data/procedure
     margin-bottom: 0;
   }
 
-  @media (max-width: 600px) {
-    .proc-toc {
-      grid-template-columns: 1fr;
+  @media (max-width: 900px) {
+    .proc-layout {
+      flex-direction: column;
+      gap: 1rem;
+      padding-top: 1rem;
     }
 
+    .proc-sidebar {
+      width: 100%;
+      position: static;
+      max-height: none;
+      overflow: visible;
+    }
+
+    .proc-sidebar .sidebar-cat-list {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    .proc-sidebar .sidebar-cat-link {
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      border: 1px solid var(--rule);
+      min-height: 0;
+    }
+
+    .proc-sidebar .proc-nav-short {
+      display: none;
+    }
+
+    .proc-sidebar .proc-nav-label {
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+  }
+
+  @media (max-width: 600px) {
     .proc-tree-branch-panel {
       padding-left: 1.15rem;
       padding-right: 1rem;

@@ -102,12 +102,13 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
               </button>
             </th>
             <th>반응</th>
+            <th>신고</th>
             <th>공개 관리</th>
           </tr>
         </thead>
         <tbody data-admin-posts-body>
           <tr>
-            <td colspan="9">불러오는 중...</td>
+            <td colspan="10">불러오는 중...</td>
           </tr>
         </tbody>
       </table>
@@ -176,6 +177,27 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
       font-size: 0.86rem;
       color: var(--t2);
       font-variant-numeric: tabular-nums;
+    }
+
+    .admin-report-open-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.35rem;
+      padding: 0.12rem 0.45rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      background: rgba(180, 35, 24, 0.12);
+      color: #b42318;
+      border: 1px solid rgba(180, 35, 24, 0.35);
+    }
+
+    :global(html[data-theme='dark'] .admin-report-open-badge) {
+      background: rgba(249, 112, 102, 0.15);
+      color: #f97066;
+      border-color: rgba(249, 112, 102, 0.4);
     }
 
     .admin-th-check {
@@ -270,6 +292,19 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
       for (const row of rows ?? []) {
         if (!row.post_id || map.has(row.post_id)) continue;
         map.set(row.post_id, row);
+      }
+      return map;
+    };
+
+    /** slug → 미해결(open) 신고 건수 */
+    const fetchOpenReportCountsBySlugs = async (client, slugSet) => {
+      const { data, error } = await client.from('post_reports').select('slug').eq('status', 'open');
+      if (error || !data?.length) return new Map();
+      const map = new Map();
+      for (const row of data) {
+        const s = row.slug;
+        if (!s || !slugSet.has(s)) continue;
+        map.set(s, (map.get(s) ?? 0) + 1);
       }
       return map;
     };
@@ -435,11 +470,11 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
       });
     };
 
-    const renderRows = (rows, latestJobs, reactionTotals, viewCounts) => {
+    const renderRows = (rows, latestJobs, reactionTotals, viewCounts, openReportCounts) => {
       if (!tbody) return;
       lastRows = rows;
       if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="9">조건에 맞는 글이 없습니다.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10">조건에 맞는 글이 없습니다.</td></tr>';
         syncSelectAllState();
         updateBulkUi();
         return;
@@ -461,6 +496,11 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
           const toggleClass = isPublished ? 'admin-btn admin-btn-sm danger' : 'admin-btn admin-btn-sm primary';
           const reactionTotal = reactionTotals?.get(row.slug) ?? 0;
           const views = viewCounts?.get(row.slug) ?? 0;
+          const openReports = openReportCounts?.get(row.slug) ?? 0;
+          const reportCell =
+            openReports > 0
+              ? `<span class="admin-report-open-badge" title="미해결 신고">${openReports}</span>`
+              : '<span class="admin-cell-subtle">—</span>';
           const checked = selectedSlugs.has(row.slug) ? ' checked' : '';
 
           return `
@@ -481,6 +521,7 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
             <td>${formatDate(row.published_at)}</td>
             <td><span class="admin-cell-mono">${views}</span></td>
             <td><span class="admin-cell-mono">${reactionTotal}</span></td>
+            <td>${reportCell}</td>
             <td>
               <button
                 class="${escapeHtml(toggleClass)}"
@@ -559,23 +600,25 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
         .limit(800);
 
       if (postsResult.error) {
-        renderRows([], new Map(), new Map(), new Map());
+        renderRows([], new Map(), new Map(), new Map(), new Map());
         setMessage(postsResult.error.message, 'error');
         return;
       }
 
       let rows = postsResult.data ?? [];
       const slugs = rows.map((r) => r.slug).filter(Boolean);
-      const [reactionTotals, viewCounts] = await Promise.all([
+      const slugSet = new Set(slugs);
+      const [reactionTotals, viewCounts, openReportCounts] = await Promise.all([
         fetchReactionTotalsBySlugs(supabase, slugs),
         fetchViewCountsMap(supabase, slugs),
+        fetchOpenReportCountsBySlugs(supabase, slugSet),
       ]);
 
       if (f.sort === 'views') {
         rows = sortRowsByViews(rows, viewCounts, f.dir);
       }
 
-      renderRows(rows, indexLatestJobs(jobsResult.data ?? []), reactionTotals, viewCounts);
+      renderRows(rows, indexLatestJobs(jobsResult.data ?? []), reactionTotals, viewCounts, openReportCounts);
 
       if (jobsResult.error) {
         setMessage(`글 목록은 불러왔지만 publish 이력은 읽지 못했습니다: ${jobsResult.error.message}`, 'error');
@@ -583,9 +626,21 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
     };
 
     if (!supabaseUrl || !supabaseKey) {
-      renderRows([], new Map(), new Map(), new Map());
+      renderRows([], new Map(), new Map(), new Map(), new Map());
       setMessage('Supabase 환경 변수가 없어 목록을 불러올 수 없습니다.', 'error');
     } else {
+      const publishRequestHeaders = async () => {
+        const h = { 'Content-Type': 'application/json' };
+        if (!supabase) return h;
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          h['Authorization'] = `Bearer ${session.access_token}`;
+        }
+        return h;
+      };
+
       document.addEventListener('admin:session-ready', async () => {
         supabase = window.__adminSupabase;
 
@@ -679,7 +734,7 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
         if (newStatus === 'published') {
           const publishRes = await fetch('/api/admin/publish', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: await publishRequestHeaders(),
             body: JSON.stringify({ slug, requestedBy: document.body.dataset.adminUserId ?? null }),
           });
           const publishResult = await publishRes.json().catch(() => ({}));
@@ -730,7 +785,7 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
           }
           const publishRes = await fetch('/api/admin/publish', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: await publishRequestHeaders(),
             body: JSON.stringify({ slug, requestedBy: uid }),
           });
           const publishResult = await publishRes.json().catch(() => ({}));

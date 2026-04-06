@@ -84,6 +84,14 @@ const lifestyleCats = CATEGORIES.filter((c) => LIFESTYLE_CATS.includes(c.id));
     <div class="sidebar-widget">
       <h2 class="sidebar-title">글 유형</h2>
       <ul class="sidebar-cat-list">
+        <li>
+          <a
+            href="/blog/"
+            class="sidebar-cat-link js-blog-merge"
+            data-blog-cat=""
+            data-blog-merge={JSON.stringify({ category: null })}
+          ><span>영역 전체</span></a>
+        </li>
         {proceduresCats.map((cat) => (
           <li>
             <a
@@ -104,6 +112,14 @@ const lifestyleCats = CATEGORIES.filter((c) => LIFESTYLE_CATS.includes(c.id));
     <div class="sidebar-widget">
       <h2 class="sidebar-title">글 유형</h2>
       <ul class="sidebar-cat-list">
+        <li>
+          <a
+            href="/blog/"
+            class="sidebar-cat-link js-blog-merge"
+            data-blog-cat=""
+            data-blog-merge={JSON.stringify({ category: null })}
+          ><span>영역 전체</span></a>
+        </li>
         {lifestyleCats.map((cat) => (
           <li>
             <a

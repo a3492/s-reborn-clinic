@@ -11,8 +11,14 @@ SUPABASE_SERVICE_ROLE_KEY=
 RESEND_API_KEY=
 FROM_EMAIL=noreply@s-reborn.com
 
+# 글 오류 신고 접수 시 관리자 알림 수신(선택, 쉼표 구분). 비우면 FROM_EMAIL로 시도.
+ADMIN_EMAIL=
+
 # 발행 후 구독자 일괄 알림 (`/api/notify-subscribers`) — 임의의 긴 문자열
 NOTIFY_SUBSCRIBERS_SECRET=
 
 # 프로덕션 공개 사이트 원점 URL (알림 메일 링크용, 선택)
 PUBLIC_SITE_URL=https://s-reborn-clinic.pages.dev
+
+# 예약 발행(Edge Function → /api/admin/publish) 시 X-Publish-Secret 검증용. Supabase 함수 PUBLISH_SECRET 과 동일 값 권장.
+PUBLISH_SECRET=

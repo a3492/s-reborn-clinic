@@ -55,15 +55,23 @@ const readerLoginReturn = readerLoginHref(`${Astro.url.pathname}${Astro.url.sear
       </div>
     </div>
 
-    <div class="topbar-auth" data-topbar-auth>
-      <a href={readerLoginReturn} class="topbar-auth-login" data-topbar-login>로그인</a>
-      <div class="topbar-auth-user" data-topbar-user hidden>
-        <img class="topbar-auth-avatar" alt="" width="28" height="28" data-topbar-avatar hidden />
-        <span class="topbar-auth-avatar-fallback" data-topbar-avatar-fallback aria-hidden="true"></span>
-        <span class="topbar-auth-name" data-topbar-name></span>
-        <button type="button" class="topbar-auth-logout" data-topbar-logout aria-label="로그아웃">
-          로그아웃
-        </button>
+    <div class="topbar-trailing">
+      <a href="/bookmarks/" class="topbar-bookmarks" aria-label="읽기 목록" title="읽기 목록">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+        </svg>
+      </a>
+
+      <div class="topbar-auth" data-topbar-auth>
+        <a href={readerLoginReturn} class="topbar-auth-login" data-topbar-login>로그인</a>
+        <div class="topbar-auth-user" data-topbar-user hidden>
+          <img class="topbar-auth-avatar" alt="" width="28" height="28" data-topbar-avatar hidden />
+          <span class="topbar-auth-avatar-fallback" data-topbar-avatar-fallback aria-hidden="true"></span>
+          <span class="topbar-auth-name" data-topbar-name></span>
+          <button type="button" class="topbar-auth-logout" data-topbar-logout aria-label="로그아웃">
+            로그아웃
+          </button>
+        </div>
       </div>
     </div>
 
@@ -300,11 +308,43 @@ const readerLoginReturn = readerLoginHref(`${Astro.url.pathname}${Astro.url.sear
     border-radius: 8px;
   }
 
+  .topbar-trailing {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-left: auto;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    max-width: min(100%, 280px);
+  }
+
+  .topbar-bookmarks {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    color: var(--t2);
+    border-radius: 10px;
+    text-decoration: none;
+    transition: color 0.15s ease, background 0.15s ease;
+  }
+
+  .topbar-bookmarks:hover {
+    color: var(--accent-dark);
+    background: rgba(184, 149, 106, 0.1);
+  }
+
+  .topbar-bookmarks:focus-visible {
+    outline: 2px solid var(--accent, #b8956a);
+    outline-offset: 2px;
+  }
+
   .topbar-auth {
     display: flex;
     align-items: center;
     gap: 0.45rem;
-    margin-left: auto;
     flex-shrink: 0;
     flex-wrap: wrap;
     justify-content: flex-end;

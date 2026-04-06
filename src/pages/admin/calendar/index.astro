@@ -15,6 +15,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
           <h2 class="admin-section-title">콘텐츠 캘린더</h2>
           <p class="admin-section-desc">
             <code>scheduled_at</code>이 설정된 글만 표시됩니다. 초안·검수·예약 상태는 노란색, 발행 완료는 초록색입니다.
+            예약 발행은 최대 15분 단위로 자동 실행됩니다(pg_cron·Edge Function). 정각에 맞추려면 여유 있게 일정을 잡아 주세요.
           </p>
         </div>
         <div class="admin-cal-nav">

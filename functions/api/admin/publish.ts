@@ -91,6 +91,60 @@ function validatePublishablePost(post: any) {
   return issues;
 }
 
+/** PUBLISH_SECRET 이 있으면: X-Publish-Secret 일치(크론·Edge) 또는 관리자 세션 JWT */
+async function authorizePublishRequest(request: Request, env: any) {
+  const expectedSecret = String(env.PUBLISH_SECRET ?? '').trim();
+  if (!expectedSecret) {
+    return { ok: true as const };
+  }
+
+  const headerSecret =
+    request.headers.get('X-Publish-Secret') ?? request.headers.get('x-publish-secret') ?? '';
+  if (headerSecret === expectedSecret) {
+    return { ok: true as const };
+  }
+
+  const auth = request.headers.get('Authorization') ?? '';
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  if (!m?.[1]) {
+    return {
+      ok: false as const,
+      status: 401,
+      error: 'PUBLISH_SECRET이 설정된 경우 X-Publish-Secret 또는 관리자 Authorization(Bearer)이 필요합니다.',
+    };
+  }
+
+  const userRes = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
+    headers: {
+      Authorization: `Bearer ${m[1]}`,
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+    },
+  });
+
+  if (!userRes.ok) {
+    return { ok: false as const, status: 401, error: '유효하지 않은 인증입니다.' };
+  }
+
+  const userJson = await safeJson(userRes);
+  const userId = userJson?.id;
+  if (!userId) {
+    return { ok: false as const, status: 401, error: '유효하지 않은 인증입니다.' };
+  }
+
+  const profRes = await supabaseFetch(env, `admin_profiles?user_id=eq.${encodeURIComponent(userId)}&select=role`);
+  if (!profRes.ok) {
+    return { ok: false as const, status: 403, error: '관리자 프로필을 확인할 수 없습니다.' };
+  }
+
+  const profs = await safeJson(profRes);
+  const prof = Array.isArray(profs) ? profs[0] : null;
+  if (!prof?.role) {
+    return { ok: false as const, status: 403, error: '관리자 권한이 없습니다.' };
+  }
+
+  return { ok: true as const };
+}
+
 async function supabaseFetch(env: any, path: string, init?: RequestInit) {
   return fetch(`${env.SUPABASE_URL}/rest/v1/${path}`, {
     ...init,
@@ -161,6 +215,11 @@ export const onRequestPost = async (context: any) => {
 
   if (missingEnv.length > 0) {
     return jsonResponse({ error: `Missing required env bindings: ${missingEnv.join(', ')}` }, 500);
+  }
+
+  const authz = await authorizePublishRequest(request, env);
+  if (!authz.ok) {
+    return jsonResponse({ error: authz.error }, authz.status);
   }
 
   const body = await request.json().catch(() => null);

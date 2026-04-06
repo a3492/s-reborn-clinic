@@ -152,6 +152,35 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
     </div>
   </div>
 
+  <section class="admin-card pad-lg admin-post-reports-wrap" data-admin-post-reports hidden>
+    <h2 class="admin-section-title">독자 오류 신고</h2>
+    <p class="admin-section-desc">이 글(slug)에 접수된 신고입니다. 검토 후 상태를 갱신해 주세요.</p>
+    <p class="admin-inline-note" data-admin-post-reports-error hidden></p>
+    <p class="admin-help" data-admin-post-reports-empty hidden>등록된 신고가 없습니다.</p>
+    <ul class="admin-list" data-admin-post-reports-list></ul>
+  </section>
+
+  <style>
+    .admin-post-reports-wrap .admin-post-report-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    @media (max-width: 640px) {
+      .admin-post-reports-wrap .admin-list-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .admin-post-reports-wrap .admin-post-report-actions {
+        justify-content: flex-start;
+      }
+    }
+  </style>
+
   <script>
     import { createClient } from '@supabase/supabase-js';
     const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
@@ -172,6 +201,10 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
     const jobStatus = document.querySelector('[data-admin-current-job-status]');
     const jobPath = document.querySelector('[data-admin-current-job-path]');
     const jobMeta = document.querySelector('[data-admin-current-job-meta]');
+    const reportsSection = document.querySelector('[data-admin-post-reports]');
+    const reportsList = document.querySelector('[data-admin-post-reports-list]');
+    const reportsEmpty = document.querySelector('[data-admin-post-reports-empty]');
+    const reportsError = document.querySelector('[data-admin-post-reports-error]');
     let currentPostId = null;
     let currentSlug = slug;
     let currentUserId = null;
@@ -229,6 +262,9 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
         year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
       }).format(new Date(value));
     };
+
+    const reportTypeLabel = (t) =>
+      ({ typo: '오탈자', factual_error: '사실 오류', outdated: '오래된 정보', other: '기타' })[t] || t;
 
     const updatePreviewHref = (value) => {
       currentSlug = value || currentSlug;
@@ -394,6 +430,66 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
     } else {
       let supabase = null;
 
+      const loadPostReports = async (postSlug) => {
+        if (!(reportsSection instanceof HTMLElement) || !reportsList || !reportsEmpty) return;
+        if (!supabase || !postSlug) {
+          reportsSection.hidden = true;
+          return;
+        }
+        reportsSection.hidden = false;
+        if (reportsError instanceof HTMLElement) {
+          reportsError.hidden = true;
+          reportsError.textContent = '';
+        }
+        const { data, error } = await supabase
+          .from('post_reports')
+          .select('id, report_type, description, reporter_email, status, created_at')
+          .eq('slug', postSlug)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          if (reportsError instanceof HTMLElement) {
+            reportsError.hidden = false;
+            reportsError.textContent = `신고 목록을 불러오지 못했습니다: ${error.message}`;
+            reportsError.dataset.state = 'error';
+          }
+          reportsList.innerHTML = '';
+          reportsEmpty.hidden = true;
+          return;
+        }
+
+        const rows = data ?? [];
+        reportsEmpty.hidden = rows.length > 0;
+
+        if (!rows.length) {
+          reportsList.innerHTML = '';
+          return;
+        }
+
+        reportsList.innerHTML = rows
+          .map((r) => {
+            const desc = r.description ? escapeHtml(r.description) : '—';
+            const email = r.reporter_email ? escapeHtml(r.reporter_email) : '이메일 없음';
+            const actions =
+              r.status === 'open'
+                ? `<div class="admin-post-report-actions">
+            <button type="button" class="admin-btn admin-btn-sm primary" data-admin-report-action="resolved" data-report-id="${escapeHtml(r.id)}">해결</button>
+            <button type="button" class="admin-btn admin-btn-sm" data-admin-report-action="dismissed" data-report-id="${escapeHtml(r.id)}">기각</button>
+          </div>`
+                : `<div class="admin-post-report-actions"><span class="admin-status ${escapeHtml(r.status)}">${escapeHtml(r.status)}</span></div>`;
+            return `<li class="admin-list-row">
+          <div>
+            <p class="admin-item-title">${escapeHtml(reportTypeLabel(r.report_type))}</p>
+            <p class="admin-item-meta">접수 ${formatDate(r.created_at)} · <span class="admin-status ${escapeHtml(r.status)}">${escapeHtml(r.status)}</span></p>
+            <p class="admin-item-meta">${desc}</p>
+            <p class="admin-item-meta">${email}</p>
+          </div>
+          ${actions}
+        </li>`;
+          })
+          .join('');
+      };
+
       const loadPost = async () => {
         const { data: post, error } = await supabase
           .from('posts')
@@ -403,6 +499,7 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
 
         if (error || !post) {
           setMessage(error?.message || '글을 찾을 수 없습니다.', 'error');
+          if (reportsSection instanceof HTMLElement) reportsSection.hidden = true;
           return null;
         }
 
@@ -423,6 +520,7 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
         fillMeta(post);
         fillReleaseState(post);
         await loadPublishHistorySummary();
+        await loadPostReports(post.slug);
         formSnapshot = serializeForm();
         hasUnsavedChanges = false;
         if (saveButton) saveButton.dataset.dirty = 'false';
@@ -484,6 +582,18 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
         }, 5000);
       };
 
+      const publishRequestHeaders = async () => {
+        const h = { 'Content-Type': 'application/json' };
+        if (!supabase) return h;
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          h['Authorization'] = `Bearer ${session.access_token}`;
+        }
+        return h;
+      };
+
       const requestPublish = async (requestedSlug, requestedBy, dryRun) => {
         if (!getCurrentRole()) {
           setMessage('admin_profiles 권한 확인이 끝나기 전에는 publish를 실행할 수 없습니다.', 'error');
@@ -493,7 +603,7 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
         setMessage(dryRun ? 'publish dry-run을 실행하는 중입니다...' : 'publish 요청을 실행하는 중입니다...', 'info');
         const response = await fetch('/api/admin/publish', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: await publishRequestHeaders(),
           body: JSON.stringify({ slug: requestedSlug, requestedBy, dryRun }),
         });
 
@@ -553,6 +663,27 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
         }
 
         await loadPost();
+
+        reportsList?.addEventListener('click', async (e) => {
+          const btn = e.target.closest('[data-admin-report-action]');
+          if (!(btn instanceof HTMLButtonElement) || !supabase) return;
+          const id = btn.dataset.reportId;
+          const next = btn.getAttribute('data-admin-report-action');
+          if (!id || (next !== 'resolved' && next !== 'dismissed')) return;
+          if (!getCurrentRole()) {
+            setMessage('admin_profiles 권한 확인이 끝나기 전에는 신고 상태를 바꿀 수 없습니다.', 'error');
+            return;
+          }
+          btn.disabled = true;
+          const { error: upErr } = await supabase.from('post_reports').update({ status: next }).eq('id', id);
+          if (upErr) {
+            setMessage(`신고 상태 변경 실패: ${upErr.message}`, 'error');
+            btn.disabled = false;
+            return;
+          }
+          const slugNow = form?.elements?.slug?.value?.trim() || currentSlug;
+          await loadPostReports(slugNow);
+        });
 
         form?.elements?.slug?.addEventListener('input', (event) => {
           updatePreviewHref(event.target.value.trim());

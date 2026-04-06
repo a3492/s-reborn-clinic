@@ -23,6 +23,20 @@
 | `FROM_EMAIL` | 발신 주소 (예: `noreply@s-reborn.com`, Resend에서 인증된 도메인) |
 | `NOTIFY_SUBSCRIBERS_SECRET` | `POST /api/notify-subscribers` 호출 시 헤더 `x-notify-secret`과 동일한 값 (발행 후 일괄 알림용) |
 | `PUBLIC_SITE_URL` | (선택) 알림 메일의 글 링크에 사용할 공개 사이트 URL |
+| `PUBLISH_SECRET` | (선택) 설정 시 `POST /api/admin/publish`는 `X-Publish-Secret` 일치 또는 관리자 Supabase 세션 `Authorization: Bearer <access_token>` 필요. Supabase Edge Function `scheduled-publish`의 동일 시크릿과 맞출 것 |
+
+### 예약 발행 (Supabase Edge Function + pg_cron)
+
+`scheduled_at`이 지난 **draft** 글을 주기적으로 GitHub에 반영하려면:
+
+1. **Edge Function 배포** (프로젝트 루트에서):
+   ```bash
+   npx supabase functions deploy scheduled-publish
+   ```
+2. Supabase Dashboard → **Edge Functions → scheduled-publish → Secrets** 에 다음을 설정:
+   - `SITE_URL` — Cloudflare Pages 공개 URL (예: `https://s-reborn-clinic.pages.dev`, 끝 슬래시 없음)
+   - `PUBLISH_SECRET` — Pages `.dev.vars` / 대시보드의 `PUBLISH_SECRET` 과 **동일** (미설정 시 로컬만 해당되며, 프로덕션에서 시크릿을 켠 경우 필수)
+3. **pg_cron**: `supabase/scheduled_publish_cron.sql` 을 참고해 `pg_net`으로 `functions/v1/scheduled-publish`를 호출합니다. URL·`Authorization: Bearer <service_role>` 는 프로젝트 값으로 치환하세요. (기본 15분마다)
 
 ## 스크립트
 

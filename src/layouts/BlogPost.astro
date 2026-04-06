@@ -13,6 +13,7 @@ import Sidebar from '../components/Sidebar.astro';
 import TagCloud from '../components/TagCloud.astro';
 import ContentImage from '../components/ContentImage.astro';
 import SubscribeForm from '../components/SubscribeForm.astro';
+import BookmarkButton from '../components/BookmarkButton.astro';
 import { CATEGORIES, SITE_TITLE } from '../consts';
 import { ACADEMY_CONTENT_ID_PREFIX, ACADEMY_PUBLIC_PATH } from '../lib/academy-constants';
 import { buildArticlePageGraph } from '../lib/structured-data';
@@ -238,11 +239,96 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
                   >
                     인쇄
                   </button>
+                  <BookmarkButton slug={slug} />
                 </div>
                 <p id="share-feedback" class="blog-post-share-feedback" aria-live="polite"></p>
               </div>
 
               <SubscribeForm source={onAcademyArticle ? 'academy' : 'blog'} />
+
+              <p class="blog-post-report-line">
+                <button
+                  type="button"
+                  class="blog-post-report-link"
+                  data-post-report-open
+                  aria-haspopup="dialog"
+                  aria-expanded="false"
+                  aria-controls="post-report-dialog"
+                >
+                  오류 신고
+                </button>
+                <span class="blog-post-report-hint">오탈자·내용 오류를 알려 주시면 검토합니다.</span>
+              </p>
+
+              <div
+                id="post-report-dialog"
+                class="post-report-modal-root"
+                data-post-report-modal
+                hidden
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="post-report-title"
+              >
+                <div class="post-report-modal-backdrop" data-post-report-close tabindex="-1" aria-hidden="true"></div>
+                <div class="post-report-modal-box">
+                  <div class="post-report-modal-head">
+                    <h2 id="post-report-title" class="post-report-modal-title">글 오류 신고</h2>
+                    <button type="button" class="post-report-modal-x" data-post-report-close aria-label="닫기">
+                      ×
+                    </button>
+                  </div>
+                  <form class="post-report-form" data-post-report-form>
+                    <fieldset class="post-report-types">
+                      <legend class="visually-hidden">신고 유형</legend>
+                      <label class="post-report-type-label">
+                        <input type="radio" name="report_type" value="typo" required />
+                        오탈자
+                      </label>
+                      <label class="post-report-type-label">
+                        <input type="radio" name="report_type" value="factual_error" />
+                        사실 오류
+                      </label>
+                      <label class="post-report-type-label">
+                        <input type="radio" name="report_type" value="outdated" />
+                        오래된 정보
+                      </label>
+                      <label class="post-report-type-label">
+                        <input type="radio" name="report_type" value="other" />
+                        기타
+                      </label>
+                    </fieldset>
+                    <label class="post-report-field">
+                      <span class="post-report-field-label">추가 설명 (선택)</span>
+                      <textarea
+                        name="description"
+                        class="post-report-textarea"
+                        rows="4"
+                        maxlength="4000"
+                        placeholder="어느 문단·문장인지 적어 주시면 도움이 됩니다."
+                      ></textarea>
+                    </label>
+                    <label class="post-report-field">
+                      <span class="post-report-field-label">이메일 (선택, 답장을 원하실 때)</span>
+                      <input
+                        type="email"
+                        name="reporter_email"
+                        class="post-report-input"
+                        autocomplete="email"
+                        maxlength="320"
+                      />
+                    </label>
+                    <p class="post-report-form-msg" data-post-report-msg hidden></p>
+                    <div class="post-report-modal-actions">
+                      <button type="button" class="post-report-btn post-report-btn-secondary" data-post-report-close>
+                        취소
+                      </button>
+                      <button type="submit" class="post-report-btn post-report-btn-primary" data-post-report-submit>
+                        신고하기
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
             </div>
           </article>
         </div>
@@ -391,6 +477,97 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
             'data-print-date',
             new Date().toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }),
           );
+        });
+      })();
+    </script>
+
+    <script define:vars={{ reportPostSlug: slug }}>
+      (() => {
+        const slug = reportPostSlug;
+        const modal = document.querySelector('[data-post-report-modal]');
+        const openBtn = document.querySelector('[data-post-report-open]');
+        const form = document.querySelector('[data-post-report-form]');
+        const msg = document.querySelector('[data-post-report-msg]');
+        const submitBtn = document.querySelector('[data-post-report-submit]');
+        const closers = () => document.querySelectorAll('[data-post-report-close]');
+
+        const setOpen = (open) => {
+          if (!(modal instanceof HTMLElement)) return;
+          modal.hidden = !open;
+          if (openBtn instanceof HTMLElement) openBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+          if (open) {
+            const first = form?.querySelector('input[type="radio"]');
+            if (first instanceof HTMLElement) first.focus();
+          }
+        };
+
+        const showMsg = (text, isError) => {
+          if (!(msg instanceof HTMLElement)) return;
+          msg.hidden = false;
+          msg.textContent = text;
+          msg.dataset.state = isError ? 'error' : 'success';
+        };
+
+        const resetMsg = () => {
+          if (!(msg instanceof HTMLElement)) return;
+          msg.hidden = true;
+          msg.textContent = '';
+          delete msg.dataset.state;
+        };
+
+        openBtn?.addEventListener('click', () => {
+          resetMsg();
+          setOpen(true);
+        });
+
+        closers().forEach((el) => {
+          el.addEventListener('click', () => setOpen(false));
+        });
+
+        modal?.addEventListener('click', (e) => {
+          if (e.target === modal) setOpen(false);
+        });
+
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && modal instanceof HTMLElement && !modal.hidden) {
+            setOpen(false);
+          }
+        });
+
+        form?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          if (!(form instanceof HTMLFormElement) || !(submitBtn instanceof HTMLButtonElement)) return;
+          const fd = new FormData(form);
+          const report_type = String(fd.get('report_type') || '');
+          const description = String(fd.get('description') || '').trim();
+          const reporter_email = String(fd.get('reporter_email') || '').trim();
+          if (!report_type) {
+            showMsg('신고 유형을 선택해 주세요.', true);
+            return;
+          }
+          resetMsg();
+          submitBtn.disabled = true;
+          submitBtn.textContent = '전송 중…';
+          try {
+            const res = await fetch('/api/report', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ slug, report_type, description, reporter_email }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+              showMsg(String(data?.error || '전송에 실패했습니다. 잠시 후 다시 시도해 주세요.'), true);
+              return;
+            }
+            showMsg('소중한 피드백 감사합니다.', false);
+            form.reset();
+            window.setTimeout(() => setOpen(false), 1200);
+          } catch {
+            showMsg('네트워크 오류가 발생했습니다.', true);
+          } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '신고하기';
+          }
         });
       })();
     </script>
@@ -675,5 +852,229 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
 
   .blog-post-series-list li.is-current a {
     color: var(--accent-dark);
+  }
+
+  .blog-post-report-line {
+    margin: 1.5rem 0 0;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+    font-size: 0.88rem;
+    color: var(--t2);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem 1rem;
+  }
+
+  .blog-post-report-link {
+    border: none;
+    background: none;
+    padding: 0;
+    font: inherit;
+    color: var(--accent-dark);
+    text-decoration: underline;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .blog-post-report-link:hover {
+    color: var(--accent);
+  }
+
+  .blog-post-report-hint {
+    flex: 1 1 12rem;
+    min-width: 0;
+    line-height: 1.45;
+  }
+
+  .post-report-modal-root[hidden] {
+    display: none !important;
+  }
+
+  .post-report-modal-root:not([hidden]) {
+    position: fixed;
+    inset: 0;
+    z-index: 10050;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0.75rem;
+    box-sizing: border-box;
+  }
+
+  @media (min-width: 560px) {
+    .post-report-modal-root:not([hidden]) {
+      align-items: center;
+    }
+  }
+
+  .post-report-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+  }
+
+  .post-report-modal-box {
+    position: relative;
+    width: min(100%, 26rem);
+    max-height: min(90vh, 32rem);
+    overflow: auto;
+    margin: 0;
+    padding: 1.1rem 1.15rem 1.15rem;
+    border-radius: 14px;
+    border: 1px solid var(--rule);
+    background: var(--surface, #fff);
+    color: var(--text);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+  }
+
+  :global(html[data-theme='dark'] .post-report-modal-box) {
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  }
+
+  .post-report-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .post-report-modal-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+  }
+
+  .post-report-modal-x {
+    border: none;
+    background: transparent;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--t2);
+    padding: 0.15rem 0.35rem;
+    border-radius: 6px;
+  }
+
+  .post-report-modal-x:hover {
+    color: var(--text);
+    background: rgba(0, 0, 0, 0.06);
+  }
+
+  :global(html[data-theme='dark'] .post-report-modal-x:hover) {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .post-report-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .post-report-types {
+    border: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .post-report-type-label {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .post-report-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.88rem;
+  }
+
+  .post-report-field-label {
+    font-weight: 600;
+    color: var(--t2);
+  }
+
+  .post-report-textarea,
+  .post-report-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.5rem 0.6rem;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--bg2, #f8f8f8);
+    color: var(--text);
+    font: inherit;
+    resize: vertical;
+    min-height: 0;
+  }
+
+  :global(html[data-theme='dark'] .post-report-textarea),
+  :global(html[data-theme='dark'] .post-report-input) {
+    background: rgba(0, 0, 0, 0.2);
+  }
+
+  .post-report-form-msg {
+    margin: 0;
+    font-size: 0.86rem;
+    font-weight: 600;
+  }
+
+  .post-report-form-msg[data-state='error'] {
+    color: #b42318;
+  }
+
+  :global(html[data-theme='dark'] .post-report-form-msg[data-state='error']) {
+    color: #f97066;
+  }
+
+  .post-report-form-msg[data-state='success'] {
+    color: var(--accent-dark, #5c4a32);
+  }
+
+  .post-report-modal-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    margin-top: 0.25rem;
+  }
+
+  .post-report-btn {
+    min-height: 40px;
+    padding: 0.45rem 1rem;
+    border-radius: 10px;
+    font: inherit;
+    font-weight: 700;
+    font-size: 0.88rem;
+    cursor: pointer;
+    border: 1px solid var(--rule);
+  }
+
+  .post-report-btn-secondary {
+    background: transparent;
+    color: var(--text);
+  }
+
+  .post-report-btn-primary {
+    background: var(--accent, #b8956a);
+    border-color: var(--accent, #b8956a);
+    color: #fff;
+  }
+
+  .post-report-btn-primary:hover:not(:disabled) {
+    filter: brightness(1.05);
+  }
+
+  .post-report-btn:disabled {
+    opacity: 0.65;
+    cursor: wait;
   }
 </style>
