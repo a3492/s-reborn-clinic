@@ -11,9 +11,12 @@ import { SITE_TITLE } from '../consts';
 import { getPublicSiteSettings } from '../lib/site-settings';
 import { getCollection } from 'astro:content';
 
-type Props = CollectionEntry<'procedures'>['data'] & { slug: string };
+type Props = CollectionEntry<'procedures'>['data'] & {
+  slug: string;
+  faqs?: { q: string; a: string }[];
+};
 
-const { title, description, seo_title, pillar, category, keywords = [], related = [], slug } = Astro.props;
+const { title, description, seo_title, pillar, category, keywords = [], related = [], slug, faqs = [] } = Astro.props;
 
 const siteSettings = await getPublicSiteSettings();
 const resolvedSiteTitle = siteSettings.siteTitle || SITE_TITLE;
@@ -38,7 +41,7 @@ const pillarHref: Record<string, string> = {
   topical: '/procedures/#topical',
 };
 
-// MedicalProcedure + FAQPage Schema
+// MedicalProcedure Schema
 const procedureSchema = {
   '@context': 'https://schema.org',
   '@type': 'MedicalProcedure',
@@ -51,6 +54,20 @@ const procedureSchema = {
     'name': resolvedSiteTitle,
   },
 };
+
+// FAQPage Schema (FAQ가 있을 때만)
+const faqSchema = faqs.length > 0 ? {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  'mainEntity': faqs.map(({ q, a }) => ({
+    '@type': 'Question',
+    'name': q,
+    'acceptedAnswer': {
+      '@type': 'Answer',
+      'text': a,
+    },
+  })),
+} : null;
 ---
 
 <!doctype html>
@@ -62,6 +79,7 @@ const procedureSchema = {
       siteTitle={resolvedSiteTitle}
     />
     <script type="application/ld+json" set:html={JSON.stringify(procedureSchema)} />
+    {faqSchema && <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />}
     <AnalyticsScripts />
     <script is:inline>
       /* 복사 시 출처 자동 추가 */

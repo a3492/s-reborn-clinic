@@ -1,0 +1,42 @@
+---
+import { getCollection, render } from 'astro:content';
+import ProcedurePage from '../../layouts/ProcedurePage.astro';
+
+export async function getStaticPaths() {
+  const procedures = await getCollection('procedures', ({ data }) => !data.draft);
+  return procedures.map((entry) => ({
+    params: { slug: entry.id },
+    props: entry,
+  }));
+}
+
+const entry = Astro.props;
+const { Content } = await render(entry);
+
+// FAQ 섹션 파싱 (마크다운 본문에서 Q&A 추출)
+function parseFaqs(body: string): { q: string; a: string }[] {
+  const faqs: { q: string; a: string }[] = [];
+  // "자주 묻는 질문" 섹션 이후 텍스트 추출
+  const faqSection = body.split(/##\s+자주 묻는 질문/)[1];
+  if (!faqSection) return faqs;
+
+  // **Q. ...** 패턴으로 분리
+  const blocks = faqSection.split(/\n(?=\*\*Q\.)/);
+  for (const block of blocks) {
+    const qMatch = block.match(/^\*\*Q\.\s*(.+?)\*\*/);
+    if (!qMatch) continue;
+    const q = qMatch[1].trim();
+    // 질문 이후 텍스트를 답변으로 수집 (마크다운 서식 제거)
+    const aRaw = block.replace(/^\*\*Q\.\s*.+?\*\*\n?/, '').trim();
+    const a = aRaw.replace(/\*\*/g, '').replace(/\n+/g, ' ').trim();
+    if (q && a) faqs.push({ q, a });
+  }
+  return faqs;
+}
+
+const faqs = parseFaqs(entry.body ?? '');
+---
+
+<ProcedurePage {...entry.data} slug={entry.id} faqs={faqs}>
+  <Content />
+</ProcedurePage>

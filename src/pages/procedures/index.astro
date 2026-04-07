@@ -2,29 +2,24 @@
 import Layout from '../../layouts/Layout.astro';
 import { PROCEDURE_CATALOG, PROCEDURE_PILLAR_SUMMARIES } from '../../data/procedure-catalog';
 import { getCollection } from 'astro:content';
-import { postPermalink } from '../../lib/academy';
 
-const allPosts = (await getCollection('blog', ({ data }) => !data.draft))
-  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
-
-// 시술 관련 글 (category: procedures)
-const procedurePosts = allPosts.filter(p => p.data.category === 'procedures').slice(0, 8);
-
-// 인기 글 (원장 칼럼 + FAQ + 건강정보)
-const popularPosts = allPosts
-  .filter(p => ['doctor-column', 'faq', 'health-tips'].includes(p.data.category ?? ''))
-  .slice(0, 6);
-
-const categoryLabels: Record<string, string> = {
-  procedures: '시술·치료',
-  'doctor-column': '원장 칼럼',
-  faq: 'FAQ',
-  'health-tips': '건강 정보',
-  'before-after': '전후 사례',
-  'patient-story': '환자 이야기',
-  myth: 'MYTH',
-  'clinic-news': '클리닉 소식',
-};
+// 토픽 아티클 전체 로드 — procedure_item 기준으로 그룹화
+const allProcedures = await getCollection('procedures', ({ data }) => !data.draft);
+const topicsByItem = allProcedures.reduce<Record<string, typeof allProcedures>>((acc, p) => {
+  const key = p.data.procedure_item;
+  if (!key) return acc;
+  if (!acc[key]) acc[key] = [];
+  acc[key].push(p);
+  return acc;
+}, {});
+// 각 그룹을 topic_order → id 순 정렬
+for (const key of Object.keys(topicsByItem)) {
+  topicsByItem[key].sort((a, b) => {
+    const oa = a.data.topic_order ?? 99;
+    const ob = b.data.topic_order ?? 99;
+    return oa !== ob ? oa - ob : a.id.localeCompare(b.id);
+  });
+}
 ---
 
 <Layout
@@ -92,7 +87,7 @@ const categoryLabels: Record<string, string> = {
             </p>
           </header>
 
-          <!-- 카테고리 빠른 선택 카드 -->
+          <!-- 카테고리 빠른 선택 카드 (왼쪽 사이드바와 동일 — 모바일용 보조) -->
           <div class="proc-pillar-cards" role="list">
             {PROCEDURE_PILLAR_SUMMARIES.map((p) => (
               <button
@@ -107,54 +102,6 @@ const categoryLabels: Record<string, string> = {
               </button>
             ))}
           </div>
-
-          <!-- 시술 관련 글 -->
-          {procedurePosts.length > 0 && (
-            <section class="proc-posts-section">
-              <h2 class="proc-section-title">시술 관련 글</h2>
-              <div class="proc-posts-grid" id="proc-posts-grid">
-                {procedurePosts.map((post) => (
-                  <a
-                    href={postPermalink(post)}
-                    class="proc-post-card"
-                    data-date={post.data.date.valueOf()}
-                  >
-                    <span class="proc-post-card-cat">
-                      {categoryLabels[post.data.category ?? ''] ?? post.data.category}
-                    </span>
-                    <span class="proc-post-card-title">{post.data.title}</span>
-                    {post.data.description && (
-                      <span class="proc-post-card-desc">{post.data.description}</span>
-                    )}
-                  </a>
-                ))}
-              </div>
-            </section>
-          )}
-
-          <!-- 인기글 / 원장 칼럼 -->
-          {popularPosts.length > 0 && (
-            <section class="proc-posts-section">
-              <h2 class="proc-section-title">원장 칼럼 · FAQ</h2>
-              <div class="proc-posts-grid proc-posts-grid--popular" id="proc-popular-grid">
-                {popularPosts.map((post) => (
-                  <a
-                    href={postPermalink(post)}
-                    class="proc-post-card"
-                    data-date={post.data.date.valueOf()}
-                  >
-                    <span class="proc-post-card-cat">
-                      {categoryLabels[post.data.category ?? ''] ?? post.data.category}
-                    </span>
-                    <span class="proc-post-card-title">{post.data.title}</span>
-                    {post.data.description && (
-                      <span class="proc-post-card-desc">{post.data.description}</span>
-                    )}
-                  </a>
-                ))}
-              </div>
-            </section>
-          )}
 
           <footer class="proc-footer">
             <p>
@@ -196,12 +143,32 @@ const categoryLabels: Record<string, string> = {
                       <span class="proc-tree-leaf-title">{sub.title}</span>
                     </summary>
                     <ul class="proc-item-list">
-                      {sub.items.map((item) => (
-                        <li>
-                          <span class="proc-item-name">{item.name}</span>
-                          {item.note && <span class="proc-item-note">{item.note}</span>}
-                        </li>
-                      ))}
+                      {sub.items.map((item) => {
+                        const topics = item.slug ? (topicsByItem[item.slug] ?? []) : [];
+                        return (
+                          <li>
+                            <div class="proc-item-header">
+                              {item.slug ? (
+                                <a href={`/procedures/${item.slug}/`} class="proc-item-name proc-item-name--link">
+                                  {item.name}
+                                </a>
+                              ) : (
+                                <span class="proc-item-name">{item.name}</span>
+                              )}
+                              {item.note && <span class="proc-item-note">{item.note}</span>}
+                            </div>
+                            {topics.length > 0 && (
+                              <div class="proc-topic-chips" aria-label={`${item.name} 세부 주제`}>
+                                {topics.map((t) => (
+                                  <a href={`/procedures/${t.id}/`} class="proc-topic-chip">
+                                    {t.data.topic_label ?? t.data.title}
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                          </li>
+                        );
+                      })}
                     </ul>
                   </details>
                 ))}
@@ -307,6 +274,11 @@ const categoryLabels: Record<string, string> = {
 </Layout>
 
 <style>
+  /* hidden 속성이 전역 CSS에 의해 무력화되는 것을 방지 */
+  [data-proc-view][hidden] {
+    display: none !important;
+  }
+
   /* ── 레이아웃 ── */
   .proc-layout {
     display: flex;
@@ -733,17 +705,63 @@ const categoryLabels: Record<string, string> = {
     border-left: 2px solid var(--color-gold-light, #e8d5b0);
   }
 
+  .proc-item-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
   .proc-item-name {
     font-weight: 700;
     color: var(--text);
   }
 
+  .proc-item-name--link {
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .proc-item-name--link:hover {
+    color: var(--accent-dark);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
   .proc-item-note {
     display: block;
-    margin-top: 0.15rem;
-    font-size: 0.8rem;
+    margin-top: 0.1rem;
+    font-size: 0.78rem;
     font-weight: 500;
     color: var(--t3);
+  }
+
+  /* 토픽 칩 */
+  .proc-topic-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.5rem;
+  }
+
+  .proc-topic-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.22rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid var(--accent, #b8956a);
+    background: rgba(184, 138, 94, 0.07);
+    color: var(--accent-dark);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-decoration: none;
+    letter-spacing: 0.01em;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+
+  .proc-topic-chip:hover {
+    background: rgba(184, 138, 94, 0.18);
+    border-color: var(--accent-dark);
+    color: var(--accent-dark);
   }
 
   .proc-footer {

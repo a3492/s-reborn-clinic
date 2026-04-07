@@ -51,4 +51,41 @@ const blog = defineCollection({
 		}),
 });
 
-export const collections = { blog };
+const procedures = defineCollection({
+	loader: glob({ base: './src/content/procedures', pattern: '**/*.{md,mdx}' }),
+	schema: z.object({
+		title: z.string(),
+		description: z.string(),
+		/** SEO 메인 키워드 */
+		seo_title: z.string().optional(),
+		/** SEO 서브 키워드 배열 */
+		keywords: z.array(z.string()).optional().default([]),
+		/** 4축 카테고리 */
+		pillar: z.enum(['ebd', 'injection', 'oral', 'topical']),
+		/** 서브그룹 (예: RF, 레이저, 필러 등) */
+		category: z.string(),
+		tags: z.array(z.string()).optional().default([]),
+		/** 관련 시술 slug 목록 (내부 링크용) */
+		related: z.array(z.string()).optional().default([]),
+		draft: z.boolean().optional().default(false),
+		/** 마지막 업데이트 날짜 */
+		updated: z.coerce.date().optional(),
+		/**
+		 * 부모 시술 slug — 토픽 아티클에서 사용. 예: 'monopolar-rf'
+		 * 같은 procedure_item 을 가진 글들이 하나의 시술 아래 묶입니다.
+		 */
+		procedure_item: z.string().optional(),
+		/**
+		 * 토픽 종류 — 'overview' | 'mechanism' | 'equipment' | 'protocol'
+		 *   | 'combination' | 'side-effects' | 'research' | 'faq'
+		 *   | 'pharmacology' | 'products' | 'monitoring' | 'concentration'
+		 */
+		topic: z.string().optional(),
+		/** 사이드바·목차에 표시할 한국어 레이블 예: '원리·기초' */
+		topic_label: z.string().optional(),
+		/** 같은 procedure_item 내 표시 순서 (작을수록 앞) */
+		topic_order: z.number().int().min(1).optional(),
+	}),
+});
+
+export const collections = { blog, procedures };
