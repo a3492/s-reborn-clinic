@@ -10,6 +10,7 @@ import Footer from '../components/Footer.astro';
 import { SITE_TITLE } from '../consts';
 import { getPublicSiteSettings } from '../lib/site-settings';
 import { getCollection } from 'astro:content';
+import { postPermalink } from '../lib/academy';
 
 type Props = CollectionEntry<'procedures'>['data'] & {
   slug: string;
@@ -23,9 +24,20 @@ const resolvedSiteTitle = siteSettings.siteTitle || SITE_TITLE;
 
 const pageTitle = seo_title || title;
 
+// 동적 OG 이미지 URL
+const ogImageUrl = `/api/og/procedure/${slug}?title=${encodeURIComponent(pageTitle)}&category=${encodeURIComponent(category)}&pillar=${pillar}`;
+
 // 관련 시술 데이터 로드
 const allProcedures = await getCollection('procedures', ({ data }) => !data.draft);
 const relatedProcedures = allProcedures.filter((p) => related.includes(p.id));
+
+// 같은 pillar의 블로그 글 최대 3개
+const allBlogPosts = await getCollection('blog', ({ data }) =>
+  !data.draft && data.pillar === pillar
+);
+// date 최신순 정렬
+allBlogPosts.sort((a, b) => (b.data.date?.valueOf() ?? 0) - (a.data.date?.valueOf() ?? 0));
+const relatedBlogPosts = allBlogPosts.slice(0, 3);
 
 const pillarLabels: Record<string, string> = {
   ebd: 'EBD · 에너지 기기',
@@ -76,8 +88,11 @@ const faqSchema = faqs.length > 0 ? {
     <BaseHead
       title={`${pageTitle} | ${resolvedSiteTitle}`}
       description={description}
+      image={ogImageUrl}
+      ogType="article"
       siteTitle={resolvedSiteTitle}
     />
+    {keywords.length > 0 && <meta name="keywords" content={keywords.join(', ')} />}
     <script type="application/ld+json" set:html={JSON.stringify(procedureSchema)} />
     {faqSchema && <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />}
     <AnalyticsScripts />
@@ -181,6 +196,21 @@ const faqSchema = faqs.length > 0 ? {
                 <ul class="proc-sidebar-tags">
                   {keywords.map((kw) => <li>{kw}</li>)}
                 </ul>
+              </div>
+            )}
+            {relatedBlogPosts.length > 0 && (
+              <div class="proc-sidebar-widget">
+                <p class="proc-sidebar-widget-title">관련 블로그 글</p>
+                <ul class="proc-sidebar-blog-list">
+                  {relatedBlogPosts.map((post) => (
+                    <li>
+                      <a href={postPermalink(post)} class="proc-sidebar-blog-link">
+                        {post.data.title}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+                <a href={`/blog/?pillar=${pillar}`} class="proc-sidebar-blog-more">더 많은 글 보기 →</a>
               </div>
             )}
             <div class="proc-sidebar-widget proc-sidebar-consult">
@@ -553,6 +583,46 @@ const faqSchema = faqs.length > 0 ? {
 
   .proc-sidebar-consult-btn:hover {
     opacity: 0.85;
+  }
+
+  /* 사이드바 블로그 링크 */
+  .proc-sidebar-blog-list {
+    list-style: none;
+    margin: 0 0 0.5rem;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .proc-sidebar-blog-link {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--t2);
+    text-decoration: none;
+    line-height: 1.45;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid var(--rule);
+    transition: color 0.15s;
+  }
+
+  .proc-sidebar-blog-link:hover {
+    color: var(--accent-dark);
+  }
+
+  .proc-sidebar-blog-more {
+    display: inline-block;
+    margin-top: 0.35rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--accent-dark);
+    text-decoration: none;
+  }
+
+  .proc-sidebar-blog-more:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
   }
 
   /* 모바일 */
