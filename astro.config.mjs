@@ -20,19 +20,7 @@ export default defineConfig({
 	/** 검색·공유 URL과 실제 정적 경로를 맞춰 슬래시 없는 링크 404·빈 화면을 줄입니다. */
 	trailingSlash: 'always',
 	output: 'static',
-	adapter: cloudflare({
-		routes: {
-			extend: {
-				exclude: [
-					{ pattern: '/favicon.svg' },
-					{ pattern: '/manifest.json' },
-					{ pattern: '/sw.js' },
-					{ pattern: '/icon-192.png' },
-					{ pattern: '/icon-512.png' },
-				],
-			},
-		},
-	}),
+	adapter: cloudflare(),
 	integrations: [
 		mdx(),
 		sitemap({
