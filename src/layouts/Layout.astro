@@ -46,6 +46,31 @@ const jsonLd = buildOrganizationAndWebSiteJsonLd(Astro.site);
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js');
       }
+
+      /* 복사 시 출처 자동 추가 */
+      document.addEventListener('copy', function (e) {
+        var selection = window.getSelection();
+        if (!selection || selection.toString().length === 0) return;
+        var originalText = selection.toString();
+        var attribution =
+          '\n\n출처: 에스리본 클리닉\n' +
+          'https://s-reborn-clinic.pages.dev/\n' +
+          '무단 전재 및 재배포를 금지합니다.';
+        if (e.clipboardData) {
+          e.clipboardData.setData('text/plain', originalText + attribution);
+          e.clipboardData.setData(
+            'text/html',
+            '<span>' +
+              originalText.replace(/\n/g, '<br>') +
+              '</span>' +
+              '<p style="color:#888;font-size:0.85em;margin-top:8px;">' +
+              '출처: <a href="https://s-reborn-clinic.pages.dev/">에스리본 클리닉</a><br>' +
+              '무단 전재 및 재배포를 금지합니다.' +
+              '</p>'
+          );
+          e.preventDefault();
+        }
+      });
     </script>
   </head>
   <body>

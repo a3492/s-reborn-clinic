@@ -1,0 +1,558 @@
+---
+import '../styles/design.css';
+import '../styles/global.css';
+import type { CollectionEntry } from 'astro:content';
+import BaseHead from '../components/BaseHead.astro';
+import AnalyticsScripts from '../components/AnalyticsScripts.astro';
+import Header from '../components/Header.astro';
+import Topbar from '../components/Topbar.astro';
+import Footer from '../components/Footer.astro';
+import { SITE_TITLE } from '../consts';
+import { getPublicSiteSettings } from '../lib/site-settings';
+import { getCollection } from 'astro:content';
+
+type Props = CollectionEntry<'procedures'>['data'] & { slug: string };
+
+const { title, description, seo_title, pillar, category, keywords = [], related = [], slug } = Astro.props;
+
+const siteSettings = await getPublicSiteSettings();
+const resolvedSiteTitle = siteSettings.siteTitle || SITE_TITLE;
+
+const pageTitle = seo_title || title;
+
+// 관련 시술 데이터 로드
+const allProcedures = await getCollection('procedures', ({ data }) => !data.draft);
+const relatedProcedures = allProcedures.filter((p) => related.includes(p.id));
+
+const pillarLabels: Record<string, string> = {
+  ebd: 'EBD · 에너지 기기',
+  injection: '주사 · 액상',
+  oral: '경구 약물',
+  topical: '외용제',
+};
+
+const pillarHref: Record<string, string> = {
+  ebd: '/procedures/#ebd',
+  injection: '/procedures/#injection',
+  oral: '/procedures/#oral',
+  topical: '/procedures/#topical',
+};
+
+// MedicalProcedure + FAQPage Schema
+const procedureSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'MedicalProcedure',
+  'name': title,
+  'description': description,
+  'url': Astro.url.href,
+  'procedureType': category,
+  'recognizingAuthority': {
+    '@type': 'MedicalOrganization',
+    'name': resolvedSiteTitle,
+  },
+};
+---
+
+<!doctype html>
+<html lang="ko">
+  <head>
+    <BaseHead
+      title={`${pageTitle} | ${resolvedSiteTitle}`}
+      description={description}
+      siteTitle={resolvedSiteTitle}
+    />
+    <script type="application/ld+json" set:html={JSON.stringify(procedureSchema)} />
+    <AnalyticsScripts />
+    <script is:inline>
+      /* 복사 시 출처 자동 추가 */
+      document.addEventListener('copy', function (e) {
+        var selection = window.getSelection();
+        if (!selection || selection.toString().length === 0) return;
+        var originalText = selection.toString();
+        var attribution =
+          '\n\n출처: 에스리본 클리닉\n' +
+          'https://s-reborn-clinic.pages.dev/\n' +
+          '무단 전재 및 재배포를 금지합니다.';
+        if (e.clipboardData) {
+          e.clipboardData.setData('text/plain', originalText + attribution);
+          e.clipboardData.setData(
+            'text/html',
+            '<span>' +
+              originalText.replace(/\n/g, '<br>') +
+              '</span>' +
+              '<p style="color:#888;font-size:0.85em;margin-top:8px;">' +
+              '출처: <a href="https://s-reborn-clinic.pages.dev/">에스리본 클리닉</a><br>' +
+              '무단 전재 및 재배포를 금지합니다.' +
+              '</p>'
+          );
+          e.preventDefault();
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <Topbar />
+    <Header />
+    <main class="proc-page-wrap">
+      <div class="proc-page-inner">
+
+        <!-- 브레드크럼 -->
+        <nav class="proc-breadcrumb" aria-label="breadcrumb">
+          <ol>
+            <li><a href="/">홈</a></li>
+            <li><a href="/procedures/">시술 안내</a></li>
+            <li><a href={pillarHref[pillar]}>{pillarLabels[pillar]}</a></li>
+            <li aria-current="page">{title}</li>
+          </ol>
+        </nav>
+
+        <div class="proc-page-layout">
+
+          <!-- 본문 -->
+          <article class="proc-article">
+            <header class="proc-article-header">
+              <p class="proc-article-badge">{pillarLabels[pillar]} · {category}</p>
+              <h1 class="proc-article-title">{title}</h1>
+              <p class="proc-article-lead">{description}</p>
+            </header>
+
+            <div class="proc-article-body prose">
+              <slot />
+            </div>
+
+            <!-- 관련 시술 -->
+            {relatedProcedures.length > 0 && (
+              <aside class="proc-related">
+                <h2 class="proc-related-title">함께 보면 좋은 시술</h2>
+                <ul class="proc-related-list">
+                  {relatedProcedures.map((p) => (
+                    <li>
+                      <a href={`/procedures/${p.id}/`} class="proc-related-card">
+                        <span class="proc-related-card-cat">{pillarLabels[p.data.pillar]} · {p.data.category}</span>
+                        <span class="proc-related-card-title">{p.data.title}</span>
+                        <span class="proc-related-card-desc">{p.data.description}</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </aside>
+            )}
+
+            <div class="proc-disclaimer" role="note">
+              본 내용은 의학적 정보 제공을 목적으로 하며, 모든 시술·약물은 개인 상태에 따라 적합성이 다릅니다.
+              최종 결정은 반드시 면허 의료인과의 상담·진료를 통해 이루어져야 합니다.
+            </div>
+
+            <div class="proc-article-cta">
+              <a href="/consult" class="proc-cta-btn">온라인 상담 신청</a>
+              <a href="/procedures/" class="proc-cta-link">← 시술 전체 목록으로</a>
+            </div>
+          </article>
+
+          <!-- 사이드바 -->
+          <aside class="proc-page-sidebar">
+            <div class="proc-sidebar-widget">
+              <p class="proc-sidebar-widget-title">영역</p>
+              <a href={pillarHref[pillar]} class="proc-sidebar-pillar-link">
+                {pillarLabels[pillar]}
+              </a>
+            </div>
+            {keywords.length > 0 && (
+              <div class="proc-sidebar-widget">
+                <p class="proc-sidebar-widget-title">관련 키워드</p>
+                <ul class="proc-sidebar-tags">
+                  {keywords.map((kw) => <li>{kw}</li>)}
+                </ul>
+              </div>
+            )}
+            <div class="proc-sidebar-widget proc-sidebar-consult">
+              <p class="proc-sidebar-widget-title">궁금하신가요?</p>
+              <p class="proc-sidebar-consult-text">시술 적합성은 개인마다 다릅니다. 온라인 상담으로 먼저 여쭤보세요.</p>
+              <a href="/consult" class="proc-sidebar-consult-btn">상담 신청</a>
+            </div>
+          </aside>
+
+        </div>
+      </div>
+    </main>
+    <Footer />
+  </body>
+</html>
+
+<style>
+  .proc-page-wrap {
+    padding: 0 0 4rem;
+  }
+
+  .proc-page-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  /* 브레드크럼 */
+  .proc-breadcrumb {
+    padding: 1rem 0 0;
+  }
+
+  .proc-breadcrumb ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.8rem;
+    color: var(--t3);
+  }
+
+  .proc-breadcrumb li + li::before {
+    content: '/';
+    margin-right: 0.3rem;
+    opacity: 0.5;
+  }
+
+  .proc-breadcrumb a {
+    color: var(--t3);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .proc-breadcrumb a:hover {
+    color: var(--accent-dark);
+  }
+
+  .proc-breadcrumb [aria-current="page"] {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* 레이아웃 */
+  .proc-page-layout {
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    gap: 2.5rem;
+    align-items: flex-start;
+    padding-top: 1.5rem;
+  }
+
+  /* 아티클 헤더 */
+  .proc-article-header {
+    padding-bottom: 2rem;
+    border-bottom: 2px solid var(--rule);
+    margin-bottom: 2rem;
+  }
+
+  .proc-article-badge {
+    display: inline-block;
+    margin: 0 0 0.75rem;
+    padding: 0.28rem 0.85rem;
+    border-radius: 999px;
+    background: rgba(201, 169, 110, 0.15);
+    border: 1px solid rgba(201, 169, 110, 0.3);
+    color: var(--accent-dark);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .proc-article-title {
+    margin: 0 0 0.85rem;
+    font-size: clamp(1.65rem, 3.5vw, 2.25rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.25;
+    color: var(--text);
+  }
+
+  .proc-article-lead {
+    margin: 0;
+    font-size: 1.05rem;
+    line-height: 1.8;
+    color: var(--t2);
+  }
+
+  /* 본문 prose */
+  .proc-article-body {
+    font-size: 0.97rem;
+    line-height: 1.85;
+    color: var(--t2);
+  }
+
+  .proc-article-body :global(h2) {
+    margin: 2.25rem 0 0.9rem;
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .proc-article-body :global(h3) {
+    margin: 1.75rem 0 0.6rem;
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--text);
+  }
+
+  .proc-article-body :global(p) {
+    margin: 0 0 1.1rem;
+  }
+
+  .proc-article-body :global(ul),
+  .proc-article-body :global(ol) {
+    margin: 0 0 1.1rem;
+    padding-left: 1.5rem;
+  }
+
+  .proc-article-body :global(li) {
+    margin-bottom: 0.35rem;
+  }
+
+  .proc-article-body :global(strong) {
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .proc-article-body :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.25rem 0;
+    font-size: 0.9rem;
+  }
+
+  .proc-article-body :global(th),
+  .proc-article-body :global(td) {
+    padding: 0.6rem 0.85rem;
+    border: 1px solid var(--rule);
+    text-align: left;
+  }
+
+  .proc-article-body :global(th) {
+    background: var(--bg2);
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .proc-article-body :global(blockquote) {
+    margin: 1.25rem 0;
+    padding: 0.85rem 1.1rem;
+    border-left: 3px solid var(--accent);
+    background: var(--bg2);
+    border-radius: 0 8px 8px 0;
+    font-style: normal;
+    color: var(--t2);
+  }
+
+  /* 면책 */
+  .proc-disclaimer {
+    margin: 2.5rem 0 0;
+    padding: 1rem 1.15rem;
+    border-radius: var(--radius-md, 14px);
+    background: var(--bg2);
+    border: 1px solid var(--rule);
+    font-size: 0.83rem;
+    line-height: 1.65;
+    color: var(--t3);
+  }
+
+  /* CTA */
+  .proc-article-cta {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    margin-top: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .proc-cta-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.7rem 1.5rem;
+    border-radius: 999px;
+    background: var(--accent-dark);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: opacity 0.15s;
+  }
+
+  .proc-cta-btn:hover {
+    opacity: 0.85;
+  }
+
+  .proc-cta-link {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--t2);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .proc-cta-link:hover {
+    color: var(--accent-dark);
+  }
+
+  /* 관련 시술 */
+  .proc-related {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--rule);
+  }
+
+  .proc-related-title {
+    margin: 0 0 1rem;
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--text);
+  }
+
+  .proc-related-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.65rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .proc-related-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.85rem 1rem;
+    border-radius: var(--radius-md, 14px);
+    border: 1px solid var(--rule);
+    background: var(--surface);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .proc-related-card:hover {
+    border-color: var(--accent);
+    background: var(--bg2);
+  }
+
+  .proc-related-card-cat {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--accent-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .proc-related-card-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .proc-related-card-desc {
+    font-size: 0.78rem;
+    color: var(--t3);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* 사이드바 */
+  .proc-page-sidebar {
+    position: sticky;
+    top: calc(var(--header-height, 68px) + 1rem);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .proc-sidebar-widget {
+    padding: 1rem 1.1rem;
+    border-radius: var(--radius-md, 14px);
+    border: 1px solid var(--rule);
+    background: var(--surface);
+  }
+
+  .proc-sidebar-widget-title {
+    margin: 0 0 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--t3);
+  }
+
+  .proc-sidebar-pillar-link {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--accent-dark);
+    text-decoration: none;
+  }
+
+  .proc-sidebar-pillar-link:hover {
+    text-decoration: underline;
+  }
+
+  .proc-sidebar-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .proc-sidebar-tags li {
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    background: var(--bg2);
+    border: 1px solid var(--rule);
+    font-size: 0.75rem;
+    color: var(--t2);
+  }
+
+  .proc-sidebar-consult-text {
+    margin: 0 0 0.85rem;
+    font-size: 0.83rem;
+    line-height: 1.6;
+    color: var(--t2);
+  }
+
+  .proc-sidebar-consult-btn {
+    display: inline-flex;
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    background: var(--accent-dark);
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: opacity 0.15s;
+  }
+
+  .proc-sidebar-consult-btn:hover {
+    opacity: 0.85;
+  }
+
+  /* 모바일 */
+  @media (max-width: 860px) {
+    .proc-page-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .proc-page-sidebar {
+      position: static;
+      order: -1;
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
+
+    .proc-sidebar-widget {
+      flex: 1;
+      min-width: 160px;
+    }
+  }
+</style>

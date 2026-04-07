@@ -14,16 +14,31 @@ import TagCloud from '../components/TagCloud.astro';
 import ContentImage from '../components/ContentImage.astro';
 import SubscribeForm from '../components/SubscribeForm.astro';
 import BookmarkButton from '../components/BookmarkButton.astro';
+import Poll from '../components/Poll.astro';
 import { CATEGORIES, SITE_TITLE } from '../consts';
 import { ACADEMY_CONTENT_ID_PREFIX, ACADEMY_PUBLIC_PATH } from '../lib/academy-constants';
 import { buildArticlePageGraph } from '../lib/structured-data';
 import { isAcademyBlogPost, postPermalink } from '../lib/academy';
 import { blogTagPageHref } from '../lib/blog-tag-url';
 import { entryIsAcademyBlogId, sortSeriesPosts, seriesHubPath } from '../lib/blog-series';
+import { getActiveDisclaimerBodyForCategory } from '../lib/disclaimers';
 
-type Props = CollectionEntry<'blog'>['data'] & { slug?: string };
+type Props = CollectionEntry<'blog'>['data'] & {
+	slug?: string;
+	/** URI 인코딩된 전체 MD(frontmatter+body) — article data-markdown 에만 사용 */
+	encodedDownloadMarkdown?: string;
+};
 
-const { title, description, date, thumbnail, category, tags, series: postSeries } = Astro.props;
+const {
+	title,
+	description,
+	date,
+	thumbnail,
+	category,
+	tags,
+	series: postSeries,
+	encodedDownloadMarkdown = '',
+} = Astro.props;
 const pathNorm = Astro.url.pathname.replace(/\/$/, '');
 const slug = pathNorm.startsWith('/blog/')
 	? pathNorm.slice('/blog/'.length)
@@ -58,14 +73,45 @@ const seriesPrev = seriesIndex > 0 ? seriesSiblings[seriesIndex - 1] : null;
 const seriesNext =
 	seriesIndex >= 0 && seriesIndex < seriesSiblings.length - 1 ? seriesSiblings[seriesIndex + 1] : null;
 
+/** pgvector 미적용·임베딩 없음 시 — 같은 카테고리 최신 3개 (클라이언트 폴백용) */
+const relatedFallback = category
+	? allPosts
+			.filter((p) => p.id !== slug)
+			.filter((p) => (onAcademyArticle ? isAcademyBlogPost(p) : !isAcademyBlogPost(p)))
+			.filter((p) => p.data.category === category)
+			.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+			.slice(0, 3)
+			.map((p) => ({
+				slug: p.id,
+				href: postPermalink(p),
+				title: p.data.title,
+				description: p.data.description ?? '',
+				category: p.data.category ?? null,
+				published_at: p.data.date.toISOString(),
+			}))
+	: [];
+
+const categoryLabelRecord = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label]));
+
+const thumbTrim = thumbnail && String(thumbnail).trim();
+const absoluteThumbnail = thumbTrim
+	? thumbTrim.startsWith('http')
+		? thumbTrim
+		: new URL(thumbTrim, Astro.url).href
+	: null;
+const ogImageForMeta =
+	absoluteThumbnail ?? new URL(`/api/og/${encodeURIComponent(slug)}/`, Astro.site).href;
+
 const articleJsonLd = buildArticlePageGraph(Astro.site, {
-  title,
-  description,
-  url: pageUrl,
-  datePublished: date,
-  image: thumbnail,
-  category,
+	title,
+	description,
+	url: pageUrl,
+	datePublished: date,
+	image: ogImageForMeta,
+	category,
 });
+
+const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
 
 ---
 
@@ -74,7 +120,7 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
     <BaseHead
       title={title}
       description={description}
-      image={thumbnail}
+      image={ogImageForMeta}
       siteTitle={SITE_TITLE}
       ogType="article"
       jsonLd={articleJsonLd}
@@ -88,10 +134,45 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js');
       }
+
+      /* 복사 시 출처 자동 추가 */
+      document.addEventListener('copy', function (e) {
+        var selection = window.getSelection();
+        if (!selection || selection.toString().length === 0) return;
+        var originalText = selection.toString();
+        var attribution =
+          '\n\n출처: 에스리본 클리닉\n' +
+          'https://s-reborn-clinic.pages.dev/\n' +
+          '무단 전재 및 재배포를 금지합니다.';
+        if (e.clipboardData) {
+          e.clipboardData.setData('text/plain', originalText + attribution);
+          e.clipboardData.setData(
+            'text/html',
+            '<span>' +
+              originalText.replace(/\n/g, '<br>') +
+              '</span>' +
+              '<p style="color:#888;font-size:0.85em;margin-top:8px;">' +
+              '출처: <a href="https://s-reborn-clinic.pages.dev/">에스리본 클리닉</a><br>' +
+              '무단 전재 및 재배포를 금지합니다.' +
+              '</p>'
+          );
+          e.preventDefault();
+        }
+      });
     </script>
   </head>
 
   <body class="blog-post-shell">
+    <div
+      id="blog-reading-mode-exit"
+      class="blog-reading-mode-exit-bar"
+      role="button"
+      tabindex="0"
+      hidden
+      aria-label="집중 모드 종료"
+    >
+      집중 모드 종료 [Esc]
+    </div>
     <div class="site-wrap">
       <Header />
       <Topbar />
@@ -100,7 +181,13 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
         <Sidebar tagCloudPosts={clinicPostsForTagCloud} />
 
         <div class="blog-content blog-post-main">
-          <article class="blog-post-article">
+          <article
+            class="blog-post-article"
+            data-download-slug={slug}
+            {...(encodedDownloadMarkdown
+              ? { 'data-markdown': encodedDownloadMarkdown }
+              : {})}
+          >
             <div
               id="blog-print-banner"
               class="blog-print-banner"
@@ -129,6 +216,11 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
                   )}
                 </div>
                 <h1>{title}</h1>
+                {disclaimerBody && (
+                  <aside class="disclaimer" role="note" aria-label="의료 면책 고지">
+                    <p>⚕️ {disclaimerBody}</p>
+                  </aside>
+                )}
                 <p class="blog-post-view-line" id="blog-post-view-line" data-post-slug={slug}>
                   조회 <span data-post-view-num>—</span>회
                 </p>
@@ -187,11 +279,95 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
 
               <slot />
 
+              <section
+                class="blog-post-related"
+                data-blog-related
+                aria-labelledby="blog-post-related-heading"
+                aria-busy="true"
+              >
+                <h2 class="blog-post-related-title" id="blog-post-related-heading">이 글과 비슷한 글</h2>
+                <p class="blog-post-related-status" data-blog-related-status>불러오는 중…</p>
+                <ul class="blog-post-related-list" data-blog-related-list hidden></ul>
+              </section>
+
+              <script
+                type="application/json"
+                id="blog-related-props"
+                set:html={JSON.stringify({
+                  slug,
+                  categoryLabels: categoryLabelRecord,
+                  fallback: relatedFallback,
+                })}
+              />
+
+              <section
+                class="blog-post-comments"
+                id="blog-post-comments"
+                data-blog-comments
+                data-post-slug={slug}
+                aria-labelledby="blog-post-comments-heading"
+                hidden
+              >
+                <h2 class="blog-post-comments-heading" id="blog-post-comments-heading">
+                  댓글 <span data-comments-count>0</span>개
+                </h2>
+                <ul class="blog-post-comments-list" data-comments-list></ul>
+                <p class="blog-post-comments-form-msg" data-comments-form-msg hidden></p>
+                <form class="blog-post-comments-form" data-comments-form>
+                  <input type="hidden" name="parent_id" value="" data-comments-parent-id />
+                  <p class="blog-post-comments-reply-hint" data-comments-reply-hint hidden>
+                    답글 작성 중
+                    <button type="button" class="blog-post-comments-cancel-reply" data-comments-cancel-reply>
+                      취소
+                    </button>
+                  </p>
+                  <label class="blog-post-comments-field">
+                    <span class="blog-post-comments-label">이름 <span aria-hidden="true">*</span></span>
+                    <input
+                      class="blog-post-comments-input"
+                      name="author_name"
+                      type="text"
+                      required
+                      maxlength="50"
+                      autocomplete="name"
+                      placeholder="닉네임 또는 이름"
+                    />
+                  </label>
+                  <label class="blog-post-comments-field">
+                    <span class="blog-post-comments-label">이메일 (선택)</span>
+                    <input
+                      class="blog-post-comments-input"
+                      name="author_email"
+                      type="email"
+                      maxlength="320"
+                      autocomplete="email"
+                      placeholder="비공개"
+                    />
+                  </label>
+                  <label class="blog-post-comments-field">
+                    <span class="blog-post-comments-label">내용 <span aria-hidden="true">*</span></span>
+                    <textarea
+                      class="blog-post-comments-textarea"
+                      name="body"
+                      required
+                      maxlength="500"
+                      rows="4"
+                      placeholder="최대 500자"
+                      data-comments-body
+                    ></textarea>
+                    <span class="blog-post-comments-char" data-comments-char>0 / 500</span>
+                  </label>
+                  <button type="submit" class="blog-post-comments-submit">댓글 등록</button>
+                </form>
+              </section>
+
               {tags && tags.length > 0 && (
                 <div class="blog-post-tag-cloud-wrap">
                   <TagCloud variant="post" tags={tags} title="이 글의 태그" />
                 </div>
               )}
+
+              <Poll slug={slug} />
 
               <div class="blog-post-reactions" id="blog-post-reactions" data-post-slug={slug}>
                 <p class="blog-post-reactions-intro">이 글은 어떠셨나요?</p>
@@ -238,6 +414,29 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
                     type="button"
                   >
                     인쇄
+                  </button>
+                  {encodedDownloadMarkdown ? (
+                    <button
+                      id="blog-md-download-btn"
+                      class="blog-post-share-btn share-btn md-download"
+                      type="button"
+                    >
+                      MD 저장
+                    </button>
+                  ) : null}
+                  <button
+                    id="blog-txt-download-btn"
+                    class="blog-post-share-btn share-btn txt-download"
+                    type="button"
+                  >
+                    TXT 저장
+                  </button>
+                  <button
+                    id="blog-reading-mode-btn"
+                    class="blog-post-share-btn share-btn reading-mode-toggle"
+                    type="button"
+                  >
+                    집중 모드
                   </button>
                   <BookmarkButton slug={slug} />
                 </div>
@@ -386,6 +585,457 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
         } else {
           numEl.textContent = formatViewCount(count);
         }
+      })();
+    </script>
+
+    <script>
+      import { createClient } from '@supabase/supabase-js';
+      import { postHrefFromDbSlug } from '../lib/academy';
+
+      type FallbackItem = {
+        slug: string;
+        href: string;
+        title: string;
+        description: string;
+        category: string | null;
+        published_at: string;
+      };
+
+      type RelatedRow = {
+        slug: string;
+        title: string;
+        description: string;
+        category: string | null;
+        published_at: string | null;
+        similarity: number;
+      };
+
+      function escapeHtml(s: string): string {
+        return String(s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      function normalizeEmbedding(raw: unknown): number[] | null {
+        if (Array.isArray(raw) && raw.length > 0 && typeof raw[0] === 'number') {
+          return raw as number[];
+        }
+        if (typeof raw === 'string') {
+          try {
+            const p = JSON.parse(raw) as unknown;
+            if (Array.isArray(p) && p.length > 0 && typeof p[0] === 'number') {
+              return p as number[];
+            }
+          } catch {
+            /* fall through */
+          }
+        }
+        return null;
+      }
+
+      function formatRelatedDate(iso: string | null | undefined): string {
+        if (!iso) return '';
+        try {
+          return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium' }).format(new Date(iso));
+        } catch {
+          return '';
+        }
+      }
+
+      function renderRelatedList(
+        root: HTMLElement,
+        listEl: HTMLUListElement,
+        statusEl: HTMLElement,
+        items: Array<{
+          href: string;
+          title: string;
+          description: string;
+          category: string | null;
+          published_at: string | null;
+        }>,
+        categoryLabels: Record<string, string>,
+      ) {
+        root.removeAttribute('aria-busy');
+        if (!items.length) {
+          root.hidden = true;
+          statusEl.textContent = '';
+          listEl.innerHTML = '';
+          listEl.hidden = true;
+          return;
+        }
+        root.hidden = false;
+        statusEl.textContent = '';
+        listEl.hidden = false;
+        listEl.innerHTML = items
+          .map((item) => {
+            const cat =
+              item.category && categoryLabels[item.category]
+                ? `<span class="blog-post-related-cat">${escapeHtml(categoryLabels[item.category])}</span>`
+                : '';
+            const dateLine = formatRelatedDate(item.published_at);
+            const meta = [cat, dateLine].filter(Boolean).join(' · ');
+            return `<li class="blog-post-related-item">
+              <a class="blog-post-related-link" href="${escapeHtml(item.href)}">${escapeHtml(item.title)}</a>
+              ${item.description ? `<p class="blog-post-related-desc">${escapeHtml(item.description)}</p>` : ''}
+              ${meta ? `<p class="blog-post-related-meta">${meta}</p>` : ''}
+            </li>`;
+          })
+          .join('');
+      }
+
+      (async () => {
+        const root = document.querySelector('[data-blog-related]');
+        const listEl = document.querySelector('[data-blog-related-list]');
+        const statusEl = document.querySelector('[data-blog-related-status]');
+        const propsEl = document.getElementById('blog-related-props');
+        if (!(root instanceof HTMLElement) || !(listEl instanceof HTMLUListElement) || !(statusEl instanceof HTMLElement)) {
+          return;
+        }
+
+        let props: { slug: string; categoryLabels: Record<string, string>; fallback: FallbackItem[] } = {
+          slug: '',
+          categoryLabels: {},
+          fallback: [],
+        };
+        try {
+          props = JSON.parse(propsEl?.textContent || '{}') as typeof props;
+        } catch {
+          root.hidden = true;
+          root.removeAttribute('aria-busy');
+          return;
+        }
+
+        const labels = props.categoryLabels ?? {};
+        const fallbackItems = (props.fallback ?? []).map((f) => ({
+          href: f.href,
+          title: f.title,
+          description: f.description,
+          category: f.category,
+          published_at: f.published_at,
+        }));
+
+        if (!props.slug) {
+          root.hidden = true;
+          root.removeAttribute('aria-busy');
+          statusEl.textContent = '';
+          return;
+        }
+
+        const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+        const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+        if (!supabaseUrl || !supabaseKey) {
+          renderRelatedList(root, listEl, statusEl, fallbackItems, labels);
+          return;
+        }
+
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        const useFallback = () => renderRelatedList(root, listEl, statusEl, fallbackItems, labels);
+
+        const { data: postRow, error: embErr } = await supabase
+          .from('posts')
+          .select('embedding')
+          .eq('slug', props.slug)
+          .maybeSingle();
+
+        if (embErr || !postRow) {
+          useFallback();
+          return;
+        }
+
+        const embedding = normalizeEmbedding(postRow.embedding);
+        if (!embedding || embedding.length !== 1536) {
+          useFallback();
+          return;
+        }
+
+        const { data: related, error: rpcErr } = await supabase.rpc('match_posts', {
+          query_embedding: embedding,
+          match_threshold: 0.7,
+          match_count: 3,
+          exclude_slug: props.slug,
+        });
+
+        if (rpcErr || !related?.length) {
+          useFallback();
+          return;
+        }
+
+        const rows = related as RelatedRow[];
+        const items = rows.map((r) => ({
+          href: postHrefFromDbSlug(r.slug),
+          title: r.title,
+          description: r.description ?? '',
+          category: r.category,
+          published_at: r.published_at,
+        }));
+        renderRelatedList(root, listEl, statusEl, items, labels);
+      })();
+    </script>
+
+    <script>
+      import { createClient } from '@supabase/supabase-js';
+
+      type CommentRow = {
+        id: string;
+        slug: string;
+        parent_id: string | null;
+        author_name: string;
+        author_email: string | null;
+        body: string;
+        is_approved: boolean;
+        created_at: string;
+      };
+
+      const url = import.meta.env.PUBLIC_SUPABASE_URL;
+      const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+      function formatCommentDate(iso: string): string {
+        try {
+          return new Intl.DateTimeFormat('ko-KR', {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+          }).format(new Date(iso));
+        } catch {
+          return '';
+        }
+      }
+
+      (async () => {
+        const root = document.querySelector('[data-blog-comments]');
+        if (!root || !(root instanceof HTMLElement)) return;
+        const postSlug = root.dataset.postSlug?.trim() ?? '';
+        if (!postSlug || !url || !key) return;
+        root.hidden = false;
+
+        const supabase = createClient(url, key, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: false,
+          },
+        });
+        const listEl = root.querySelector('[data-comments-list]');
+        const countEl = root.querySelector('[data-comments-count]');
+        const form = root.querySelector('[data-comments-form]');
+        const formMsg = root.querySelector('[data-comments-form-msg]');
+        const parentInput = root.querySelector('[data-comments-parent-id]');
+        const replyHint = root.querySelector('[data-comments-reply-hint]');
+        const cancelReplyBtn = root.querySelector('[data-comments-cancel-reply]');
+        const bodyTa = root.querySelector('[data-comments-body]');
+        const charEl = root.querySelector('[data-comments-char]');
+
+        if (!listEl || !countEl || !form || !(form instanceof HTMLFormElement)) return;
+
+        const updateCount = () => {
+          const n = listEl.querySelectorAll('li[data-comment-id]').length;
+          countEl.textContent = String(n);
+        };
+
+        const showFormMsg = (text: string, isError: boolean) => {
+          if (!(formMsg instanceof HTMLElement)) return;
+          formMsg.hidden = false;
+          formMsg.textContent = text;
+          formMsg.dataset.state = isError ? 'error' : 'success';
+        };
+
+        const clearFormMsg = () => {
+          if (!(formMsg instanceof HTMLElement)) return;
+          formMsg.hidden = true;
+          formMsg.textContent = '';
+          delete formMsg.dataset.state;
+        };
+
+        const resetReply = () => {
+          if (parentInput instanceof HTMLInputElement) parentInput.value = '';
+          if (replyHint instanceof HTMLElement) replyHint.hidden = true;
+        };
+
+        const buildCommentLi = (row: CommentRow, isNested: boolean): HTMLLIElement => {
+          const li = document.createElement('li');
+          li.className = isNested ? 'blog-post-comment-item blog-post-comment-item--reply' : 'blog-post-comment-item';
+          li.dataset.commentId = row.id;
+
+          const art = document.createElement('article');
+          art.className = 'blog-post-comment-card';
+
+          const head = document.createElement('header');
+          head.className = 'blog-post-comment-head';
+          const strong = document.createElement('strong');
+          strong.className = 'blog-post-comment-author';
+          strong.textContent = row.author_name;
+          const time = document.createElement('time');
+          time.className = 'blog-post-comment-time';
+          time.dateTime = row.created_at;
+          time.textContent = formatCommentDate(row.created_at);
+          head.append(strong, document.createTextNode(' · '), time);
+
+          const p = document.createElement('p');
+          p.className = 'blog-post-comment-body';
+          p.textContent = row.body;
+
+          art.append(head, p);
+
+          if (!isNested) {
+            const repliesUl = document.createElement('ul');
+            repliesUl.className = 'blog-post-comment-replies';
+            repliesUl.dataset.commentReplies = '';
+            const replyBtn = document.createElement('button');
+            replyBtn.type = 'button';
+            replyBtn.className = 'blog-post-comment-reply-btn';
+            replyBtn.textContent = '답글';
+            replyBtn.addEventListener('click', () => {
+              if (parentInput instanceof HTMLInputElement) parentInput.value = row.id;
+              if (replyHint instanceof HTMLElement) replyHint.hidden = false;
+              form.querySelector('input[name="author_name"]')?.focus();
+            });
+            art.append(replyBtn, repliesUl);
+          }
+
+          li.append(art);
+          return li;
+        };
+
+        const renderNewComment = (row: CommentRow) => {
+          if (listEl.querySelector(`[data-comment-id="${row.id}"]`)) return;
+          if (!row.is_approved) return;
+
+          if (row.parent_id) {
+            const parentLi = listEl.querySelector(`:scope > li[data-comment-id="${row.parent_id}"]`);
+            const repliesUl = parentLi?.querySelector('[data-comment-replies]');
+            if (repliesUl) {
+              repliesUl.append(buildCommentLi(row, true));
+              updateCount();
+            }
+            return;
+          }
+
+          listEl.append(buildCommentLi(row, false));
+          updateCount();
+        };
+
+        const renderAll = (rows: CommentRow[]) => {
+          listEl.innerHTML = '';
+          const byParent = new Map<string | null, CommentRow[]>();
+          for (const r of rows) {
+            const k = r.parent_id;
+            if (!byParent.has(k)) byParent.set(k, []);
+            byParent.get(k)!.push(r);
+          }
+          for (const arr of byParent.values()) {
+            arr.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+          }
+          const roots = byParent.get(null) ?? [];
+          for (const rootRow of roots) {
+            const li = buildCommentLi(rootRow, false);
+            listEl.append(li);
+            const replies = byParent.get(rootRow.id) ?? [];
+            const repliesUl = li.querySelector('[data-comment-replies]');
+            for (const ch of replies) {
+              repliesUl?.append(buildCommentLi(ch, true));
+            }
+          }
+          updateCount();
+        };
+
+        const { data, error } = await supabase
+          .from('comments')
+          .select('*')
+          .eq('slug', postSlug)
+          .eq('is_approved', true)
+          .order('created_at', { ascending: true });
+
+        if (error) {
+          root.hidden = true;
+          return;
+        }
+        renderAll((data ?? []) as CommentRow[]);
+
+        const channel = supabase
+          .channel('comments:' + postSlug)
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'comments',
+              filter: `slug=eq.${postSlug}`,
+            },
+            (payload) => {
+              const n = payload.new as CommentRow | null;
+              if (n?.is_approved) renderNewComment(n);
+            },
+          )
+          .subscribe();
+
+        window.addEventListener('pagehide', () => {
+          void channel.unsubscribe();
+        });
+
+        cancelReplyBtn?.addEventListener('click', () => {
+          resetReply();
+          clearFormMsg();
+        });
+
+        if (bodyTa instanceof HTMLTextAreaElement && charEl) {
+          const syncChar = () => {
+            charEl.textContent = `${bodyTa.value.length} / 500`;
+          };
+          bodyTa.addEventListener('input', syncChar);
+          syncChar();
+        }
+
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          clearFormMsg();
+          const fd = new FormData(form);
+          const author_name = String(fd.get('author_name') || '').trim();
+          const author_emailRaw = String(fd.get('author_email') || '').trim();
+          const body = String(fd.get('body') || '').trim();
+          let parent_id: string | null = String(fd.get('parent_id') || '').trim() || null;
+
+          if (!author_name || !body) {
+            showFormMsg('이름과 내용을 입력해 주세요.', true);
+            return;
+          }
+
+          if (parent_id) {
+            const parentLi = listEl.querySelector(`:scope > li[data-comment-id="${parent_id}"]`);
+            if (!parentLi) {
+              showFormMsg('답글 대상을 찾을 수 없습니다.', true);
+              return;
+            }
+          }
+
+          const insertPayload: Record<string, unknown> = {
+            slug: postSlug,
+            author_name,
+            body,
+            parent_id,
+          };
+          if (author_emailRaw) insertPayload.author_email = author_emailRaw;
+
+          const { data: authUserData } = await supabase.auth.getUser();
+          if (authUserData.user?.id) {
+            insertPayload.user_id = authUserData.user.id;
+          }
+
+          const { error: insErr } = await supabase.from('comments').insert(insertPayload);
+
+          if (insErr) {
+            showFormMsg(insErr.message || '등록에 실패했습니다.', true);
+            return;
+          }
+
+          showFormMsg('댓글이 등록되었습니다. 검토 후 표시됩니다.', false);
+          form.reset();
+          resetReply();
+          if (bodyTa instanceof HTMLTextAreaElement && charEl) {
+            charEl.textContent = '0 / 500';
+          }
+        });
       })();
     </script>
 
@@ -573,6 +1223,78 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
     </script>
 
     <script define:vars={{ pageUrl, contentId: slug }}>
+      const READING_MODE_LS = 'sreborn_blog_reading_mode_v1';
+
+      function isEditableTarget(el) {
+        if (!el || !(el instanceof HTMLElement)) return false;
+        const t = el.tagName;
+        if (t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT') return true;
+        return el.isContentEditable;
+      }
+
+      function reportModalOpen() {
+        const modal = document.querySelector('[data-post-report-modal]');
+        return modal instanceof HTMLElement && !modal.hidden;
+      }
+
+      function setReadingMode(on) {
+        document.body.classList.toggle('reading-mode', on);
+        const bar = document.getElementById('blog-reading-mode-exit');
+        if (bar instanceof HTMLElement) {
+          if (on) bar.removeAttribute('hidden');
+          else bar.setAttribute('hidden', '');
+        }
+        try {
+          localStorage.setItem(READING_MODE_LS, on ? '1' : '0');
+        } catch {
+          /* ignore */
+        }
+      }
+
+      function syncReadingModeFromStorage() {
+        let on = false;
+        try {
+          on = localStorage.getItem(READING_MODE_LS) === '1';
+        } catch {
+          /* ignore */
+        }
+        setReadingMode(on);
+      }
+
+      syncReadingModeFromStorage();
+
+      const readingExit = document.getElementById('blog-reading-mode-exit');
+      readingExit?.addEventListener('click', () => setReadingMode(false));
+      readingExit?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setReadingMode(false);
+        }
+      });
+
+      document.getElementById('blog-reading-mode-btn')?.addEventListener('click', () => {
+        const next = !document.body.classList.contains('reading-mode');
+        setReadingMode(next);
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          if (reportModalOpen()) return;
+          if (document.body.classList.contains('reading-mode')) {
+            e.preventDefault();
+            setReadingMode(false);
+          }
+          return;
+        }
+        if (e.key === 'f' || e.key === 'F' || e.key === 'r' || e.key === 'R') {
+          if (e.ctrlKey || e.metaKey || e.altKey) return;
+          if (isEditableTarget(document.activeElement)) return;
+          e.preventDefault();
+          const next = !document.body.classList.contains('reading-mode');
+          setReadingMode(next);
+        }
+      });
+
       const tw = document.querySelector('a.blog-post-share-btn.share-btn.twitter');
       tw?.addEventListener('click', () => {
         globalThis.gtag?.('event', 'share', { method: 'twitter', content_id: contentId });
@@ -583,6 +1305,44 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
 
       document.getElementById('blog-print-btn')?.addEventListener('click', () => {
         window.print();
+      });
+
+      function downloadBaseName(article) {
+        const raw = article?.getAttribute('data-download-slug') || contentId || 'post';
+        return raw.replace(/\//g, '-');
+      }
+
+      document.getElementById('blog-md-download-btn')?.addEventListener('click', () => {
+        const article = document.querySelector('article.blog-post-article');
+        const raw = article?.getAttribute('data-markdown');
+        if (!raw) return;
+        let markdownContent;
+        try {
+          markdownContent = decodeURIComponent(raw);
+        } catch {
+          return;
+        }
+        const blob = new Blob([markdownContent], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${downloadBaseName(article)}.md`;
+        a.click();
+        URL.revokeObjectURL(url);
+        globalThis.gtag?.('event', 'share', { method: 'download_md', content_id: contentId });
+      });
+
+      document.getElementById('blog-txt-download-btn')?.addEventListener('click', () => {
+        const article = document.querySelector('article.blog-post-article');
+        const text = document.querySelector('.prose')?.innerText ?? '';
+        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${downloadBaseName(article)}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+        globalThis.gtag?.('event', 'share', { method: 'download_txt', content_id: contentId });
       });
 
       copyButton?.addEventListener('click', async () => {
@@ -619,6 +1379,255 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
 </html>
 
 <style>
+  .blog-post-related {
+    margin: 2rem 0 0;
+    padding: 1.25rem 0 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .blog-post-related-title {
+    margin: 0 0 0.75rem;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--text);
+  }
+
+  .blog-post-related-status {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--t2);
+  }
+
+  .blog-post-related-list {
+    list-style: none;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .blog-post-related-item {
+    margin: 0;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    background: var(--bg2, rgba(0, 0, 0, 0.03));
+  }
+
+  .blog-post-related-link {
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: var(--accent-dark, #8b6914);
+    text-decoration: none;
+  }
+
+  .blog-post-related-link:hover {
+    text-decoration: underline;
+  }
+
+  .blog-post-related-desc {
+    margin: 0.4rem 0 0;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--t2);
+  }
+
+  .blog-post-related-meta {
+    margin: 0.35rem 0 0;
+    font-size: 0.8rem;
+    color: var(--t2);
+  }
+
+  .blog-post-related-cat {
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .blog-post-comments {
+    margin: 2rem 0 0;
+    padding: 1.25rem 0 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .blog-post-comments-heading {
+    margin: 0 0 1rem;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--text);
+  }
+
+  .blog-post-comments-list {
+    list-style: none;
+    margin: 0 0 1.25rem;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .blog-post-comment-item--reply {
+    margin-left: 1.25rem;
+    padding-left: 1rem;
+    border-left: 3px solid var(--rule);
+  }
+
+  .blog-post-comment-card {
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    background: var(--bg2, rgba(0, 0, 0, 0.03));
+  }
+
+  .blog-post-comment-head {
+    font-size: 0.86rem;
+    color: var(--t2);
+    margin-bottom: 0.45rem;
+  }
+
+  .blog-post-comment-author {
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .blog-post-comment-body {
+    margin: 0;
+    font-size: 0.92rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .blog-post-comment-reply-btn {
+    margin-top: 0.55rem;
+    padding: 0.25rem 0.65rem;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border: none;
+    background: transparent;
+    color: var(--accent-dark);
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  .blog-post-comment-reply-btn:hover {
+    color: var(--accent);
+  }
+
+  .blog-post-comment-replies {
+    list-style: none;
+    margin: 0.65rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .blog-post-comments-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-width: 36rem;
+  }
+
+  .blog-post-comments-reply-hint {
+    margin: 0;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--accent-dark);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .blog-post-comments-cancel-reply {
+    font: inherit;
+    font-size: 0.82rem;
+    border: none;
+    background: none;
+    color: var(--t2);
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  .blog-post-comments-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.88rem;
+  }
+
+  .blog-post-comments-label {
+    font-weight: 600;
+    color: var(--t2);
+  }
+
+  .blog-post-comments-input,
+  .blog-post-comments-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.5rem 0.6rem;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--bg2, #f8f8f8);
+    color: var(--text);
+    font: inherit;
+  }
+
+  :global(html[data-theme='dark'] .blog-post-comments-input),
+  :global(html[data-theme='dark'] .blog-post-comments-textarea) {
+    background: rgba(0, 0, 0, 0.2);
+  }
+
+  .blog-post-comments-textarea {
+    resize: vertical;
+    min-height: 5rem;
+  }
+
+  .blog-post-comments-char {
+    font-size: 0.78rem;
+    color: var(--t3);
+    text-align: right;
+  }
+
+  .blog-post-comments-submit {
+    align-self: flex-start;
+    min-height: 44px;
+    padding: 0.5rem 1.15rem;
+    border-radius: 10px;
+    border: 1px solid var(--accent, #b8956a);
+    background: var(--accent, #b8956a);
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  .blog-post-comments-submit:hover:not(:disabled) {
+    filter: brightness(1.05);
+  }
+
+  .blog-post-comments-form-msg {
+    margin: 0 0 0.5rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+
+  .blog-post-comments-form-msg[data-state='error'] {
+    color: #b42318;
+  }
+
+  :global(html[data-theme='dark'] .blog-post-comments-form-msg[data-state='error']) {
+    color: #f97066;
+  }
+
+  .blog-post-comments-form-msg[data-state='success'] {
+    color: var(--accent-dark, #5c4a32);
+  }
+
   .blog-post-tag-cloud-wrap {
     margin: 2rem 0 0;
     padding-top: 1.5rem;
@@ -1076,5 +2085,76 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
   .post-report-btn:disabled {
     opacity: 0.65;
     cursor: wait;
+  }
+
+  /* 집중 읽기 모드 — 화면 전용(.reading-mode), 인쇄는 blog-print.css에서 별도 처리 */
+  .blog-reading-mode-exit-bar[hidden] {
+    display: none !important;
+  }
+
+  body.blog-post-shell.reading-mode .topbar,
+  body.blog-post-shell.reading-mode .blog-sidebar,
+  body.blog-post-shell.reading-mode .site-footer {
+    display: none !important;
+  }
+
+  body.blog-post-shell.reading-mode .blog-content.blog-post-main {
+    max-width: 700px;
+    margin-inline: auto;
+    padding-left: 1.75rem;
+    padding-right: 1.75rem;
+    padding-bottom: 3rem;
+  }
+
+  body.blog-post-shell.reading-mode .blog-post-prose.prose {
+    font-size: 1.15rem;
+    line-height: 1.75;
+  }
+
+  body.blog-post-shell.reading-mode .site-main.blog-with-sidebar {
+    padding-top: 3.25rem;
+  }
+
+  body.blog-post-shell.reading-mode .blog-reading-mode-exit-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10070;
+    min-height: 2.75rem;
+    padding: 0.5rem 1rem;
+    box-sizing: border-box;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    background: var(--surface, #fff);
+    color: var(--text);
+    border-bottom: 1px solid var(--rule);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+  }
+
+  :global(html[data-theme='dark'] body.blog-post-shell.reading-mode .blog-reading-mode-exit-bar) {
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  }
+
+  .blog-post-article :global(aside.disclaimer) {
+    border-left: 3px solid var(--accent-pink);
+    padding: 0.75rem 1rem;
+    margin: 0.5rem 0 1rem;
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: var(--t2);
+    background: rgba(0, 0, 0, 0.02);
+  }
+
+  :global(html[data-theme='dark'] .blog-post-article aside.disclaimer) {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .blog-post-article :global(aside.disclaimer p) {
+    margin: 0;
   }
 </style>
