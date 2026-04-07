@@ -15,17 +15,37 @@ const clinicPosts = allPosts.filter((p) => !isAcademyBlogPost(p));
 const publicSettings = await getPublicSiteSettings();
 const featuredSlugConfigured = publicSettings.featuredSlug?.trim() || '';
 
-let featuredPost =
+const adminFeaturedMatch =
   featuredSlugConfigured.length > 0
     ? clinicPosts.find((p) => p.id === featuredSlugConfigured)
-    : null;
-if (!featuredPost && clinicPosts.length > 0) {
-  featuredPost = clinicPosts[0];
-}
+    : undefined;
+/** 관리자 설정으로 글이 지정된 경우에만 고정 (slug 오타 등으로 못 찾으면 자동 랜덤 허용) */
+const isFeaturedLocked = Boolean(adminFeaturedMatch);
+
+let featuredPost = adminFeaturedMatch ?? (clinicPosts.length > 0 ? clinicPosts[0] : null);
+
+const FEATURED_RANDOM_POOL_MAX = 30;
+const featuredRandomPool = !isFeaturedLocked
+  ? clinicPosts.slice(0, FEATURED_RANDOM_POOL_MAX).map((p) => ({
+      id: p.id,
+      title: p.data.title,
+      description: p.data.description,
+      thumbnail: p.data.thumbnail?.trim() || '',
+      categoryLabel:
+        p.data.category != null
+          ? CATEGORIES.find((c) => c.id === p.data.category)?.label ?? p.data.category
+          : '',
+      href: postPermalink(p),
+    }))
+  : [];
+const featuredRandomPoolJson =
+  featuredRandomPool.length > 1
+    ? JSON.stringify(featuredRandomPool).replace(/</g, '\\u003c')
+    : '';
 
 const latestPosts = clinicPosts
   .filter((p) => !featuredPost || p.id !== featuredPost.id)
-  .slice(0, 6);
+  .slice(0, 20);
 const academyPreview = allPosts.filter(isAcademyBlogPost).slice(0, 3);
 const doctorColumn = allPosts.filter(p => p.data.category === 'doctor-column').slice(0, 3);
 const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
@@ -47,16 +67,28 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
     </div>
   </section>
 
-  <!-- 피처드 글 (site_settings.homepage.featured_slug, 없으면 클리닉 최신 1편) -->
+  <!-- 피처드 글 (site_settings.homepage.featured_slug, 없으면 클리닉 최신 1편을 초기값으로 두고 풀에서 랜덤 교체) -->
   {featuredPost && (
     <section class="section featured-section">
       <div class="section-header">
         <h2 class="section-title">추천 콘텐츠</h2>
         <a href="/blog/" class="section-more">클리닉 블로그 전체 글 보기 →</a>
       </div>
-      <a href={postPermalink(featuredPost)} class="featured-hero-card" data-home-slug={featuredPost.id}>
-        {featuredPost.data.thumbnail && (
-          <div class="featured-hero-thumb">
+      {featuredRandomPoolJson && (
+        <script type="application/json" id="featured-random-pool" set:html={featuredRandomPoolJson} />
+      )}
+      <a
+        href={postPermalink(featuredPost)}
+        class="featured-hero-card"
+        data-featured-card
+        data-home-slug={featuredPost.id}
+      >
+        <div
+          class="featured-hero-thumb"
+          data-featured-thumb
+          style={featuredPost.data.thumbnail ? undefined : 'display: none'}
+        >
+          {featuredPost.data.thumbnail && (
             <ContentImage
               src={featuredPost.data.thumbnail}
               alt={featuredPost.data.title}
@@ -66,19 +98,23 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
               decoding="async"
               fetchpriority="high"
             />
-          </div>
-        )}
+          )}
+        </div>
         <div class="featured-hero-body">
           <div class="featured-hero-meta-row">
-            {featuredPost.data.category && (
-              <span class="featured-hero-cat">
-                {CATEGORIES.find((c) => c.id === featuredPost.data.category)?.label ?? featuredPost.data.category}
-              </span>
-            )}
+            <span
+              class="featured-hero-cat"
+              data-featured-cat
+              hidden={!featuredPost.data.category}
+            >
+              {featuredPost.data.category
+                ? CATEGORIES.find((c) => c.id === featuredPost.data.category)?.label ?? featuredPost.data.category
+                : ''}
+            </span>
             <span class="featured-hero-views" data-home-view-badge aria-label="조회수">조회 —</span>
           </div>
-          <h3 class="featured-hero-title">{featuredPost.data.title}</h3>
-          <p class="featured-hero-desc">{featuredPost.data.description}</p>
+          <h3 class="featured-hero-title" data-featured-title>{featuredPost.data.title}</h3>
+          <p class="featured-hero-desc" data-featured-desc>{featuredPost.data.description}</p>
           <span class="featured-hero-cta">자세히 읽기 →</span>
         </div>
       </a>
@@ -141,9 +177,9 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
         <h2 class="section-title">최신 콘텐츠</h2>
         <a href="/blog/" class="section-more">최신 콘텐츠 전체 보기 →</a>
       </div>
-      <div class="post-grid">
+      <div class="post-grid" data-latest-grid>
         {latestPosts.map(post => (
-          <a href={postPermalink(post)} class="post-card" data-home-slug={post.id}>
+          <a href={postPermalink(post)} class="post-card" data-home-slug={post.id} data-latest-card>
             {post.data.thumbnail && (
               <div class="post-card-thumb">
                 <img src={post.data.thumbnail} alt={post.data.title} loading="lazy" />
@@ -949,6 +985,65 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
   const url = import.meta.env.PUBLIC_SUPABASE_URL;
   const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
+  function applyRandomFeaturedFromPool() {
+    const jsonEl = document.getElementById('featured-random-pool');
+    const root = document.querySelector('[data-featured-card]');
+    if (!jsonEl || !root) return;
+    let pool;
+    try {
+      pool = JSON.parse(jsonEl.textContent || '[]');
+    } catch {
+      return;
+    }
+    if (!Array.isArray(pool) || pool.length < 2) return;
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    root.setAttribute('href', pick.href);
+    root.dataset.homeSlug = pick.id;
+
+    const titleEl = root.querySelector('[data-featured-title]');
+    const descEl = root.querySelector('[data-featured-desc]');
+    const catEl = root.querySelector('[data-featured-cat]');
+    const thumbWrap = root.querySelector('[data-featured-thumb]');
+
+    if (titleEl) titleEl.textContent = pick.title;
+    if (descEl) descEl.textContent = pick.description;
+
+    if (catEl) {
+      if (pick.categoryLabel) {
+        catEl.textContent = pick.categoryLabel;
+        catEl.hidden = false;
+      } else {
+        catEl.textContent = '';
+        catEl.hidden = true;
+      }
+    }
+
+    if (thumbWrap) {
+      if (pick.thumbnail) {
+        thumbWrap.textContent = '';
+        const img = document.createElement('img');
+        img.src = pick.thumbnail;
+        img.alt = pick.title;
+        img.width = 960;
+        img.height = 540;
+        img.loading = 'eager';
+        img.decoding = 'async';
+        img.setAttribute('fetchpriority', 'high');
+        thumbWrap.appendChild(img);
+        thumbWrap.style.display = '';
+      } else {
+        thumbWrap.textContent = '';
+        thumbWrap.style.display = 'none';
+      }
+    }
+
+    document.querySelectorAll('.post-grid [data-home-slug]').forEach((node) => {
+      if (node instanceof HTMLElement && node.dataset.homeSlug === pick.id) {
+        node.closest('.post-card')?.remove();
+      }
+    });
+  }
+
   async function fillHomeViewBadges() {
     if (!url || !key) return;
     const roots = document.querySelectorAll('[data-home-slug]');
@@ -967,5 +1062,23 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
     });
   }
 
+  function shuffleLatestGrid() {
+    const grid = document.querySelector('[data-latest-grid]');
+    if (!grid) return;
+    const cards = [...grid.querySelectorAll('[data-latest-card]')];
+    if (cards.length <= 6) return;
+    // Fisher-Yates shuffle — re-append in random order
+    for (let i = cards.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [cards[i], cards[j]] = [cards[j], cards[i]];
+    }
+    cards.forEach((card, idx) => {
+      grid.appendChild(card);
+      (card as HTMLElement).style.display = idx < 6 ? '' : 'none';
+    });
+  }
+
+  applyRandomFeaturedFromPool();
+  shuffleLatestGrid();
   fillHomeViewBadges();
 </script>
