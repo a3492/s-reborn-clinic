@@ -90,6 +90,34 @@ export const onRequestGet = async ({ env }: any) => {
     checks.push(result('github_branch', 'GitHub Branch Access', 'error', error?.message || 'GitHub branch 연결 실패'));
   }
 
-  const ok = checks.every((check) => check.status === 'ok');
+  const kv = env.SITE_CACHE as KVNamespace | undefined;
+  if (!kv) {
+    checks.push(
+      result(
+        'site_cache_kv',
+        'SITE_CACHE KV',
+        'warn',
+        'SITE_CACHE 바인딩이 없습니다. /api/cached/* 는 Supabase 직조회로 동작합니다.',
+      ),
+    );
+  } else {
+    const probeKey = `__health_kv_${Date.now()}`;
+    try {
+      await kv.put(probeKey, JSON.stringify({ ping: true }), { expirationTtl: 120 });
+      const got = await kv.get(probeKey, { type: 'json' });
+      await kv.delete(probeKey);
+      if (got && typeof got === 'object' && (got as { ping?: boolean }).ping === true) {
+        checks.push(result('site_cache_kv', 'SITE_CACHE KV', 'ok', 'put/get/delete 프로브 성공'));
+      } else {
+        checks.push(result('site_cache_kv', 'SITE_CACHE KV', 'warn', 'KV 응답 형식이 예상과 다릅니다.'));
+      }
+    } catch (error: any) {
+      checks.push(
+        result('site_cache_kv', 'SITE_CACHE KV', 'warn', error?.message || 'KV put/get 테스트 실패'),
+      );
+    }
+  }
+
+  const ok = checks.every((check) => check.status !== 'error');
   return Response.json({ ok, checks, repo, branch });
 };

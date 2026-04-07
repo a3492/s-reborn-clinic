@@ -31,6 +31,76 @@
 
 ---
 
+## 최근 작업 스냅샷 (갱신일: 2026-04-08)
+
+### 레포 / 브랜치
+- **경로**: `c:\dev\s-reborn-clinic`
+- **브랜치**: `main`
+- **사이트 URL**: `https://s-reborn-clinic.pages.dev`
+
+### 완료된 작업 요약 (2026-04-05 ~ 2026-04-08)
+
+#### 시술 안내 페이지 (`/procedures`) — 모노폴라 RF 콘텐츠 기초작업
+- `src/content/procedures/monopolar-rf.md` — 메인 카드 (제목: "모노폴라 / 바이폴라 RF", slug: `monopolar-rf`)
+- `monopolar-rf--overview.md` — RF 원리·모노폴라 vs 바이폴라 비교·콜라겐 기전 (topic_order: 1)
+- `monopolar-rf--equipment.md` — 써마지 FLX / 비너스 레거시 / 폴라리스 장비 비교·치료팁 종류 (topic_order: 2)
+- `monopolar-rf--protocol.md` — 시술 전 준비, 패스 방식, 횟수·간격 프로토콜, 시술 후 관리 (topic_order: 3)
+- `monopolar-rf--combination.md` — RF+HIFU / 보톡스 / 필러 / 스킨부스터 병합 전략·순서 (topic_order: 4)
+- `monopolar-rf--faq.md` — 자주 묻는 질문 10개 (효과 시점, 통증, 횟수, HIFU 비교 등) (topic_order: 5)
+- `procedure-catalog.ts`에 `monopolar-rf` slug 연결 완료
+
+#### 시술 페이지 인프라
+- `src/layouts/ProcedurePage.astro` — `WebVitalsCollector` 컴포넌트 추가
+- `src/pages/procedures.astro` 삭제 → `src/pages/procedures/index.astro` + `[slug].astro` 로 분리 (이전 커밋)
+- OG 이미지 동적 생성: `functions/api/og/[slug].ts`, `functions/api/admin/og-fetch.ts`
+- FAQPage JSON-LD Schema, 블로그-시술 연결 링크 (이전 커밋)
+
+#### 신규 기능 (커밋된 것 포함)
+- **WebVitals 수집**: `src/components/WebVitalsCollector.astro`, `src/lib/web-vitals-client.ts`, `functions/api/vitals.ts`, `supabase/web_vitals.sql`
+- **Poll(투표) 컴포넌트**: `src/components/Poll.astro`, `supabase/polls.sql`
+- **관리자 커맨드 팔레트**: `src/components/admin/CommandPalette.astro`
+- **관리자 알림 센터**: `src/pages/admin/notifications/`
+- **게시물 템플릿**: `src/pages/admin/templates/`, `supabase/post_templates.sql`
+- **게시물 버전 관리**: `supabase/post_versions.sql`
+- **RSS 피드**: `src/pages/rss/`, `src/lib/rss-feed.ts`
+- **검색 페이지**: `src/pages/search.astro`
+- **i18n 기반**: `src/i18n/`
+- **블로그 TOC**: `src/lib/blog-post-toc.ts`
+- **블로그 마크다운 다운로드**: `src/lib/blog-post-download-markdown.ts`
+- **면책조항(Disclaimers)**: `src/lib/disclaimers.ts`, `supabase/disclaimers.sql`, `src/pages/api/admin/disclaimers.ts`
+- **회원 페이지**: `src/pages/my/`
+- **파일 업로드 API**: `functions/api/admin/upload.ts`
+- **계정 삭제 API**: `functions/api/delete-account.ts`
+- **구독 해지 API**: `functions/api/unsubscribe.ts`
+- **Cached API**: `functions/api/cached/`
+- **Functions 공통 라이브러리**: `functions/lib/`
+- **robots.txt**: `public/robots.txt` (정적 파일), `src/pages/robots.txt.ts` 삭제
+- **wrangler.toml**: KV 네임스페이스 바인딩 설정
+- **Supabase 마이그레이션**: `20260406_comments_user_id`, `20260412_admin_profiles_receive_report`
+- **페이비콘**: SC 대각선 분할 금색/핑크 SVG
+
+#### 콘텐츠
+- 클리닉 뉴스: `thermage-key-doctor.md` (써마지 핵심 의사 관련)
+- 블로그 콘텐츠 전반 메타데이터 보강 (doctor-column, faq, health-tips, myth, procedures 계열)
+
+### 빌드
+- 마지막 확인 빌드: `npm run build` — 통과 예상 (WebVitalsCollector 신규 컴포넌트 추가 후 미확인)
+
+### 알려둘 이슈 / 기술 부채
+- `wrangler.toml`의 KV 네임스페이스 ID가 `YOUR_KV_NAMESPACE_ID` 플레이스홀더 상태 → 실제 사용 시 Cloudflare 대시보드에서 ID 발급 후 교체 필요
+- i18n 기반(`src/i18n/`)만 추가됨 — 실제 다국어 전환 UI는 미구현
+- `src/pages/my/` 회원 페이지 뼈대만 있음 — Supabase Auth 연동 추가 필요
+- 모노폴라 RF 시술 안내 페이지는 콘텐츠 완성 상태이나 실제 배포 후 `/procedures/monopolar-rf` URL에서 렌더링 검증 필요
+
+### 다음 작업 아이디어
+- 모노폴라 RF 외 미작성 시술 안내 항목 콘텐츠 작성 (마이크로니들 RF, 바디 RF, 집속형 RF 등)
+- WebVitals 대시보드 관리자 페이지 추가
+- 검색 페이지(`/search`) 벡터 검색 연결 (Supabase `match_posts`)
+- i18n 다국어 실제 구현 (EN/KO 전환)
+- Poll 투표 컴포넌트 블로그 글에 삽입 테스트
+
+---
+
 ## 최근 작업 스냅샷 (갱신일: 2026-04-04)
 
 ### 레포 / 브랜치

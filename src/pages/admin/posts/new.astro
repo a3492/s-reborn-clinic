@@ -25,6 +25,14 @@ import { CATEGORIES } from '../../../consts';
 
       <form id="admin-post-form" class="admin-form-grid" data-admin-post-form>
         <div class="admin-field full">
+          <label class="admin-label" for="admin-start-template">템플릿으로 시작</label>
+          <select id="admin-start-template" class="admin-select" data-admin-template-select>
+            <option value="">선택 안 함</option>
+          </select>
+          <span class="admin-help">템플릿을 고르면 본문·글 유형·태그를 채웁니다. 제목·설명은 그대로 둡니다.</span>
+        </div>
+
+        <div class="admin-field full">
           <label class="admin-label" for="title">제목</label>
           <input id="title" name="title" class="admin-input" type="text" placeholder="글 제목을 입력하세요." required />
         </div>
@@ -195,12 +203,73 @@ import { CATEGORIES } from '../../../consts';
       setMessage('Supabase 환경 변수가 없어 저장 기능을 초기화할 수 없습니다.', 'error');
     } else {
       let currentSessionUserId = null;
+      let supabase = null;
+
+      const loadTemplateOptions = async () => {
+        const sel = document.querySelector('[data-admin-template-select]');
+        if (!(sel instanceof HTMLSelectElement) || !supabase) return;
+        while (sel.options.length > 1) sel.remove(1);
+        const { data, error } = await supabase
+          .from('post_templates')
+          .select('id, name')
+          .order('created_at', { ascending: false });
+        if (error || !data?.length) return;
+        for (const t of data) {
+          const opt = document.createElement('option');
+          opt.value = t.id;
+          opt.textContent = t.name;
+          sel.appendChild(opt);
+        }
+      };
+
       document.addEventListener('admin:session-ready', ({ detail }) => {
         supabase = window.__adminSupabase;
         currentSessionUserId = detail.userId;
+        void loadTemplateOptions();
       });
 
-      let supabase = null;
+      document.querySelector('[data-admin-template-select]')?.addEventListener('change', async (e) => {
+        const sel = e.target;
+        if (!(sel instanceof HTMLSelectElement)) return;
+        const id = sel.value;
+        if (!id) return;
+        if (!supabase) {
+          setMessage('세션이 준비될 때까지 잠시 후 다시 선택해 주세요.', 'error');
+          sel.value = '';
+          return;
+        }
+        const titleEl = document.getElementById('title');
+        const descEl = document.getElementById('description');
+        const bodyEl = document.getElementById('body');
+        const hasExisting = [titleEl, descEl, bodyEl].some(
+          (el) => el && 'value' in el && String(el.value ?? '').trim(),
+        );
+        if (hasExisting && !confirm('기존 내용을 덮어씁니다. 계속할까요?')) {
+          sel.value = '';
+          return;
+        }
+        const { data: t, error } = await supabase.from('post_templates').select('*').eq('id', id).maybeSingle();
+        sel.value = '';
+        if (error || !t) {
+          setMessage(error?.message || '템플릿을 불러오지 못했습니다.', 'error');
+          return;
+        }
+        const catEl = document.getElementById('category');
+        if (t.category && catEl instanceof HTMLSelectElement) {
+          const ok = [...catEl.options].some((o) => o.value === t.category);
+          if (ok) catEl.value = t.category;
+        }
+        if (bodyEl instanceof HTMLTextAreaElement) {
+          bodyEl.value = String(t.body_markdown ?? '');
+        }
+        const tagsEl = document.getElementById('tags');
+        if (tagsEl instanceof HTMLInputElement) {
+          const arr = Array.isArray(t.default_tags) ? t.default_tags.map(String) : [];
+          tagsEl.value = arr.join(', ');
+        }
+        syncPreview();
+        setMessage('템플릿을 적용했습니다.', 'success');
+      });
 
       form?.addEventListener('submit', async (event) => {
         event.preventDefault();

@@ -1,0 +1,406 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { CATEGORIES } from '../../../consts';
+---
+
+<AdminLayout
+  title="Post Templates"
+  pageTitle="글 템플릿"
+  pageDescription="반복되는 글 형식을 템플릿으로 저장하고 새 글 작성 시 불러옵니다."
+  status="Templates"
+>
+  <div class="admin-card pad-lg">
+    <div class="admin-actions-row">
+      <div>
+        <h2 class="admin-section-title">템플릿 목록</h2>
+        <p class="admin-section-desc">이름·카테고리·본문은 Supabase에만 저장됩니다.</p>
+      </div>
+      <button type="button" class="admin-btn primary" data-admin-template-new>새 템플릿</button>
+    </div>
+
+    <p class="admin-inline-note" data-admin-templates-msg hidden></p>
+
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>이름</th>
+            <th>카테고리</th>
+            <th>생성일</th>
+            <th>작업</th>
+          </tr>
+        </thead>
+        <tbody data-admin-templates-body>
+          <tr>
+            <td colspan="4">불러오는 중…</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div
+    class="post-version-modal-root"
+    data-admin-template-modal
+    hidden
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="admin-template-modal-title"
+  >
+    <div class="post-version-modal-backdrop" data-admin-template-modal-close tabindex="-1" aria-hidden="true"></div>
+    <div class="post-version-modal-box post-version-modal-box--wide">
+      <div class="post-version-modal-head">
+        <h2 id="admin-template-modal-title" class="post-version-modal-title" data-admin-template-modal-heading>
+          새 템플릿
+        </h2>
+        <button type="button" class="post-version-modal-x" data-admin-template-modal-close aria-label="닫기">×</button>
+      </div>
+      <input type="hidden" data-admin-template-edit-id value="" />
+      <label class="admin-label" for="admin-template-name">이름</label>
+      <input id="admin-template-name" class="admin-input" type="text" maxlength="200" data-admin-template-name required />
+      <label class="admin-label" for="admin-template-desc" style="margin-top: 0.65rem">설명 (선택)</label>
+      <textarea
+        id="admin-template-desc"
+        class="admin-textarea"
+        rows="2"
+        maxlength="500"
+        data-admin-template-desc
+      ></textarea>
+      <label class="admin-label" for="admin-template-category" style="margin-top: 0.65rem">기본 글 유형</label>
+      <select id="admin-template-category" class="admin-select" data-admin-template-category>
+        <option value="">(없음)</option>
+        {CATEGORIES.map((c) => (
+          <option value={c.id}>{c.label}</option>
+        ))}
+      </select>
+      <label class="admin-label" for="admin-template-tags" style="margin-top: 0.65rem">기본 태그 (쉼표)</label>
+      <input id="admin-template-tags" class="admin-input" type="text" data-admin-template-tags placeholder="ai, tip" />
+      <label class="admin-label" for="admin-template-body" style="margin-top: 0.65rem">본문 Markdown</label>
+      <textarea id="admin-template-body" class="admin-textarea" rows="12" data-admin-template-body required></textarea>
+      <p class="admin-help admin-help-error" data-admin-template-form-msg hidden></p>
+      <div class="post-version-modal-actions">
+        <button type="button" class="admin-btn" data-admin-template-modal-cancel>취소</button>
+        <button type="button" class="admin-btn primary" data-admin-template-modal-save>저장</button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .post-version-modal-root[hidden] {
+      display: none !important;
+    }
+
+    .post-version-modal-root:not([hidden]) {
+      position: fixed;
+      inset: 0;
+      z-index: 10040;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 0.75rem;
+      box-sizing: border-box;
+    }
+
+    @media (min-width: 560px) {
+      .post-version-modal-root:not([hidden]) {
+        align-items: center;
+      }
+    }
+
+    .post-version-modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+    }
+
+    .post-version-modal-box {
+      position: relative;
+      width: min(100%, 26rem);
+      max-height: min(88vh, 28rem);
+      overflow: auto;
+      margin: 0;
+      padding: 1.1rem 1.15rem 1.15rem;
+      border-radius: 14px;
+      border: 1px solid var(--admin-border, #e0d8cc);
+      background: var(--admin-surface, #fff);
+      color: var(--admin-text, #1a1a1a);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+    }
+
+    .post-version-modal-box--wide {
+      width: min(100%, 40rem);
+      max-height: min(90vh, 36rem);
+    }
+
+    .post-version-modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0.65rem;
+    }
+
+    .post-version-modal-title {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 800;
+    }
+
+    .post-version-modal-x {
+      border: none;
+      background: transparent;
+      font-size: 1.5rem;
+      line-height: 1;
+      cursor: pointer;
+      color: var(--admin-text-2, #666);
+      padding: 0.15rem 0.35rem;
+      border-radius: 6px;
+    }
+
+    .post-version-modal-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: flex-end;
+      margin-top: 1rem;
+    }
+  </style>
+
+  <script>
+    import { createClient } from '@supabase/supabase-js';
+
+    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+    const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+    const tbody = document.querySelector('[data-admin-templates-body]');
+    const msg = document.querySelector('[data-admin-templates-msg]');
+    const modal = document.querySelector('[data-admin-template-modal]');
+    const heading = document.querySelector('[data-admin-template-modal-heading]');
+    const editIdInput = document.querySelector('[data-admin-template-edit-id]');
+    const nameInput = document.querySelector('[data-admin-template-name]');
+    const descInput = document.querySelector('[data-admin-template-desc]');
+    const catSelect = document.querySelector('[data-admin-template-category]');
+    const tagsInput = document.querySelector('[data-admin-template-tags]');
+    const bodyInput = document.querySelector('[data-admin-template-body]');
+    const formMsg = document.querySelector('[data-admin-template-form-msg]');
+
+    const getCurrentRole = () => document.body.dataset.adminRole || '';
+
+    const escapeHtml = (v) =>
+      String(v ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;');
+
+    const setMsg = (text, state = 'info') => {
+      if (!(msg instanceof HTMLElement)) return;
+      if (!text) {
+        msg.hidden = true;
+        msg.textContent = '';
+        delete msg.dataset.state;
+        return;
+      }
+      msg.hidden = false;
+      msg.textContent = text;
+      msg.dataset.state = state;
+    };
+
+    const setFormMsg = (text) => {
+      if (!(formMsg instanceof HTMLElement)) return;
+      if (!text) {
+        formMsg.hidden = true;
+        formMsg.textContent = '';
+        return;
+      }
+      formMsg.hidden = false;
+      formMsg.textContent = text;
+    };
+
+    const formatDate = (iso) => {
+      if (!iso) return '—';
+      try {
+        return new Intl.DateTimeFormat('ko-KR', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        }).format(new Date(iso));
+      } catch {
+        return '—';
+      }
+    };
+
+    const tagsFromDefault = (raw) => {
+      if (Array.isArray(raw)) return raw.map(String);
+      if (raw && typeof raw === 'object') return [];
+      return [];
+    };
+
+    let supabase = null;
+
+    const closeModal = () => {
+      if (modal instanceof HTMLElement) modal.hidden = true;
+      setFormMsg('');
+    };
+
+    const openModalNew = () => {
+      if (!(modal instanceof HTMLElement)) return;
+      if (heading) heading.textContent = '새 템플릿';
+      if (editIdInput instanceof HTMLInputElement) editIdInput.value = '';
+      if (nameInput instanceof HTMLInputElement) nameInput.value = '';
+      if (descInput instanceof HTMLTextAreaElement) descInput.value = '';
+      if (catSelect instanceof HTMLSelectElement) catSelect.value = '';
+      if (tagsInput instanceof HTMLInputElement) tagsInput.value = '';
+      if (bodyInput instanceof HTMLTextAreaElement) bodyInput.value = '';
+      setFormMsg('');
+      modal.hidden = false;
+      nameInput?.focus();
+    };
+
+    const openModalEdit = (row) => {
+      if (!(modal instanceof HTMLElement)) return;
+      if (heading) heading.textContent = '템플릿 편집';
+      if (editIdInput instanceof HTMLInputElement) editIdInput.value = row.id;
+      if (nameInput instanceof HTMLInputElement) nameInput.value = row.name ?? '';
+      if (descInput instanceof HTMLTextAreaElement) descInput.value = row.description ?? '';
+      if (catSelect instanceof HTMLSelectElement) catSelect.value = row.category ?? '';
+      if (tagsInput instanceof HTMLInputElement) tagsInput.value = tagsFromDefault(row.default_tags).join(', ');
+      if (bodyInput instanceof HTMLTextAreaElement) bodyInput.value = row.body_markdown ?? '';
+      setFormMsg('');
+      modal.hidden = false;
+      nameInput?.focus();
+    };
+
+    const loadList = async () => {
+      if (!supabase || !tbody) return;
+      const { data, error } = await supabase
+        .from('post_templates')
+        .select('id, name, category, created_at')
+        .order('created_at', { ascending: false });
+      if (error) {
+        tbody.innerHTML = `<tr><td colspan="4"><p class="admin-help admin-help-error">${escapeHtml(error.message)}</p></td></tr>`;
+        return;
+      }
+      const rows = data ?? [];
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="4"><p class="admin-help">등록된 템플릿이 없습니다.</p></td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows
+        .map(
+          (r) => `
+        <tr data-template-id="${escapeHtml(r.id)}">
+          <td>${escapeHtml(r.name)}</td>
+          <td>${escapeHtml(r.category ?? '—')}</td>
+          <td>${escapeHtml(formatDate(r.created_at))}</td>
+          <td>
+            <button type="button" class="admin-btn admin-btn-sm" data-admin-template-edit="${escapeHtml(r.id)}">편집</button>
+            <button type="button" class="admin-btn admin-btn-sm danger" data-admin-template-delete="${escapeHtml(r.id)}">삭제</button>
+          </td>
+        </tr>`,
+        )
+        .join('');
+    };
+
+    if (!supabaseUrl || !supabaseKey) {
+      if (tbody) tbody.innerHTML = '<tr><td colspan="4">Supabase 환경 변수가 없습니다.</td></tr>';
+    } else {
+      document.addEventListener('admin:session-ready', async () => {
+        supabase = window.__adminSupabase;
+        await loadList();
+      });
+
+      document.querySelector('[data-admin-template-new]')?.addEventListener('click', () => {
+        if (!getCurrentRole()) {
+          setMsg('권한 확인 후 다시 시도하세요.', 'error');
+          return;
+        }
+        openModalNew();
+      });
+
+      modal?.addEventListener('click', (e) => {
+        if (e.target.closest('[data-admin-template-modal-close]')) closeModal();
+        if (e.target.closest('[data-admin-template-modal-cancel]')) closeModal();
+      });
+
+      document.querySelector('[data-admin-template-modal-save]')?.addEventListener('click', async () => {
+        if (!supabase) return;
+        if (!getCurrentRole()) {
+          setFormMsg('권한이 없습니다.');
+          return;
+        }
+        const name = nameInput instanceof HTMLInputElement ? nameInput.value.trim() : '';
+        const bodyMd = bodyInput instanceof HTMLTextAreaElement ? bodyInput.value : '';
+        if (!name || !bodyMd.trim()) {
+          setFormMsg('이름과 본문은 필수입니다.');
+          return;
+        }
+        const desc = descInput instanceof HTMLTextAreaElement ? descInput.value.trim() : '';
+        const category = catSelect instanceof HTMLSelectElement ? catSelect.value.trim() : '';
+        const tags = (tagsInput instanceof HTMLInputElement ? tagsInput.value : '')
+          .split(',')
+          .map((t) => t.trim())
+          .filter(Boolean);
+        const uid = document.body.dataset.adminUserId ?? null;
+        const editId = editIdInput instanceof HTMLInputElement ? editIdInput.value.trim() : '';
+
+        setFormMsg('');
+        const payload = {
+          name,
+          description: desc || null,
+          category: category || null,
+          body_markdown: bodyMd,
+          default_tags: tags,
+        };
+
+        if (editId) {
+          const { error } = await supabase.from('post_templates').update(payload).eq('id', editId);
+          if (error) {
+            setFormMsg(error.message);
+            return;
+          }
+          setMsg('템플릿을 수정했습니다.', 'success');
+        } else {
+          const { error } = await supabase.from('post_templates').insert({
+            ...payload,
+            created_by: uid != null ? String(uid) : null,
+          });
+          if (error) {
+            setFormMsg(error.message);
+            return;
+          }
+          setMsg('템플릿을 만들었습니다.', 'success');
+        }
+        closeModal();
+        await loadList();
+      });
+
+      tbody?.addEventListener('click', async (e) => {
+        const del = e.target.closest('[data-admin-template-delete]');
+        const ed = e.target.closest('[data-admin-template-edit]');
+        if (!supabase) return;
+        if (del instanceof HTMLButtonElement) {
+          const id = del.getAttribute('data-admin-template-delete');
+          if (!id || !confirm('이 템플릿을 삭제할까요?')) return;
+          const { error } = await supabase.from('post_templates').delete().eq('id', id);
+          if (error) {
+            setMsg(error.message, 'error');
+            return;
+          }
+          setMsg('삭제했습니다.', 'success');
+          await loadList();
+          return;
+        }
+        if (ed instanceof HTMLButtonElement) {
+          const id = ed.getAttribute('data-admin-template-edit');
+          if (!id) return;
+          const { data, error } = await supabase.from('post_templates').select('*').eq('id', id).maybeSingle();
+          if (error || !data) {
+            setMsg(error?.message || '불러오지 못했습니다.', 'error');
+            return;
+          }
+          openModalEdit(data);
+        }
+      });
+    }
+  </script>
+</AdminLayout>

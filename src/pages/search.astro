@@ -1,0 +1,357 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Sidebar from '../components/Sidebar.astro';
+import { getCollection } from 'astro:content';
+import { CATEGORIES, SITE_TITLE } from '../consts';
+import { isAcademyBlogPost } from '../lib/academy';
+
+const allClinic = (await getCollection('blog', ({ data }) => !data.draft))
+	.filter((p) => !isAcademyBlogPost(p))
+	.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+
+const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label]));
+const recommendLinks = [
+	{ id: 'procedures', label: CATEGORIES.find((c) => c.id === 'procedures')?.label ?? '시술·치료' },
+	{ id: 'health-tips', label: CATEGORIES.find((c) => c.id === 'health-tips')?.label ?? '건강 정보' },
+	{ id: 'doctor-column', label: CATEGORIES.find((c) => c.id === 'doctor-column')?.label ?? '원장 칼럼' },
+];
+---
+
+<Layout title="검색" description={`${SITE_TITLE} — 블로그 통합 검색`}>
+	<div class="blog-layout">
+		<Sidebar tagCloudPosts={allClinic} />
+
+		<section class="blog-main" aria-labelledby="search-page-title">
+			<div class="blog-header">
+				<h1 class="blog-header-title" id="search-page-title">검색</h1>
+				<p class="blog-search-meta" data-search-summary hidden>
+					<span data-search-summary-text></span>
+				</p>
+			</div>
+
+			<div class="blog-search-skeleton-grid" data-search-skeleton>
+				{Array.from({ length: 3 }).map(() => (
+					<div class="blog-search-skeleton-card" aria-hidden="true">
+						<div class="blog-search-skeleton-thumb" />
+						<div class="blog-search-skeleton-line blog-search-skeleton-line--lg" />
+						<div class="blog-search-skeleton-line" />
+						<div class="blog-search-skeleton-line blog-search-skeleton-line--sm" />
+					</div>
+				))}
+			</div>
+
+			<div id="search-no-matches" class="blog-empty" hidden>
+				<p>검색 결과가 없습니다.</p>
+				<p class="blog-empty-hint">다른 키워드로 시도하거나 아래 카테고리를 둘러보세요.</p>
+				<div class="blog-search-recommend">
+					{recommendLinks.map((c) => (
+						<a href={`/blog/?category=${encodeURIComponent(c.id)}`} class="btn btn-outline btn-sm">
+							{c.label}
+						</a>
+					))}
+					<a href="/blog/" class="btn btn-outline btn-sm">
+						블로그 전체
+					</a>
+				</div>
+			</div>
+
+			<div class="blog-grid" id="search-results-grid" data-search-results hidden></div>
+			<p class="blog-search-error" data-search-error hidden></p>
+		</section>
+	</div>
+</Layout>
+
+<script define:vars={{ categoryLabels }}>
+	import { createClient } from '@supabase/supabase-js';
+	import { postHrefFromDbSlug } from '../lib/academy';
+
+	const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+	const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+	const skeletonEl = document.querySelector('[data-search-skeleton]');
+	const resultsEl = document.querySelector('[data-search-results]');
+	const emptyEl = document.getElementById('search-no-matches');
+	const summaryEl = document.querySelector('[data-search-summary]');
+	const summaryTextEl = document.querySelector('[data-search-summary-text]');
+	const errorEl = document.querySelector('[data-search-error]');
+
+	function highlightText(text: string, query: string): string {
+		const div = document.createElement('div');
+		div.textContent = text;
+		let escaped = div.innerHTML;
+		const terms = query
+			.trim()
+			.split(/\s+/)
+			.map((t) => t.trim())
+			.filter(Boolean);
+		if (!terms.length) return escaped;
+		const parts = terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(Boolean);
+		if (!parts.length) return escaped;
+		const pattern = new RegExp(`(${parts.join('|')})`, 'gi');
+		return escaped.replace(pattern, '<mark>$1</mark>');
+	}
+
+	function escapeHtmlAttr(s: string) {
+		return String(s || '')
+			.replace(/&/g, '&amp;')
+			.replace(/"/g, '&quot;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;');
+	}
+
+	function blogTagHref(tag: string) {
+		const t = String(tag || '').trim();
+		if (!t) return '/blog/';
+		return `/blog/tag/${encodeURIComponent(t)}/`;
+	}
+
+	function formatDate(iso: string | null) {
+		if (!iso) return '—';
+		try {
+			return new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' }).format(
+				new Date(iso),
+			);
+		} catch {
+			return '—';
+		}
+	}
+
+	function escapeIlikePattern(q: string) {
+		return q.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+	}
+
+	type Row = {
+		slug: string;
+		title: string;
+		description: string | null;
+		category: string | null;
+		tags: string[] | null;
+		published_at: string | null;
+		thumbnail_url: string | null;
+	};
+
+	async function runSearch(query: string) {
+		if (!supabaseUrl || !supabaseKey || !resultsEl) {
+			if (errorEl) {
+				errorEl.hidden = false;
+				errorEl.textContent = '검색을 사용할 수 없습니다. Supabase 공개 키를 확인하세요.';
+			}
+			skeletonEl?.setAttribute('hidden', '');
+			return;
+		}
+
+		const supabase = createClient(supabaseUrl, supabaseKey);
+		const q = query.trim();
+
+		if (!q) {
+			skeletonEl?.setAttribute('hidden', '');
+			resultsEl.hidden = true;
+			resultsEl.innerHTML = '';
+			emptyEl?.setAttribute('hidden', '');
+			summaryEl?.setAttribute('hidden', '');
+			if (errorEl) {
+				errorEl.hidden = true;
+				errorEl.textContent = '';
+			}
+			return;
+		}
+
+		skeletonEl?.removeAttribute('hidden');
+		resultsEl.hidden = true;
+		emptyEl?.setAttribute('hidden', '');
+		summaryEl?.setAttribute('hidden', '');
+		if (errorEl) {
+			errorEl.hidden = true;
+			errorEl.textContent = '';
+		}
+
+		const selectCols = 'slug, title, description, category, tags, published_at, thumbnail_url';
+
+		let rows: Row[] = [];
+
+		const tsRes = await supabase
+			.from('posts')
+			.select(selectCols)
+			.textSearch('search_vector', q, { type: 'websearch', config: 'simple' })
+			.eq('status', 'published')
+			.limit(20);
+
+		if (!tsRes.error) {
+			rows = (tsRes.data as Row[]) ?? [];
+		} else {
+			const esc = escapeIlikePattern(q);
+			const orFilter = `title.ilike.%${esc}%,description.ilike.%${esc}%`;
+			const fb = await supabase
+				.from('posts')
+				.select(selectCols)
+				.eq('status', 'published')
+				.or(orFilter)
+				.limit(20);
+			if (fb.error) {
+				skeletonEl?.setAttribute('hidden', '');
+				if (errorEl) {
+					errorEl.hidden = false;
+					errorEl.textContent = fb.error.message || '검색 요청에 실패했습니다.';
+				}
+				return;
+			}
+			rows = (fb.data as Row[]) ?? [];
+		}
+
+		skeletonEl?.setAttribute('hidden', '');
+
+		if (summaryEl && summaryTextEl) {
+			summaryEl.hidden = false;
+			summaryTextEl.textContent = '';
+			const strong = document.createElement('strong');
+			strong.textContent = `"${q}"`;
+			summaryTextEl.append(strong, ` 검색 결과 ${rows.length}개`);
+		}
+
+		if (rows.length === 0) {
+			resultsEl.innerHTML = '';
+			resultsEl.hidden = true;
+			emptyEl?.removeAttribute('hidden');
+			return;
+		}
+
+		emptyEl?.setAttribute('hidden', '');
+		resultsEl.hidden = false;
+
+		resultsEl.innerHTML = rows
+			.map((row) => {
+				const href = postHrefFromDbSlug(row.slug);
+				const cat = row.category || '';
+				const badge = categoryLabels[cat] || cat || '블로그';
+				const titleHtml = highlightText(row.title || '', q);
+				const descHtml = highlightText(row.description || '', q);
+				const thumb = row.thumbnail_url?.trim();
+				const tags = (row.tags ?? [])
+					.map((t) => String(t).trim())
+					.filter((t) => t && !/^작성-\d{6,}/.test(t))
+					.slice(0, 4);
+
+				const thumbBlock = thumb
+					? `<div class="blog-post-card-thumb">
+            <img src="${escapeHtmlAttr(thumb)}" alt="" loading="lazy" decoding="async" width="640" height="360" />
+          </div>`
+					: '';
+
+				const tagBlock = tags
+					.map(
+						(t) =>
+							`<a href="${escapeHtmlAttr(blogTagHref(t))}" class="blog-post-card-tag">#${escapeHtmlAttr(t)}</a>`,
+					)
+					.join('');
+
+				return `<article class="blog-post-card" data-search-hit>
+          <a href="${escapeHtmlAttr(href)}" class="blog-post-card-main">
+            ${thumbBlock}
+            <div class="blog-post-card-body">
+              <div class="blog-post-card-badges">
+                <span class="blog-post-card-cat">${escapeHtmlAttr(badge)}</span>
+              </div>
+              <h2 class="blog-post-card-title">${titleHtml}</h2>
+              <p class="blog-post-card-desc">${descHtml}</p>
+            </div>
+          </a>
+          <div class="blog-post-card-footer">
+            <time class="blog-post-card-date" datetime="${escapeHtmlAttr(row.published_at || '')}">${formatDate(row.published_at)}</time>
+            ${tagBlock}
+          </div>
+        </article>`;
+			})
+			.join('');
+	}
+
+	function readQuery() {
+		return new URLSearchParams(window.location.search).get('q') ?? '';
+	}
+
+	void (async () => {
+		await runSearch(readQuery());
+		window.addEventListener('popstate', () => {
+			void runSearch(readQuery());
+		});
+	})();
+</script>
+
+<style>
+	.blog-search-skeleton-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+		gap: 1.25rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.blog-search-skeleton-card {
+		border: 1px solid var(--rule, #e0d8cc);
+		border-radius: 16px;
+		padding: 0.75rem;
+		background: var(--surface, #fff);
+	}
+
+	.blog-search-skeleton-thumb {
+		height: 160px;
+		border-radius: 12px;
+		background: linear-gradient(90deg, var(--bg2, #f0ebe4) 25%, var(--bg3, #e8e2da) 50%, var(--bg2, #f0ebe4) 75%);
+		background-size: 200% 100%;
+		animation: blog-search-shimmer 1.2s ease-in-out infinite;
+		margin-bottom: 0.75rem;
+	}
+
+	.blog-search-skeleton-line {
+		height: 0.75rem;
+		border-radius: 6px;
+		margin-bottom: 0.45rem;
+		background: var(--bg2, #f0ebe4);
+		animation: blog-search-shimmer 1.2s ease-in-out infinite;
+		background-size: 200% 100%;
+	}
+
+	.blog-search-skeleton-line--lg {
+		width: 72%;
+		height: 1rem;
+	}
+
+	.blog-search-skeleton-line--sm {
+		width: 40%;
+		margin-bottom: 0;
+	}
+
+	@keyframes blog-search-shimmer {
+		0% {
+			background-position: 200% 0;
+		}
+		100% {
+			background-position: -200% 0;
+		}
+	}
+
+	.blog-search-recommend {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-top: 1rem;
+		justify-content: center;
+	}
+
+	.blog-search-error {
+		margin-top: 1rem;
+		color: var(--t2, #666);
+		font-size: 0.92rem;
+	}
+
+	.blog-post-card-title :global(mark),
+	.blog-post-card-desc :global(mark) {
+		background: rgba(184, 149, 106, 0.28);
+		color: inherit;
+		padding: 0 0.12em;
+		border-radius: 3px;
+	}
+
+	:global(html[data-theme='dark']) .blog-post-card-title :global(mark),
+	:global(html[data-theme='dark']) .blog-post-card-desc :global(mark) {
+		background: rgba(212, 184, 122, 0.22);
+	}
+</style>

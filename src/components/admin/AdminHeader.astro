@@ -16,6 +16,38 @@ const { title, description, status = 'Phase 1' } = Astro.props;
   </div>
 
   <div class="admin-topbar-actions">
+    <button
+      type="button"
+      class="admin-cp-open-btn"
+      data-command-palette-open
+      aria-label="전체 검색 열기"
+    >
+      <span class="admin-cp-open-kbd" data-admin-cp-kbd-mac>⌘K</span>
+      <span class="admin-cp-open-kbd" data-admin-cp-kbd-win hidden>Ctrl+K</span>
+    </button>
+    <div class="admin-notif-wrap" data-admin-notif-wrap>
+      <button
+        type="button"
+        class="admin-notif-bell"
+        aria-label="알림"
+        aria-expanded="false"
+        aria-haspopup="true"
+        data-admin-notif-toggle
+      >
+        <span class="admin-notif-bell-icon" aria-hidden="true">🔔</span>
+        <span class="admin-notif-badge" data-admin-notif-badge hidden>0</span>
+      </button>
+      <div class="admin-notif-panel" data-admin-notif-panel hidden role="region" aria-label="최근 알림">
+        <div class="admin-notif-panel-head">
+          <span class="admin-notif-panel-title">알림</span>
+          <button type="button" class="admin-notif-mark-all" data-admin-notif-mark-all>모두 읽음</button>
+        </div>
+        <ul class="admin-notif-list" data-admin-notif-list></ul>
+        <div class="admin-notif-panel-foot">
+          <a href="/admin/notifications" class="admin-notif-all-link">전체 보기</a>
+        </div>
+      </div>
+    </div>
     <span class="admin-status ready">{status}</span>
     <span class="admin-user-pill" data-admin-user>Owner · 에스리본</span>
     <button type="button" class="admin-btn" data-admin-logout>로그아웃</button>
@@ -26,3 +58,206 @@ const { title, description, status = 'Phase 1' } = Astro.props;
   <span class="admin-topbar-cta-label" data-admin-role-cta-label>다음 작업</span>
   <a class="admin-btn primary" data-admin-role-cta-link href="/">대기 중</a>
 </div>
+
+<script>
+  import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
+
+  const macKbd = document.querySelector('[data-admin-cp-kbd-mac]');
+  const winKbd = document.querySelector('[data-admin-cp-kbd-win]');
+  if (macKbd instanceof HTMLElement && winKbd instanceof HTMLElement) {
+    const isApple = /Mac|iPhone|iPad|iPod/i.test(navigator.userAgent || navigator.platform || '');
+    macKbd.hidden = !isApple;
+    winKbd.hidden = isApple;
+  }
+
+  const TYPE_ICON: Record<string, string> = {
+    new_comment: '💬',
+    new_report: '⚠️',
+    publish_failed: '❌',
+    new_subscriber: '📧',
+    publish_success: '✅',
+  };
+
+  const escapeHtml = (value: string) =>
+    String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+
+  const relativeTime = (iso: string) => {
+    const then = new Date(iso).getTime();
+    const now = Date.now();
+    const sec = Math.round((then - now) / 1000);
+    const rtf = new Intl.RelativeTimeFormat('ko', { numeric: 'auto' });
+    const abs = Math.abs(sec);
+    if (abs < 60) return rtf.format(Math.round(sec), 'second');
+    if (abs < 3600) return rtf.format(Math.round(sec / 60), 'minute');
+    if (abs < 86400) return rtf.format(Math.round(sec / 3600), 'hour');
+    if (abs < 604800) return rtf.format(Math.round(sec / 86400), 'day');
+    return rtf.format(Math.round(sec / 604800), 'week');
+  };
+
+  type NotifRow = {
+    id: string;
+    type: string;
+    title: string;
+    body: string | null;
+    resource_slug: string | null;
+    is_read: boolean;
+    created_at: string;
+  };
+
+  const wrap = document.querySelector('[data-admin-notif-wrap]');
+  const toggleBtn = document.querySelector('[data-admin-notif-toggle]');
+  const panel = document.querySelector('[data-admin-notif-panel]');
+  const listEl = document.querySelector('[data-admin-notif-list]');
+  const badge = document.querySelector('[data-admin-notif-badge]');
+  const markAllBtn = document.querySelector('[data-admin-notif-mark-all]');
+
+  let unreadCount = 0;
+  let channel: RealtimeChannel | null = null;
+
+  const setBadge = () => {
+    if (!badge) return;
+    if (unreadCount <= 0) {
+      badge.hidden = true;
+      badge.textContent = '0';
+      return;
+    }
+    badge.hidden = false;
+    badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
+  };
+
+  const buildRowHtml = (row: NotifRow) => {
+    const icon = TYPE_ICON[row.type] ?? '📌';
+    const slug = row.resource_slug?.trim();
+    const meta = relativeTime(row.created_at);
+    const unreadClass = row.is_read ? '' : ' admin-notif-item--unread';
+    const inner = `
+      <span class="admin-notif-item-icon" aria-hidden="true">${icon}</span>
+      <span class="admin-notif-item-text">
+        <span class="admin-notif-item-title">${escapeHtml(row.title)}</span>
+        <span class="admin-notif-item-meta">${escapeHtml(meta)}</span>
+      </span>`;
+    if (slug) {
+      return `<li><a class="admin-notif-item${unreadClass}" href="/admin/posts/edit?slug=${encodeURIComponent(slug)}">${inner}</a></li>`;
+    }
+    return `<li><span class="admin-notif-item${unreadClass}" role="text">${inner}</span></li>`;
+  };
+
+  const renderList = (rows: NotifRow[]) => {
+    if (!listEl) return;
+    if (!rows.length) {
+      listEl.innerHTML = '<li class="admin-notif-empty">최근 알림이 없습니다.</li>';
+      return;
+    }
+    listEl.innerHTML = rows.map((r) => buildRowHtml(r)).join('');
+  };
+
+  const prependRow = (row: NotifRow) => {
+    if (!listEl) return;
+    listEl.querySelector('.admin-notif-empty')?.remove();
+    const holder = document.createElement('div');
+    holder.innerHTML = buildRowHtml(row).trim();
+    const li = holder.querySelector('li');
+    if (li) listEl.insertBefore(li, listEl.firstChild);
+    while (listEl.children.length > 10) {
+      listEl.lastElementChild?.remove();
+    }
+  };
+
+  const fetchUnreadCount = async (supabase: SupabaseClient) => {
+    const { count, error } = await supabase
+      .from('admin_notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_read', false);
+    if (error) {
+      console.error('[admin-notif] unread count', error);
+      return;
+    }
+    unreadCount = count ?? 0;
+    setBadge();
+  };
+
+  const fetchRecent = async (supabase: SupabaseClient) => {
+    const { data, error } = await supabase
+      .from('admin_notifications')
+      .select('id,type,title,body,resource_slug,is_read,created_at')
+      .order('created_at', { ascending: false })
+      .limit(10);
+    if (error) {
+      console.error('[admin-notif] list', error);
+      renderList([]);
+      return;
+    }
+    renderList((data ?? []) as NotifRow[]);
+  };
+
+  const subscribeRealtime = (supabase: SupabaseClient) => {
+    if (channel) {
+      void channel.unsubscribe();
+      channel = null;
+    }
+    channel = supabase
+      .channel('admin-notifications')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'admin_notifications' },
+        (payload) => {
+          const row = payload.new as NotifRow | null;
+          if (!row?.id) return;
+          prependRow(row);
+          if (!row.is_read) {
+            unreadCount += 1;
+            setBadge();
+          }
+        },
+      )
+      .subscribe();
+  };
+
+  const setPanelOpen = (open: boolean) => {
+    if (!panel || !toggleBtn) return;
+    panel.hidden = !open;
+    toggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  };
+
+  toggleBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = panel?.hidden === false;
+    setPanelOpen(!open);
+  });
+
+  markAllBtn?.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const supabase = (window as Window & { __adminSupabase?: SupabaseClient }).__adminSupabase;
+    if (!supabase) return;
+    const { error } = await supabase.from('admin_notifications').update({ is_read: true }).eq('is_read', false);
+    if (error) {
+      console.error('[admin-notif] mark all', error);
+      return;
+    }
+    unreadCount = 0;
+    setBadge();
+    await fetchRecent(supabase);
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!wrap?.contains(e.target as Node)) setPanelOpen(false);
+  });
+
+  document.addEventListener('admin:session-ready', () => {
+    const supabase = (window as Window & { __adminSupabase?: SupabaseClient }).__adminSupabase;
+    if (!supabase) return;
+    void fetchUnreadCount(supabase);
+    void fetchRecent(supabase);
+    subscribeRealtime(supabase);
+  });
+
+  window.addEventListener('pagehide', () => {
+    if (channel) void channel.unsubscribe();
+    channel = null;
+  });
+</script>

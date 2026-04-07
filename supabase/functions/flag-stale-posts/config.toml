@@ -1,0 +1,3 @@
+# pg_cron·서버에서 service_role Bearer로 호출
+[functions.flag-stale-posts]
+verify_jwt = true

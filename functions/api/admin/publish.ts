@@ -1,3 +1,5 @@
+import { invalidatePublishRelatedCaches } from '../../lib/kv-cache';
+
 const encoder = new TextEncoder();
 
 function toBase64(input: string) {
@@ -80,15 +82,57 @@ function absolutePostUrl(siteBase: string, targetPath: string) {
   return `${base}/blog/${enc(rel)}/`;
 }
 
-function validatePublishablePost(post: any) {
-  const issues: string[] = [];
-  if (!post?.title?.trim()) issues.push('title');
-  if (!post?.description?.trim()) issues.push('description');
-  if (!post?.slug?.trim()) issues.push('slug');
-  if (!post?.category?.trim()) issues.push('category');
-  if (!post?.body_markdown?.trim()) issues.push('body_markdown');
-  if (post?.status === 'archived') issues.push('archived_status');
-  return issues;
+interface ValidationResult {
+  errors: string[];
+  warnings: string[];
+}
+
+function countTitleSpecialChars(title: string): number {
+  let n = 0;
+  for (const ch of title.trim()) {
+    if (/[\p{L}\p{N}]/u.test(ch)) continue;
+    if (/\s/u.test(ch)) continue;
+    n += 1;
+  }
+  return n;
+}
+
+function validatePublishablePost(post: any): ValidationResult {
+  const errors: string[] = [];
+  if (!post?.title?.trim()) errors.push('title');
+  if (!post?.description?.trim()) errors.push('description');
+  if (!post?.slug?.trim()) errors.push('slug');
+  if (!post?.category?.trim()) errors.push('category');
+  if (!post?.body_markdown?.trim()) errors.push('body_markdown');
+  if (post?.status === 'archived') errors.push('archived_status');
+
+  const warnings: string[] = [];
+  const body = String(post?.body_markdown ?? '').trim();
+  if (body.length < 500) {
+    warnings.push('본문이 너무 짧습니다 (500자 미만)');
+  }
+  if (!post?.thumbnail_url?.trim()) {
+    warnings.push('썸네일 이미지가 없습니다');
+  }
+  const tags = post?.tags;
+  if (!Array.isArray(tags) || tags.length === 0) {
+    warnings.push('태그가 없습니다');
+  }
+  if (!post?.seo_description?.trim()) {
+    warnings.push('SEO 설명이 없습니다');
+  }
+  if (countTitleSpecialChars(String(post?.title ?? '')) > 2) {
+    warnings.push('제목에 특수문자가 많습니다');
+  }
+  if (
+    /작성\s*중/.test(body) ||
+    /\bTODO\b/i.test(body) ||
+    /\bTBD\b/i.test(body)
+  ) {
+    warnings.push('미완성 표시가 남아 있습니다');
+  }
+
+  return { errors, warnings };
 }
 
 /** PUBLISH_SECRET 이 있으면: X-Publish-Secret 일치(크론·Edge) 또는 관리자 세션 JWT */
@@ -209,6 +253,52 @@ async function insertAuditLog(env: any, payload: any) {
   }
 }
 
+/** 알림 센터용 — 실패해도 발행 흐름에 영향 없음 */
+async function insertAdminNotification(env: any, row: Record<string, unknown>) {
+  try {
+    const res = await supabaseFetch(env, 'admin_notifications', {
+      method: 'POST',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify(row),
+    });
+    if (!res.ok) {
+      const err = await safeJson(res);
+      console.error('[publish] admin_notifications insert failed:', err?.message || res.status);
+    }
+  } catch (e) {
+    console.error('[publish] admin_notifications insert failed:', e);
+  }
+}
+
+/** 발행 직후 임베딩 갱신 — 비동기, 실패 무시 (발행 지연 방지) */
+function triggerEmbedPost(env: any, slug: string) {
+  const base = String(env.SUPABASE_URL ?? '').replace(/\/$/, '');
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!base || !key || !slug) return;
+  void fetch(`${base}/functions/v1/embed-post`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${key}`,
+      apikey: key,
+    },
+    body: JSON.stringify({ slug }),
+  }).catch(() => {});
+}
+
+/** 발행·저장 추적용 — 실패해도 발행 성공과 분리 (경고만) */
+async function insertPostVersionSnapshot(env: any, payload: Record<string, unknown>) {
+  const res = await supabaseFetch(env, 'post_versions', {
+    method: 'POST',
+    headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const error = await safeJson(res);
+    console.warn('[publish] post_versions insert failed:', error?.message || res.status);
+  }
+}
+
 export const onRequestPost = async (context: any) => {
   const { request, env } = context;
   const missingEnv = requiredEnv(env);
@@ -249,12 +339,13 @@ export const onRequestPost = async (context: any) => {
   const targetPath = buildTargetPath(post);
   const branch = env.GITHUB_BRANCH || 'main';
   const commitMessage = `publish: ${post.slug}`;
-  const validationIssues = validatePublishablePost(post);
+  const { errors: validationErrors, warnings } = validatePublishablePost(post);
 
-  if (validationIssues.length > 0) {
+  if (validationErrors.length > 0) {
     return jsonResponse({
-      error: `Post is not publishable: ${validationIssues.join(', ')}`,
-      validationIssues,
+      error: `Post is not publishable: ${validationErrors.join(', ')}`,
+      validationIssues: validationErrors,
+      warnings,
       targetPath,
       branch,
     }, 400);
@@ -267,7 +358,8 @@ export const onRequestPost = async (context: any) => {
       branch,
       commitMessage,
       postStatus: post.status,
-      validationIssues,
+      validationIssues: validationErrors,
+      warnings,
       markdownPreview: markdown.slice(0, 1200),
     });
   }
@@ -353,6 +445,19 @@ export const onRequestPost = async (context: any) => {
       },
     });
 
+    await insertPostVersionSnapshot(env, {
+      post_id: post.id,
+      slug: post.slug,
+      title: post.title ?? null,
+      body_markdown: post.body_markdown ?? '',
+      changed_by: requestedBy != null ? String(requestedBy) : '',
+      change_summary: 'published',
+    });
+
+    await invalidatePublishRelatedCaches(env);
+
+    triggerEmbedPost(env, post.slug);
+
     const notifySecret = env.NOTIFY_SUBSCRIBERS_SECRET?.trim();
     const resendKey = env.RESEND_API_KEY?.trim();
     const fromEmail = env.FROM_EMAIL?.trim();
@@ -379,8 +484,16 @@ export const onRequestPost = async (context: any) => {
       }
     }
 
+    await insertAdminNotification(env, {
+      type: 'publish_success',
+      title: `발행 완료: ${post.slug}`,
+      body: null,
+      resource_slug: post.slug,
+    });
+
     return jsonResponse({
       ok: true,
+      warnings,
       jobId: job.id,
       targetPath,
       targetRepo: env.GITHUB_REPO,
@@ -410,6 +523,13 @@ export const onRequestPost = async (context: any) => {
         },
       });
     } catch {}
+
+    await insertAdminNotification(env, {
+      type: 'publish_failed',
+      title: `발행 실패: ${post.slug}`,
+      body: String(error?.message || 'Unknown publish error').slice(0, 2000),
+      resource_slug: post.slug,
+    });
 
     return jsonResponse({
       error: error?.message || 'Unknown publish error',

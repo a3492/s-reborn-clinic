@@ -2,24 +2,19 @@ import rss from '@astrojs/rss';
 import type { APIRoute } from 'astro';
 import { getCollection } from 'astro:content';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
-import { postPermalink } from '../lib/academy';
+import { feedSiteOrigin, postsToRssItems, RSS_MAIN_FEED_TITLE } from '../lib/rss-feed';
 
 export const GET: APIRoute = async (context) => {
-  const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort(
-    (a, b) => b.data.date.valueOf() - a.data.date.valueOf()
-  );
+	const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort(
+		(a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
+	);
 
-  return rss({
-    title: SITE_TITLE,
-    description: SITE_DESCRIPTION,
-    site: context.site ?? 'https://s-reborn-clinic.pages.dev',
-    items: posts.map((post) => ({
-      title: post.data.title,
-      pubDate: post.data.date,
-      description: post.data.description,
-      link: postPermalink(post),
-    })),
-    customData: '<language>ko-kr</language>',
-    trailingSlash: true,
-  });
+	return rss({
+		title: RSS_MAIN_FEED_TITLE,
+		description: SITE_DESCRIPTION,
+		site: feedSiteOrigin(context.site),
+		items: postsToRssItems(posts, context.site),
+		customData: '<language>ko-kr</language>',
+		trailingSlash: true,
+	});
 };

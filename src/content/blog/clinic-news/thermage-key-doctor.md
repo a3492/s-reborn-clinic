@@ -29,4 +29,4 @@ draft: false
 
 ---
 
-*출처: 팜뉴스 2024.03.06 — [기사 바로가기](https://www.pharmnews.com/news/articleView.html?idxno=240483)*
+출처: 팜뉴스 2024.03.06 — [기사 바로가기](https://www.pharmnews.com/news/articleView.html?idxno=240483)

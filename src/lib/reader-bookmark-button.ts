@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { isLocalBookmarked, setLocalBookmark } from './reader-bookmarks';
+import { isLocalBookmarked, readLocalBookmarkSlugs, setLocalBookmark } from './reader-bookmarks';
 
 function syncBookmarkButtonUi(btn: HTMLButtonElement, saved: boolean) {
 	btn.setAttribute('aria-pressed', saved ? 'true' : 'false');
@@ -39,13 +39,13 @@ export function mountReaderBookmarkButtons() {
 				return;
 			}
 			const {
-				data: { session },
-			} = await supabase.auth.getSession();
-			if (session?.user?.id) {
+				data: { user },
+			} = await supabase.auth.getUser();
+			if (user?.id) {
 				const { data } = await supabase
 					.from('bookmarks')
 					.select('id')
-					.eq('user_id', session.user.id)
+					.eq('user_id', user.id)
 					.eq('slug', slug)
 					.maybeSingle();
 				syncBookmarkButtonUi(btn, !!data);
@@ -63,12 +63,12 @@ export function mountReaderBookmarkButtons() {
 			try {
 				if (supabase) {
 					const {
-						data: { session },
-					} = await supabase.auth.getSession();
-					if (session?.user?.id) {
+						data: { user },
+					} = await supabase.auth.getUser();
+					if (user?.id) {
 						if (next) {
 							const { error } = await supabase.from('bookmarks').upsert(
-								{ user_id: session.user.id, slug },
+								{ user_id: user.id, slug },
 								{ onConflict: 'user_id,slug' },
 							);
 							if (error) throw error;
@@ -76,7 +76,7 @@ export function mountReaderBookmarkButtons() {
 							const { error } = await supabase
 								.from('bookmarks')
 								.delete()
-								.eq('user_id', session.user.id)
+								.eq('user_id', user.id)
 								.eq('slug', slug);
 							if (error) throw error;
 						}
@@ -131,13 +131,13 @@ export async function removeReaderBookmark(
 	try {
 		if (supabase) {
 			const {
-				data: { session },
-			} = await supabase.auth.getSession();
-			if (session?.user?.id) {
+				data: { user },
+			} = await supabase.auth.getUser();
+			if (user?.id) {
 				const { error } = await supabase
 					.from('bookmarks')
 					.delete()
-					.eq('user_id', session.user.id)
+					.eq('user_id', user.id)
 					.eq('slug', s);
 				return !error;
 			}
@@ -152,13 +152,13 @@ export async function removeReaderBookmark(
 export async function loadBookmarkSlugsForList(supabase: ReturnType<typeof createClient> | null): Promise<string[]> {
 	if (supabase) {
 		const {
-			data: { session },
-		} = await supabase.auth.getSession();
-		if (session?.user?.id) {
+			data: { user },
+		} = await supabase.auth.getUser();
+		if (user?.id) {
 			const { data, error } = await supabase
 				.from('bookmarks')
 				.select('slug')
-				.eq('user_id', session.user.id)
+				.eq('user_id', user.id)
 				.order('created_at', { ascending: false });
 			if (error || !data) return [];
 			return data.map((r) => r.slug).filter(Boolean);

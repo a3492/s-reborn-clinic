@@ -23,8 +23,8 @@ export type ReactionIdentity =
 	| { kind: 'user'; userId: string };
 
 export async function getReactionIdentity(supabase: SupabaseClient): Promise<ReactionIdentity> {
-	const { data } = await supabase.auth.getSession();
-	const uid = data.session?.user?.id;
+	const { data } = await supabase.auth.getUser();
+	const uid = data.user?.id;
 	if (uid) return { kind: 'user', userId: uid };
 	return { kind: 'anon', sessionId: getOrCreateReaderSessionId() };
 }

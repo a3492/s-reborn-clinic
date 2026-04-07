@@ -11,8 +11,28 @@
 ### Astro / 클라이언트
 
 - `PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY` — 블로그 조회수·반응 등
+- `PUBLIC_R2_MEDIA_URL` — (선택) R2(또는 커스텀 도메인) 공개 미디어 베이스 URL. Pages Functions의 `R2_PUBLIC_URL`과 **동일한 값**으로 두면 글 히어로·미디어 관리 썸네일에 `width`·`format=webp` 쿼리가 자동 적용됩니다.
 - `PUBLIC_CF_ANALYTICS_TOKEN` — (선택) [Cloudflare Web Analytics](https://developers.cloudflare.com/analytics/web-analytics/) 비콘 토큰. 없으면 스크립트 미삽입.
 - `PUBLIC_GA_MEASUREMENT_ID` — (선택) Google Analytics 4 측정 ID(`G-…`). 없으면 gtag 미삽입. 글 페이지는 `content_id`가 config에 포함되며, 공유·반응·구독은 `gtag`가 있을 때만 커스텀 이벤트 전송.
+
+### Cloudflare KV 캐시 (`SITE_CACHE`)
+
+자주 읽는 공개 데이터(`site_settings`, `faq_items`, 조회수 TOP5, 카테고리별 글 수)는 Pages Functions가 KV에 넣어 두고, `POST /api/admin/publish` 성공 시 관련 키를 비웁니다. **세션·개인정보는 KV에 넣지 않습니다.** 바인딩이 없으면 캐시 없이 Supabase만 조회합니다.
+
+1. 네임스페이스 생성 (프로젝트 루트에서, Wrangler v3+):
+   ```bash
+   npx wrangler kv namespace create SITE_CACHE
+   ```
+   (구버전 별칭: `npx wrangler kv:namespace create SITE_CACHE`)
+   출력된 `id`를 `wrangler.toml`의 `[[kv_namespaces]]` → `id`에, 로컬 미리보기용으로 `npx wrangler kv namespace create SITE_CACHE --preview` 의 id를 `preview_id`에 넣습니다.
+2. **Cloudflare Pages** → 해당 프로젝트 → **Settings → Functions → KV namespace bindings** 에서 `SITE_CACHE` 이름으로 위 네임스페이스를 연결합니다. (저장소 루트 `wrangler.toml`을 쓰는 연동 빌드에서는 동일 바인딩이 반영될 수 있습니다. 대시보드에서 한 번 더 확인하세요.)
+3. 캐시 API (Service Role로 Supabase 조회 후 KV에 저장):
+   - `GET /api/cached/settings-all` — 키 `settings:all`, TTL 600초
+   - `GET /api/cached/faq-visible` — `faq:visible`, 600초
+   - `GET /api/cached/views-top5` — `views:top5`, 300초
+   - `GET /api/cached/category-counts` — `category:counts`, 1800초
+
+헬스체크: `GET /api/admin/publish-health` 에 SITE_CACHE put/get 프로브 결과가 포함됩니다(미바인딩 시 `warn`).
 
 ### Cloudflare Pages Functions
 
@@ -28,6 +48,27 @@
 | `NOTIFY_SUBSCRIBERS_SECRET` | `POST /api/notify-subscribers` 호출 시 헤더 `x-notify-secret`과 동일한 값 (발행 후 일괄 알림용) |
 | `PUBLIC_SITE_URL` | (선택) 알림 메일의 글 링크에 사용할 공개 사이트 URL. 뉴스레터 Edge Function의 `SITE_URL`과 같게 두면 구독 취소·글 링크가 일치합니다 |
 | `PUBLISH_SECRET` | (선택) 설정 시 `POST /api/admin/publish`는 `X-Publish-Secret` 일치 또는 관리자 Supabase 세션 `Authorization: Bearer <access_token>` 필요. Supabase Edge Function `scheduled-publish`의 동일 시크릿과 맞출 것 |
+| `R2_ACCOUNT_ID` | Cloudflare 계정 ID (R2 S3 API 엔드포인트용) |
+| `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | R2 API 토큰(읽기·쓰기). **클라이언트·저장소에 넣지 말고 Functions 환경에만** 설정 |
+| `R2_BUCKET_NAME` | 버킷 이름 (예: `s-reborn-media`) |
+| `R2_PUBLIC_URL` | 객체 공개 URL의 origin (예: 커스텀 도메인 `https://media.example.com` 또는 R2 퍼블릭 개발 URL). 끝 슬래시 없이 |
+| `R2_REGION` | (선택) 기본값 `auto` |
+
+### Cloudflare R2 미디어 CDN (`/api/admin/upload`)
+
+Supabase Storage 대신 **R2**에 이미지를 올리고 전 세계 CDN으로 서빙하려면:
+
+1. **버킷 생성** (프로젝트 루트에서):
+   ```bash
+   npx wrangler r2 bucket create s-reborn-media
+   ```
+2. R2 대시보드에서 **API 토큰**을 만들고, 버킷을 **공개 읽기**할 수 있게 설정합니다(커스텀 도메인 또는 `r2.dev` 공개 URL).
+3. 위 표의 `R2_*` 변수를 Pages **Settings → Environment variables**(및 로컬 `.dev.vars`)에 넣습니다.
+4. Astro 빌드/클라이언트에서 R2 URL을 인식하려면 `PUBLIC_R2_MEDIA_URL`을 `R2_PUBLIC_URL`과 동일하게 설정합니다.
+
+관리자 **Media** 페이지에서 Storage provider를 `r2`로 두면 `POST /api/admin/upload`가 **AWS Signature V4**(`crypto.subtle`, 외부 AWS SDK 없음)로 R2에 `PUT`합니다. 기존 Supabase Storage 업로드 경로는 그대로 유지됩니다.
+
+**Cloudflare Images** 스타일 변환: R2 퍼블릭 URL에 `?width=&format=webp&quality=` 쿼리를 붙이는 방식은 **도메인에 이미지 리사이징(예: Cloudflare Images·Workers)**이 연결되어 있을 때만 동작합니다. 미연결 시에는 원본이 그대로 요청됩니다.
 
 ### 예약 발행 (Supabase Edge Function + pg_cron)
 

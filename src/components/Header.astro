@@ -1,7 +1,24 @@
 ---
 import { NAV_LINKS, SITE_TITLE } from '../consts';
+import { ACADEMY_PUBLIC_PATH } from '../lib/academy-constants';
+import { t, type Locale } from '../i18n';
 
 const pathname = Astro.url.pathname;
+const locale: Locale = Astro.currentLocale === 'en' ? 'en' : 'ko';
+
+const navLabelKeyByHref = new Map<string, string>([
+  ['/', 'nav.home'],
+  ['/procedures/', 'nav.procedures'],
+  ['/blog/', 'nav.blog'],
+  [`${ACADEMY_PUBLIC_PATH}/`, 'nav.doctorAi'],
+  ['/consult/', 'nav.consult'],
+  ['/about/', 'nav.about'],
+]);
+
+const navLabel = (href: string) => {
+  const key = navLabelKeyByHref.get(href);
+  return key ? t(locale, key) : href;
+};
 ---
 
 <header class="site-header">
@@ -11,7 +28,7 @@ const pathname = Astro.url.pathname;
       <span class="site-logo-text">{SITE_TITLE}</span>
     </a>
 
-    <nav class="site-nav" aria-label="주요 메뉴">
+    <nav class="site-nav" aria-label={t(locale, 'header.mainNavAria')}>
       {NAV_LINKS.map((link) => (
         <a
           href={link.href}
@@ -26,7 +43,7 @@ const pathname = Astro.url.pathname;
             },
           ]}
         >
-          {link.label}
+          {navLabel(link.href)}
         </a>
       ))}
     </nav>
@@ -34,7 +51,7 @@ const pathname = Astro.url.pathname;
     <button
       type="button"
       class="site-mobile-menu-btn"
-      aria-label="메뉴 열기"
+      aria-label={t(locale, 'header.menuOpenAria')}
       aria-expanded="false"
       aria-controls="site-mobile-nav-panel"
       data-mobile-menu-toggle
@@ -50,12 +67,12 @@ const pathname = Astro.url.pathname;
     data-mobile-nav
     hidden
     role="region"
-    aria-label="모바일 내비게이션"
+    aria-label={t(locale, 'header.mobileNavAria')}
   >
-    <nav aria-label="모바일 주요 메뉴">
+    <nav aria-label={t(locale, 'header.mobileMainNavAria')}>
       {NAV_LINKS.map((link) => (
         <a href={link.href} class="site-mobile-nav-link">
-          {link.label}
+          {navLabel(link.href)}
         </a>
       ))}
     </nav>

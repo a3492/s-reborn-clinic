@@ -27,6 +27,30 @@ function supabaseHeaders(env: Record<string, string | undefined>, extra?: Header
   };
 }
 
+async function insertAdminNotification(
+  env: Record<string, string | undefined>,
+  row: { type: string; title: string; body?: string | null; resource_slug?: string | null },
+) {
+  try {
+    const res = await fetch(`${env.SUPABASE_URL}/rest/v1/admin_notifications`, {
+      method: 'POST',
+      headers: supabaseHeaders(env, { Prefer: 'return=minimal' }),
+      body: JSON.stringify({
+        type: row.type,
+        title: row.title,
+        body: row.body ?? null,
+        resource_slug: row.resource_slug ?? null,
+      }),
+    });
+    if (!res.ok) {
+      const err = await safeJson(res);
+      console.error('[subscribe] admin_notifications insert failed:', err?.message || res.status);
+    }
+  } catch (e) {
+    console.error('[subscribe] admin_notifications insert failed:', e);
+  }
+}
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const onRequestOptions = () =>
@@ -46,7 +70,7 @@ export const onRequestPost = async (context: { request: Request; env: Record<str
     return jsonResponse({ error: 'Server misconfigured.' }, 500);
   }
 
-  const body = await request.json().catch(() => null);
+  const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   const rawEmail = String(body?.email ?? '').trim();
   const source = String(body?.source ?? 'lab').trim().slice(0, 64) || 'lab';
   const email = rawEmail.toLowerCase();
@@ -70,6 +94,13 @@ export const onRequestPost = async (context: { request: Request; env: Record<str
       502,
     );
   }
+
+  await insertAdminNotification(env, {
+    type: 'new_subscriber',
+    title: `새 구독자: ${email}`,
+    body: `source: ${source}`,
+    resource_slug: null,
+  });
 
   if (env.RESEND_API_KEY && env.FROM_EMAIL) {
     const resendRes = await fetch('https://api.resend.com/emails', {

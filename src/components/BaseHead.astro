@@ -1,6 +1,7 @@
 ---
 import { CLINIC_INFO, SITE_TITLE } from '../consts';
 import { ACADEMY_PUBLIC_PATH } from '../lib/academy-constants';
+import { RSS_MAIN_FEED_TITLE } from '../lib/rss-feed';
 
 interface Props {
 	title: string;
@@ -15,6 +16,9 @@ interface Props {
 	noindex?: boolean;
 	/** false면 테마 FOUC 방지 스크립트 미삽입 (어드민 전용) */
 	applyVisitorTheme?: boolean;
+	/** 글 페이지 등 — 카테고리별 RSS `<link rel="alternate">` */
+	rssCategoryId?: string | null;
+	rssCategoryLabel?: string | null;
 }
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
@@ -28,6 +32,8 @@ const {
 	jsonLd,
 	noindex,
 	applyVisitorTheme = true,
+	rssCategoryId,
+	rssCategoryLabel,
 } = Astro.props;
 
 const pathNorm = Astro.url.pathname.replace(/\/$/, '') || '/';
@@ -69,12 +75,15 @@ const ogImage = image
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <link rel="sitemap" href="/sitemap-index.xml" />
-<link
-	rel="alternate"
-	type="application/rss+xml"
-	title={siteTitle}
-	href={new URL('rss.xml', Astro.site)}
-/>
+<link rel="alternate" type="application/rss+xml" title={RSS_MAIN_FEED_TITLE} href="/rss.xml" />
+{rssCategoryId && (
+	<link
+		rel="alternate"
+		type="application/rss+xml"
+		title={`S-Reborn — ${rssCategoryLabel ?? rssCategoryId}`}
+		href={`/rss/${rssCategoryId}.xml`}
+	/>
+)}
 <link rel="alternate" type="text/plain" title="LLM · 사이트 요약" href={new URL('llms.txt', Astro.site).href} />
 <meta name="generator" content={Astro.generator} />
 {noindex && <meta name="robots" content="noindex, nofollow" />}

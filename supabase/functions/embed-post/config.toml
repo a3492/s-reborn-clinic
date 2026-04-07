@@ -1,0 +1,3 @@
+# service_role JWT(또는 동일 키 Bearer)로 호출 — Cloudflare publish 등 서버에서 트리거
+[functions.embed-post]
+verify_jwt = true

@@ -27,6 +27,30 @@ function supabaseHeaders(env: Record<string, string | undefined>, extra?: Header
   };
 }
 
+async function insertAdminNotification(
+  env: Record<string, string | undefined>,
+  row: { type: string; title: string; body?: string | null; resource_slug?: string | null },
+) {
+  try {
+    const res = await fetch(`${env.SUPABASE_URL}/rest/v1/admin_notifications`, {
+      method: 'POST',
+      headers: supabaseHeaders(env, { Prefer: 'return=minimal' }),
+      body: JSON.stringify({
+        type: row.type,
+        title: row.title,
+        body: row.body ?? null,
+        resource_slug: row.resource_slug ?? null,
+      }),
+    });
+    if (!res.ok) {
+      const err = await safeJson(res);
+      console.error('[report] admin_notifications insert failed:', err?.message || res.status);
+    }
+  } catch (e) {
+    console.error('[report] admin_notifications insert failed:', e);
+  }
+}
+
 const REPORT_TYPES = new Set(['typo', 'factual_error', 'outdated', 'other']);
 const SLUG_RE = /^[a-zA-Z0-9/_-]+$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -48,7 +72,7 @@ export const onRequestPost = async (context: { request: Request; env: Record<str
     return jsonResponse({ error: 'Server misconfigured.' }, 500);
   }
 
-  const body = await request.json().catch(() => null);
+  const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   const slug = String(body?.slug ?? '').trim().slice(0, 512);
   const reportType = String(body?.report_type ?? '').trim();
   const description = String(body?.description ?? '').trim().slice(0, 4000);
@@ -85,6 +109,13 @@ export const onRequestPost = async (context: { request: Request; env: Record<str
       502,
     );
   }
+
+  await insertAdminNotification(env, {
+    type: 'new_report',
+    title: `오류 신고: ${slug}`,
+    body: [reportType, description || null, reporterEmailRaw || null].filter(Boolean).join(' · ').slice(0, 2000),
+    resource_slug: slug,
+  });
 
   if (env.RESEND_API_KEY && env.FROM_EMAIL) {
     const adminRaw = (env.ADMIN_EMAIL || env.FROM_EMAIL).trim();

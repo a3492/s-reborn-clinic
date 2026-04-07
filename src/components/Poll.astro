@@ -1,0 +1,368 @@
+---
+interface Props {
+  slug: string;
+}
+const { slug } = Astro.props;
+---
+
+<div class="blog-post-poll" data-blog-poll data-poll-slug={slug} hidden>
+  <div class="blog-post-poll-card">
+    <p class="blog-post-poll-label">독자 투표</p>
+    <h2 class="blog-post-poll-title" data-poll-title></h2>
+    <p class="blog-post-poll-question" data-poll-question></p>
+    <div class="blog-post-poll-pre" data-poll-pre hidden></div>
+    <div class="blog-post-poll-results" data-poll-results hidden></div>
+    <p class="blog-post-poll-msg" data-poll-msg hidden></p>
+  </div>
+</div>
+
+<script>
+  import { createClient } from '@supabase/supabase-js';
+
+  type PollOption = { id: string; label: string };
+
+  const SESSION_KEY = 'blog_poll_session_id';
+
+  function getOrCreateSessionId(): string {
+    try {
+      let id = localStorage.getItem(SESSION_KEY);
+      if (!id || id.length < 8) {
+        id = crypto.randomUUID();
+        localStorage.setItem(SESSION_KEY, id);
+      }
+      return id;
+    } catch {
+      return `ephemeral_${Math.random().toString(36).slice(2)}_${Date.now()}`;
+    }
+  }
+
+  function parseOptions(raw: unknown): PollOption[] {
+    if (!Array.isArray(raw)) return [];
+    const out: PollOption[] = [];
+    for (const x of raw) {
+      if (!x || typeof x !== 'object') continue;
+      const o = x as Record<string, unknown>;
+      const id = typeof o.id === 'string' ? o.id.trim() : '';
+      const label = typeof o.label === 'string' ? o.label.trim() : '';
+      if (id && label) out.push({ id, label });
+    }
+    return out;
+  }
+
+  function escapeHtml(s: string): string {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  (async () => {
+    const root = document.querySelector('[data-blog-poll]');
+    if (!(root instanceof HTMLElement)) return;
+    const postSlug = root.dataset.pollSlug?.trim() ?? '';
+    const titleEl = root.querySelector('[data-poll-title]');
+    const questionEl = root.querySelector('[data-poll-question]');
+    const preEl = root.querySelector('[data-poll-pre]');
+    const resultsEl = root.querySelector('[data-poll-results]');
+    const msgEl = root.querySelector('[data-poll-msg]');
+    if (!postSlug || !questionEl || !preEl || !resultsEl || !msgEl) return;
+
+    const url = import.meta.env.PUBLIC_SUPABASE_URL;
+    const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+    if (!url || !key) {
+      return;
+    }
+
+    const supabase = createClient(url, key);
+    const { data: poll, error: pollErr } = await supabase
+      .from('polls')
+      .select('id, slug, question, options')
+      .eq('slug', postSlug)
+      .maybeSingle();
+
+    if (pollErr || !poll) {
+      return;
+    }
+
+    const options = parseOptions(poll.options);
+    if (options.length < 2) {
+      return;
+    }
+
+    root.hidden = false;
+    if (titleEl instanceof HTMLElement) {
+      titleEl.textContent = '이 글과 관련해 의견을 들려주세요';
+    }
+    questionEl.textContent = poll.question ?? '';
+
+    const sessionId = getOrCreateSessionId();
+
+    const showMsg = (text: string, isError: boolean) => {
+      if (!(msgEl instanceof HTMLElement)) return;
+      if (!text) {
+        msgEl.hidden = true;
+        msgEl.textContent = '';
+        delete msgEl.dataset.state;
+        return;
+      }
+      msgEl.hidden = false;
+      msgEl.textContent = text;
+      msgEl.dataset.state = isError ? 'error' : 'info';
+    };
+
+    const countVotes = (rows: { option_id: string }[] | null): Map<string, number> => {
+      const m = new Map<string, number>();
+      for (const o of options) m.set(o.id, 0);
+      for (const r of rows ?? []) {
+        const k = r.option_id;
+        m.set(k, (m.get(k) ?? 0) + 1);
+      }
+      return m;
+    };
+
+    const renderResults = (
+      counts: Map<string, number>,
+      myOptionId: string | null,
+      total: number,
+    ) => {
+      preEl.setAttribute('hidden', '');
+      (preEl as HTMLElement).hidden = true;
+      resultsEl.removeAttribute('hidden');
+      (resultsEl as HTMLElement).hidden = false;
+
+      const parts = options.map((o) => {
+        const c = counts.get(o.id) ?? 0;
+        const pct = total > 0 ? Math.round((100 * c) / total) : 0;
+        const mine = myOptionId === o.id ? ' blog-post-poll-bar-row--mine' : '';
+        return `<div class="blog-post-poll-bar-row${mine}">
+          <div class="blog-post-poll-bar-head">
+            <span class="blog-post-poll-bar-label">${escapeHtml(o.label)}</span>
+            <span class="blog-post-poll-bar-count">${c}표 (${pct}%)</span>
+          </div>
+          <div class="blog-post-poll-bar-track" role="presentation">
+            <div class="blog-post-poll-bar-fill" style="width:${pct}%"></div>
+          </div>
+        </div>`;
+      });
+      let foot = '';
+      if (myOptionId) {
+        const label = options.find((x) => x.id === myOptionId)?.label ?? myOptionId;
+        foot = `<p class="blog-post-poll-foot">내 선택: <strong>${escapeHtml(label)}</strong></p>`;
+      }
+      resultsEl.innerHTML = parts.join('') + foot;
+    };
+
+    const renderPreVote = () => {
+      resultsEl.setAttribute('hidden', '');
+      (resultsEl as HTMLElement).hidden = true;
+      preEl.removeAttribute('hidden');
+      (preEl as HTMLElement).hidden = false;
+      preEl.innerHTML = options
+        .map(
+          (o) =>
+            `<button type="button" class="blog-post-poll-option" data-poll-option="${escapeHtml(o.id)}">${escapeHtml(o.label)}</button>`,
+        )
+        .join('');
+    };
+
+    const { data: allVotes } = await supabase
+      .from('poll_votes')
+      .select('option_id')
+      .eq('poll_id', poll.id);
+
+    const { data: myRow } = await supabase
+      .from('poll_votes')
+      .select('option_id')
+      .eq('poll_id', poll.id)
+      .eq('session_id', sessionId)
+      .maybeSingle();
+
+    const counts = countVotes(allVotes);
+    const total = (allVotes ?? []).length;
+    const myVote = myRow?.option_id ?? null;
+
+    if (myVote) {
+      renderResults(counts, myVote, total);
+    } else {
+      renderPreVote();
+    }
+
+    preEl.addEventListener('click', async (e) => {
+      const btn = (e.target as HTMLElement).closest('[data-poll-option]');
+      if (!(btn instanceof HTMLButtonElement)) return;
+      const optionId = btn.getAttribute('data-poll-option') ?? '';
+      if (!optionId || !options.some((o) => o.id === optionId)) return;
+
+      btn.disabled = true;
+      showMsg('', false);
+
+      const { error } = await supabase.from('poll_votes').insert({
+        poll_id: poll.id,
+        option_id: optionId,
+        session_id: sessionId,
+      });
+
+      if (error) {
+        btn.disabled = false;
+        if (error.code === '23505' || error.message.includes('duplicate')) {
+          showMsg('이미 참여한 투표입니다.', true);
+          const { data: again } = await supabase
+            .from('poll_votes')
+            .select('option_id')
+            .eq('poll_id', poll.id)
+            .eq('session_id', sessionId)
+            .maybeSingle();
+          const { data: v2 } = await supabase
+            .from('poll_votes')
+            .select('option_id')
+            .eq('poll_id', poll.id);
+          const c2 = countVotes(v2);
+          const t2 = (v2 ?? []).length;
+          renderResults(c2, again?.option_id ?? optionId, t2);
+          return;
+        }
+        showMsg(error.message || '투표에 실패했습니다.', true);
+        return;
+      }
+
+      const nextCounts = new Map(counts);
+      nextCounts.set(optionId, (nextCounts.get(optionId) ?? 0) + 1);
+      renderResults(nextCounts, optionId, total + 1);
+      showMsg('', false);
+    });
+  })();
+</script>
+
+<style>
+  .blog-post-poll {
+    margin: 2rem 0 0;
+    padding: 1.25rem 0 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .blog-post-poll-card {
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--rule);
+    border-radius: 14px;
+    background: var(--bg2, rgba(0, 0, 0, 0.03));
+  }
+
+  .blog-post-poll-label {
+    margin: 0 0 0.35rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--t2);
+  }
+
+  .blog-post-poll-title {
+    margin: 0 0 0.5rem;
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--text);
+  }
+
+  .blog-post-poll-question {
+    margin: 0 0 1rem;
+    font-size: 0.95rem;
+    line-height: 1.55;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .blog-post-poll-pre {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: stretch;
+  }
+
+  .blog-post-poll-option {
+    font: inherit;
+    text-align: left;
+    padding: 0.65rem 0.85rem;
+    border-radius: 10px;
+    border: 1px solid var(--rule);
+    background: var(--surface, #fff);
+    color: var(--text);
+    cursor: pointer;
+    font-weight: 600;
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .blog-post-poll-option:hover:not(:disabled) {
+    border-color: var(--accent, #b8956a);
+    background: var(--bg3, rgba(0, 0, 0, 0.04));
+  }
+
+  .blog-post-poll-option:disabled {
+    opacity: 0.65;
+    cursor: wait;
+  }
+
+  .blog-post-poll-results {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .blog-post-poll-bar-row--mine .blog-post-poll-bar-label {
+    color: var(--accent-dark, #8b6914);
+  }
+
+  .blog-post-poll-bar-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.75rem;
+    font-size: 0.88rem;
+  }
+
+  .blog-post-poll-bar-label {
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .blog-post-poll-bar-count {
+    flex-shrink: 0;
+    color: var(--t2);
+    font-size: 0.82rem;
+  }
+
+  .blog-post-poll-bar-track {
+    margin-top: 0.35rem;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--rule);
+    overflow: hidden;
+  }
+
+  .blog-post-poll-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent-dark, #8b6914), var(--accent, #b8956a));
+    min-width: 0;
+    transition: width 0.35s ease;
+  }
+
+  .blog-post-poll-foot {
+    margin: 0.5rem 0 0;
+    font-size: 0.86rem;
+    color: var(--t2);
+  }
+
+  .blog-post-poll-msg {
+    margin: 0.75rem 0 0;
+    font-size: 0.86rem;
+  }
+
+  .blog-post-poll-msg[data-state='error'] {
+    color: var(--admin-danger, #b84235);
+  }
+
+  .blog-post-poll-msg[data-state='info'] {
+    color: var(--t2);
+  }
+</style>

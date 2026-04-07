@@ -14,7 +14,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       <div class="admin-actions-row">
         <div>
           <h2 class="admin-section-title">Asset Registry</h2>
-          <p class="admin-section-desc">수동 URL 등록과 Supabase Storage 업로드를 같은 UI에서 처리합니다.</p>
+          <p class="admin-section-desc">수동 URL 등록, Cloudflare R2 업로드, 기존 Supabase Storage 업로드를 같은 UI에서 처리합니다.</p>
         </div>
         <button type="submit" form="admin-media-form" class="admin-btn primary">자산 등록</button>
       </div>
@@ -23,7 +23,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         <div class="admin-field full">
           <label class="admin-label" for="binary_file">Upload File</label>
           <input id="binary_file" name="binary_file" class="admin-input" type="file" accept="image/*" />
-          <span class="admin-help">파일을 선택하면 Supabase Storage 업로드를 우선 시도합니다. 공개 URL만 등록할 수도 있습니다.</span>
+          <span class="admin-help">파일을 선택하면 provider가 R2이면 Pages Function으로 R2에 업로드합니다. Supabase Storage도 그대로 선택 가능합니다.</span>
         </div>
 
         <div class="admin-field">
@@ -45,9 +45,9 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         <div class="admin-field">
           <label class="admin-label" for="storage_provider">Storage Provider</label>
           <select id="storage_provider" name="storage_provider" class="admin-select">
-            <option value="manual">manual</option>
-            <option value="r2">r2</option>
+            <option value="r2">r2 (권장)</option>
             <option value="supabase-storage">supabase-storage</option>
+            <option value="manual">manual</option>
             <option value="external-cdn">external-cdn</option>
           </select>
         </div>
@@ -121,11 +121,12 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
     <div class="admin-panel-stack">
       <section class="admin-card pad-md">
         <h2 class="admin-section-title">Current Flow</h2>
-        <p class="admin-section-desc">이제 Supabase Storage 업로드와 수동 URL 등록을 모두 지원합니다.</p>
+        <p class="admin-section-desc">R2·Supabase Storage·수동 URL을 모두 지원합니다.</p>
         <ul class="admin-list">
           <li class="admin-list-row"><div><p class="admin-item-title">Asset registry</p><p class="admin-item-meta">public URL, alt text, mime type, size를 저장합니다.</p></div><div><span class="admin-status ready">Live</span></div></li>
           <li class="admin-list-row"><div><p class="admin-item-title">Audit log</p><p class="admin-item-meta">등록 이력을 `audit_logs`에 남깁니다.</p></div><div><span class="admin-status ready">Live</span></div></li>
-          <li class="admin-list-row"><div><p class="admin-item-title">Supabase upload</p><p class="admin-item-meta">공개 버킷에 파일을 업로드하고 URL을 자동 등록합니다.</p></div><div><span class="admin-status ready">Live</span></div></li>
+          <li class="admin-list-row"><div><p class="admin-item-title">R2 upload</p><p class="admin-item-meta">`/api/admin/upload`에서 SigV4로 업로드, 공개 URL은 `R2_PUBLIC_URL` 기준입니다.</p></div><div><span class="admin-status ready">Live</span></div></li>
+          <li class="admin-list-row"><div><p class="admin-item-title">Supabase upload</p><p class="admin-item-meta">기존 공개 버킷 경로도 그대로 사용할 수 있습니다.</p></div><div><span class="admin-status ready">Live</span></div></li>
         </ul>
       </section>
 
@@ -147,9 +148,9 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 
       <section class="admin-card pad-md">
         <h2 class="admin-section-title">Rule</h2>
-        <p class="admin-section-desc">당분간은 수동 URL 등록이 기본입니다.</p>
+        <p class="admin-section-desc">R2 공개 URL(`PUBLIC_R2_MEDIA_URL`)이면 글 히어로·썸네일 복사 시 WebP 변환 쿼리가 자동으로 붙습니다.</p>
         <ul class="admin-list">
-          <li class="admin-list-row"><div><p class="admin-item-title">Thumbnail</p><p class="admin-item-meta">frontmatter `thumbnail`에 public URL을 그대로 사용합니다.</p></div></li>
+          <li class="admin-list-row"><div><p class="admin-item-title">Thumbnail</p><p class="admin-item-meta">frontmatter에는 원본 public URL을 넣습니다. 렌더 시 R2면 `width=800&amp;format=webp`가 적용됩니다.</p></div></li>
           <li class="admin-list-row"><div><p class="admin-item-title">본문 이미지</p><p class="admin-item-meta">Markdown helper가 생성한 문법을 붙여 넣습니다.</p></div></li>
           <li class="admin-list-row"><div><p class="admin-item-title">Alt text</p><p class="admin-item-meta">등록 단계에서 alt를 관리해 본문 품질을 일정하게 맞춥니다.</p></div></li>
         </ul>
@@ -175,6 +176,25 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
   const previewPath = document.querySelector('[data-admin-media-preview-path]');
   const historyList = document.querySelector('[data-admin-media-history]');
   let localPreviewUrl = null;
+
+  const publicR2Base = (import.meta.env.PUBLIC_R2_MEDIA_URL || '').trim().replace(/\/$/, '');
+  const withR2ThumbParams = (url, width = 400) => {
+    const u = String(url || '').trim();
+    if (!publicR2Base || !u.startsWith(publicR2Base)) return u;
+    const j = u.includes('?') ? '&' : '?';
+    return `${u}${j}width=${width}&format=webp&quality=85`;
+  };
+  const sourceBadgeLabel = (asset) => {
+    const p = String(asset.storage_provider || '').trim();
+    const url = String(asset.public_url || '').trim();
+    if (p === 'r2') return 'R2';
+    if (p === 'supabase-storage') return 'Supabase';
+    if (publicR2Base && url.startsWith(publicR2Base)) return 'R2';
+    if (url.includes('/storage/v1/object/public')) return 'Supabase';
+    if (supabaseUrl && url.includes(String(supabaseUrl))) return 'Supabase';
+    if (p === 'manual' || p === 'external-cdn') return p;
+    return p || '—';
+  };
 
   const setMessage = (text, state = 'info') => {
     if (!message) return;
@@ -235,7 +255,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
     };
 
     if (markdownField) markdownField.value = buildMarkdown(asset);
-    if (thumbnailField) thumbnailField.value = asset.public_url;
+    if (thumbnailField) thumbnailField.value = withR2ThumbParams(asset.public_url);
     renderPreview({
       file: fileInput?.files?.[0] || null,
       url: localPreviewUrl || asset.public_url,
@@ -261,7 +281,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
     if (!form.file_name.value) form.file_name.value = file.name;
     if (!form.mime_type.value) form.mime_type.value = file.type || '';
     if (!form.file_path.value) form.file_path.value = buildStoragePath(file.name);
-    if (form.storage_provider.value === 'manual') form.storage_provider.value = 'supabase-storage';
+    if (form.storage_provider.value === 'manual') form.storage_provider.value = 'r2';
 
     clearLocalPreview();
     localPreviewUrl = URL.createObjectURL(file);
@@ -313,14 +333,19 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
           .map((asset) => {
             const markdown = escapeHtml(buildMarkdown(asset));
             const title = escapeHtml(asset.file_name);
-            const url = escapeHtml(asset.public_url || '');
+            const urlRaw = String(asset.public_url || '');
+            const url = escapeHtml(withR2ThumbParams(urlRaw));
+            const badge = escapeHtml(sourceBadgeLabel(asset));
             const isArchived = Boolean(asset.deleted_at);
 
             return `
           <article class="admin-card pad-md" data-media-asset-card data-media-asset-id="${escapeHtml(asset.id)}" data-media-asset-archived="${isArchived ? 'true' : 'false'}" style="font-size:0.82rem;">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:0.4rem;margin-bottom:0.45rem;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:0.4rem;margin-bottom:0.45rem;flex-wrap:wrap;">
               <p class="admin-item-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;" title="${title}">${title}</p>
-              <span class="admin-status ${isArchived ? 'draft' : 'ready'}" style="flex-shrink:0;">${isArchived ? 'archived' : 'active'}</span>
+              <div style="display:flex;align-items:center;gap:0.35rem;flex-shrink:0;">
+                <span class="admin-status ready" style="font-size:0.7rem;">${badge}</span>
+                <span class="admin-status ${isArchived ? 'draft' : 'ready'}" style="flex-shrink:0;">${isArchived ? 'archived' : 'active'}</span>
+              </div>
             </div>
             <textarea class="admin-textarea" style="min-height:56px;font-size:0.76rem;" readonly data-asset-markdown>${markdown}</textarea>
             <input class="admin-input" style="margin-top:0.35rem;font-size:0.76rem;" type="text" readonly value="${url}" data-asset-thumbnail />
@@ -516,8 +541,9 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       const fileName = String(formData.get('file_name') || '').trim();
       const binaryFile = fileInput?.files?.[0] || null;
       const storageProvider = String(formData.get('storage_provider') || 'manual');
-      const storageBucket = String(formData.get('storage_bucket') || '').trim() || 'blog-images';
+      let storageBucket = String(formData.get('storage_bucket') || '').trim() || 'blog-images';
       const filePath = String(formData.get('file_path') || '').trim() || (binaryFile ? buildStoragePath(binaryFile.name) : null);
+      let resolvedFilePath = filePath;
 
       if (!fileName) {
         setMessage('파일명은 필수입니다.', 'error');
@@ -530,59 +556,100 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       }
 
       if (binaryFile) {
-        if (storageProvider !== 'supabase-storage') {
-          setMessage('현재 실제 업로드는 `supabase-storage` provider만 지원합니다.', 'error');
-          return;
-        }
-
-        let resolvedPath = filePath;
-        let { error: uploadError } = await supabase.storage
-          .from(storageBucket)
-          .upload(resolvedPath, binaryFile, {
-            upsert: false,
-            contentType: binaryFile.type || undefined,
+        if (storageProvider === 'r2') {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          if (!session?.access_token) {
+            setMessage('R2 업로드에는 로그인 세션이 필요합니다.', 'error');
+            return;
+          }
+          const fd = new FormData();
+          fd.append('file', binaryFile);
+          if (filePath) fd.append('file_path', filePath);
+          const uploadRes = await fetch('/api/admin/upload', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${session.access_token}` },
+            body: fd,
           });
-
-        if (uploadError && /exists|duplicate|already/i.test(uploadError.message || '')) {
-          resolvedPath = buildStoragePath(binaryFile.name);
-          form.file_path.value = resolvedPath;
-          ({ error: uploadError } = await supabase.storage
+          const uploadJson = await uploadRes.json().catch(() => ({}));
+          if (!uploadRes.ok) {
+            setMessage(uploadJson.error || `R2 업로드 실패 (${uploadRes.status})`, 'error');
+            return;
+          }
+          publicUrl = String(uploadJson.publicUrl || '').trim();
+          resolvedFilePath = String(uploadJson.objectKey || filePath || '').trim();
+          if (uploadJson.bucket) {
+            storageBucket = String(uploadJson.bucket);
+            form.storage_bucket.value = storageBucket;
+          }
+          if (!publicUrl) {
+            setMessage('R2 응답에 publicUrl이 없습니다. R2_PUBLIC_URL 설정을 확인하세요.', 'error');
+            return;
+          }
+          form.public_url.value = publicUrl;
+          if (resolvedFilePath) form.file_path.value = resolvedFilePath;
+          renderPreview({
+            file: binaryFile,
+            url: publicUrl,
+            path: resolvedFilePath,
+            width: form.width.value,
+            height: form.height.value,
+          });
+        } else if (storageProvider === 'supabase-storage') {
+          let resolvedPath = filePath;
+          let { error: uploadError } = await supabase.storage
             .from(storageBucket)
             .upload(resolvedPath, binaryFile, {
               upsert: false,
               contentType: binaryFile.type || undefined,
-            }));
-        }
+            });
 
-        if (uploadError) {
-          setMessage(`스토리지 업로드에 실패했습니다: ${uploadError.message}`, 'error');
+          if (uploadError && /exists|duplicate|already/i.test(uploadError.message || '')) {
+            resolvedPath = buildStoragePath(binaryFile.name);
+            form.file_path.value = resolvedPath;
+            ({ error: uploadError } = await supabase.storage
+              .from(storageBucket)
+              .upload(resolvedPath, binaryFile, {
+                upsert: false,
+                contentType: binaryFile.type || undefined,
+              }));
+          }
+
+          if (uploadError) {
+            setMessage(`스토리지 업로드에 실패했습니다: ${uploadError.message}`, 'error');
+            return;
+          }
+
+          const { data: publicData } = supabase.storage.from(storageBucket).getPublicUrl(resolvedPath);
+          publicUrl = publicData?.publicUrl || '';
+
+          if (!publicUrl) {
+            setMessage('업로드는 완료됐지만 public URL을 생성하지 못했습니다. 버킷 공개 설정을 확인하세요.', 'error');
+            return;
+          }
+
+          resolvedFilePath = resolvedPath;
+          form.public_url.value = publicUrl;
+          form.file_path.value = resolvedPath;
+          renderPreview({
+            file: binaryFile,
+            url: publicUrl,
+            path: resolvedPath,
+            width: form.width.value,
+            height: form.height.value,
+          });
+        } else {
+          setMessage('파일이 있으면 Storage provider는 `r2` 또는 `supabase-storage`여야 합니다.', 'error');
           return;
         }
-
-        const { data: publicData } = supabase.storage.from(storageBucket).getPublicUrl(resolvedPath);
-        publicUrl = publicData?.publicUrl || '';
-
-        if (!publicUrl) {
-          setMessage('업로드는 완료됐지만 public URL을 생성하지 못했습니다. 버킷 공개 설정을 확인하세요.', 'error');
-          return;
-        }
-
-        form.public_url.value = publicUrl;
-        form.file_path.value = resolvedPath;
-        renderPreview({
-          file: binaryFile,
-          url: publicUrl,
-          path: resolvedPath,
-          width: form.width.value,
-          height: form.height.value,
-        });
       }
 
       const payload = {
         file_name: fileName,
         storage_provider: storageProvider,
         storage_bucket: storageBucket,
-        file_path: filePath,
+        file_path: resolvedFilePath,
         public_url: publicUrl,
         mime_type: String(formData.get('mime_type') || '').trim() || binaryFile?.type || null,
         alt_text: String(formData.get('alt_text') || '').trim() || null,

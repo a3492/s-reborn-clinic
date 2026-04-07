@@ -134,6 +134,91 @@ const featuredPickerJson = JSON.stringify(recentClinicPostsForFeatured).replace(
     </section>
   </div>
 
+  <section class="admin-card pad-lg" style="margin-top: 1.25rem;" data-admin-disclaimers-root>
+    <div class="admin-actions-row">
+      <div>
+        <h2 class="admin-section-title">면책 고지</h2>
+        <p class="admin-section-desc">
+          블로그 글에서 제목(h1) 바로 아래에 카테고리별 면책 문구가 자동 삽입됩니다. DB의 <code>disclaimers</code> 테이블을 사용하며, 비활성 항목은 공개 사이트에 노출되지 않습니다.
+        </p>
+      </div>
+      <button type="button" class="admin-btn" data-admin-disclaimers-refresh>다시 불러오기</button>
+    </div>
+    <p class="admin-help" style="margin: 0.5rem 0 0.75rem;">
+      편집·저장은 <strong>owner</strong>만 가능합니다. API는 서버에서 <code>SUPABASE_SERVICE_ROLE_KEY</code>로 PATCH 합니다.
+    </p>
+    <div data-admin-disclaimers-list>
+      <p class="admin-help">세션 준비 후 목록을 불러옵니다.</p>
+    </div>
+    <p class="admin-inline-note" data-admin-disclaimers-message hidden></p>
+  </section>
+
+  <section class="admin-card pad-lg" style="margin-top: 1.25rem;">
+    <div class="admin-actions-row">
+      <div>
+        <h2 class="admin-section-title">뉴스레터</h2>
+        <p class="admin-section-desc">
+          지난 7일간 발행된 글 중 조회수 상위 최대 5편을 묶어 Resend로 발송합니다. 구독자는 <code>lab_waitlist</code> 전체이며, 매주 월요일 09:00(KST)에 Edge Function이 자동 실행될 수 있습니다.
+        </p>
+      </div>
+    </div>
+    <ul class="admin-list" style="margin: 0.75rem 0 1rem;">
+      <li class="admin-list-row">
+        <div>
+          <p class="admin-item-title">구독자 수</p>
+          <p class="admin-item-meta">이메일 구독·대기 목록</p>
+        </div>
+        <div><strong data-newsletter-subscriber-count>—</strong></div>
+      </li>
+      <li class="admin-list-row">
+        <div>
+          <p class="admin-item-title">마지막 발송</p>
+          <p class="admin-item-meta">수동·자동 발송 공통</p>
+        </div>
+        <div><span data-newsletter-last-sent>—</span></div>
+      </li>
+    </ul>
+    <div class="admin-actions-row" style="align-items: center;">
+      <button type="button" class="admin-btn primary" data-newsletter-send>지금 발송</button>
+      <span class="admin-help">Supabase Function <code>weekly-newsletter</code> 및 Resend·SITE_URL 시크릿이 필요합니다.</span>
+    </div>
+    <p class="admin-inline-note" data-newsletter-message hidden></p>
+  </section>
+
+  <section class="admin-card pad-lg" style="margin-top: 1.25rem;">
+    <div class="admin-actions-row">
+      <div>
+        <h2 class="admin-section-title">주간 리포트</h2>
+        <p class="admin-section-desc">
+          매주 월요일 08:00(KST) 전후에 <code>admin_profiles</code>의 <strong>owner</strong> 중 리포트 수신이 켜진 계정으로 운영 요약 메일을 보냅니다. Supabase Function <code>admin-weekly-report</code>·Resend·<code>SITE_URL</code>이 필요합니다.
+        </p>
+      </div>
+    </div>
+    <div class="admin-field full" style="margin: 0.75rem 0 1rem;" data-report-owner-only hidden>
+      <label class="admin-label" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+        <input type="checkbox" data-report-receive />
+        <span>owner 리포트 이메일 수신</span>
+      </label>
+      <span class="admin-help">끄면 자동·수동 발송 모두에서 제외됩니다.</span>
+    </div>
+    <p class="admin-help" data-report-non-owner-note hidden style="margin: 0.75rem 0 1rem;">
+      리포트는 <strong>owner</strong> 역할 계정으로만 발송됩니다.
+    </p>
+    <ul class="admin-list" style="margin: 0 0 1rem;">
+      <li class="admin-list-row">
+        <div>
+          <p class="admin-item-title">마지막 발송</p>
+          <p class="admin-item-meta">수동·자동 공통</p>
+        </div>
+        <div><span data-report-last-sent>—</span></div>
+      </li>
+    </ul>
+    <div class="admin-actions-row" style="align-items: center;">
+      <button type="button" class="admin-btn primary" data-report-send>지금 리포트 발송</button>
+    </div>
+    <p class="admin-inline-note" data-report-message hidden></p>
+  </section>
+
   <section class="admin-card pad-lg" style="margin-top: 1.25rem;">
     <h2 class="admin-section-title">운영자 관리</h2>
     <p class="admin-section-desc">
@@ -177,6 +262,19 @@ const featuredPickerJson = JSON.stringify(recentClinicPostsForFeatured).replace(
     const featuredSlugCurrentEl = document.querySelector('[data-admin-featured-slug-current]');
     const operatorsTbody = document.querySelector('[data-admin-operators-tbody]');
     const operatorsMessage = document.querySelector('[data-admin-operators-message]');
+    const newsletterSubscriberCount = document.querySelector('[data-newsletter-subscriber-count]');
+    const newsletterLastSent = document.querySelector('[data-newsletter-last-sent]');
+    const newsletterSendBtn = document.querySelector('[data-newsletter-send]');
+    const newsletterMessage = document.querySelector('[data-newsletter-message]');
+    const reportReceiveCb = document.querySelector('[data-report-receive]');
+    const reportOwnerOnly = document.querySelector('[data-report-owner-only]');
+    const reportNonOwnerNote = document.querySelector('[data-report-non-owner-note]');
+    const reportLastSent = document.querySelector('[data-report-last-sent]');
+    const reportSendBtn = document.querySelector('[data-report-send]');
+    const reportMessage = document.querySelector('[data-report-message]');
+    const disclaimersPanelList = document.querySelector('[data-admin-disclaimers-list]');
+    const disclaimersMessage = document.querySelector('[data-admin-disclaimers-message]');
+    const disclaimersRefreshBtn = document.querySelector('[data-admin-disclaimers-refresh]');
     let featuredPickerPosts = [];
     let featuredSlugPickerInitialized = false;
     let operatorRows = [];
@@ -307,6 +405,109 @@ const featuredPickerJson = JSON.stringify(recentClinicPostsForFeatured).replace(
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+
+    const setDisclaimersMessage = (text, state = 'info') => {
+      if (!disclaimersMessage) return;
+      if (!text) {
+        disclaimersMessage.hidden = true;
+        disclaimersMessage.textContent = '';
+        return;
+      }
+      disclaimersMessage.hidden = false;
+      disclaimersMessage.textContent = text;
+      disclaimersMessage.dataset.state = state;
+    };
+
+    const disclaimerCategoryLabel = (c) =>
+      ({
+        general: '일반 (fallback · general)',
+        ai: 'AI / Academy (ai)',
+        legal: '법률 (legal)',
+      })[c] || c;
+
+    const disclaimersAuthHeaders = async (sb) => {
+      const h = {};
+      if (!sb) return h;
+      const {
+        data: { session },
+      } = await sb.auth.getSession();
+      if (session?.access_token) h['Authorization'] = `Bearer ${session.access_token}`;
+      return h;
+    };
+
+    const renderDisclaimersList = (rows) => {
+      if (!disclaimersPanelList) return;
+      if (!rows?.length) {
+        disclaimersPanelList.innerHTML =
+          '<p class="admin-help">등록된 면책 고지가 없습니다. Supabase에 <code>supabase/disclaimers.sql</code>을 적용했는지 확인하세요.</p>';
+        return;
+      }
+      disclaimersPanelList.innerHTML = rows
+        .map(
+          (row) => `
+        <div class="admin-card pad-md" style="margin-bottom: 1rem;border:1px solid var(--admin-border);" data-disclaimer-id="${escapeHtml(row.id)}">
+          <div class="admin-actions-row" style="align-items:center;margin-bottom:0.35rem;">
+            <h3 class="admin-section-title" style="margin:0;font-size:1rem;">${escapeHtml(disclaimerCategoryLabel(row.category))}</h3>
+            <code class="admin-cell-subtle">${escapeHtml(row.category)}</code>
+          </div>
+          <p class="admin-item-meta" style="margin:0 0 0.5rem;">갱신: ${escapeHtml(row.updated_at || '-')}</p>
+          <label class="admin-label" style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:0.9rem;">
+            <input type="checkbox" data-disclaimer-active ${row.is_active ? 'checked' : ''} />
+            활성
+          </label>
+          <textarea class="admin-textarea" data-disclaimer-body style="min-height:120px;margin-top:0.45rem;width:100%;box-sizing:border-box;">${escapeHtml(row.body)}</textarea>
+          <button type="button" class="admin-btn admin-btn-sm primary" data-disclaimer-save style="margin-top:0.5rem;">저장</button>
+        </div>
+      `,
+        )
+        .join('');
+    };
+
+    const loadDisclaimers = async (sb) => {
+      if (!disclaimersPanelList || !sb) return;
+      disclaimersPanelList.innerHTML = '<p class="admin-help">불러오는 중…</p>';
+      setDisclaimersMessage('');
+      try {
+        const res = await fetch('/api/admin/disclaimers', { headers: await disclaimersAuthHeaders(sb) });
+        const payload = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          disclaimersPanelList.innerHTML = `<p class="admin-help admin-help-error">${escapeHtml(payload.error || res.statusText)}</p>`;
+          return;
+        }
+        renderDisclaimersList(payload.data || []);
+      } catch (e) {
+        disclaimersPanelList.innerHTML = `<p class="admin-help admin-help-error">${escapeHtml(String(e?.message || e))}</p>`;
+      }
+    };
+
+    const saveDisclaimerRow = async (sb, card) => {
+      if (!sb || !(card instanceof HTMLElement)) return;
+      const id = card.getAttribute('data-disclaimer-id');
+      const ta = card.querySelector('[data-disclaimer-body]');
+      const cb = card.querySelector('[data-disclaimer-active]');
+      const saveBtn = card.querySelector('[data-disclaimer-save]');
+      if (!id || !(ta instanceof HTMLTextAreaElement) || !(cb instanceof HTMLInputElement)) return;
+      if (saveBtn instanceof HTMLButtonElement) saveBtn.disabled = true;
+      setDisclaimersMessage('저장 중…', 'info');
+      try {
+        const res = await fetch('/api/admin/disclaimers', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', ...(await disclaimersAuthHeaders(sb)) },
+          body: JSON.stringify({ id, body: ta.value, is_active: cb.checked }),
+        });
+        const payload = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setDisclaimersMessage(payload.error || '저장 실패', 'error');
+          return;
+        }
+        setDisclaimersMessage('저장되었습니다.', 'success');
+        await loadDisclaimers(sb);
+      } catch (e) {
+        setDisclaimersMessage(String(e?.message || e), 'error');
+      } finally {
+        if (saveBtn instanceof HTMLButtonElement) saveBtn.disabled = false;
+      }
+    };
 
     const isProbablyUrl = (value) => /^https?:\/\//i.test(String(value || '').trim()) || String(value || '').trim().startsWith('/');
 
@@ -449,6 +650,76 @@ const featuredPickerJson = JSON.stringify(recentClinicPostsForFeatured).replace(
       }).format(new Date(value));
     };
 
+    const setNewsletterMessage = (text, state = 'info') => {
+      if (!newsletterMessage) return;
+      if (!text) {
+        newsletterMessage.hidden = true;
+        newsletterMessage.textContent = '';
+        return;
+      }
+      newsletterMessage.hidden = false;
+      newsletterMessage.textContent = text;
+      newsletterMessage.dataset.state = state;
+    };
+
+    const loadNewsletterPanel = async (sb) => {
+      if (!sb) return;
+      if (newsletterSubscriberCount) {
+        const { count, error } = await sb.from('lab_waitlist').select('*', { count: 'exact', head: true });
+        newsletterSubscriberCount.textContent = error ? '오류' : String(count ?? 0);
+      }
+      if (newsletterLastSent) {
+        const { data, error } = await sb.from('site_settings').select('value_json').eq('key', 'newsletter').maybeSingle();
+        if (error || !data?.value_json?.last_sent_at) {
+          newsletterLastSent.textContent = '아직 없음';
+        } else {
+          newsletterLastSent.textContent = formatDate(data.value_json.last_sent_at);
+        }
+      }
+    };
+
+    const setReportMessage = (text, state = 'info') => {
+      if (!reportMessage) return;
+      if (!text) {
+        reportMessage.hidden = true;
+        reportMessage.textContent = '';
+        return;
+      }
+      reportMessage.hidden = false;
+      reportMessage.textContent = text;
+      reportMessage.dataset.state = state;
+    };
+
+    const loadWeeklyReportPanel = async (sb) => {
+      if (!sb) return;
+      const uid = document.body.dataset.adminUserId || '';
+      const isOwner = getCurrentRole() === 'owner';
+      if (reportOwnerOnly instanceof HTMLElement) reportOwnerOnly.hidden = !isOwner;
+      if (reportNonOwnerNote instanceof HTMLElement) reportNonOwnerNote.hidden = isOwner;
+
+      if (isOwner && uid && reportReceiveCb instanceof HTMLInputElement) {
+        const { data, error } = await sb.from('admin_profiles').select('receive_report').eq('id', uid).maybeSingle();
+        if (!error && data && typeof data.receive_report === 'boolean') {
+          reportReceiveCb.checked = data.receive_report;
+        } else {
+          reportReceiveCb.checked = true;
+        }
+      }
+
+      if (reportLastSent) {
+        const { data, error } = await sb
+          .from('site_settings')
+          .select('value_json')
+          .eq('key', 'admin_weekly_report')
+          .maybeSingle();
+        if (error || !data?.value_json?.last_sent_at) {
+          reportLastSent.textContent = '아직 없음';
+        } else {
+          reportLastSent.textContent = formatDate(data.value_json.last_sent_at);
+        }
+      }
+    };
+
     const loadHistory = async (supabase) => {
       if (!historyList) return;
       const { data, error } = await supabase
@@ -537,6 +808,124 @@ const featuredPickerJson = JSON.stringify(recentClinicPostsForFeatured).replace(
         }
 
         await loadOperators(supabase);
+        await loadNewsletterPanel(supabase);
+        await loadWeeklyReportPanel(supabase);
+        await loadDisclaimers(supabase);
+
+        disclaimersRefreshBtn?.addEventListener('click', () => loadDisclaimers(supabase));
+        disclaimersPanelList?.addEventListener('click', (e) => {
+          const btn = e.target.closest('[data-disclaimer-save]');
+          if (!btn || !supabase) return;
+          const card = btn.closest('[data-disclaimer-id]');
+          if (card instanceof HTMLElement) void saveDisclaimerRow(supabase, card);
+        });
+
+        reportReceiveCb?.addEventListener('change', async () => {
+          if (getCurrentRole() !== 'owner') return;
+          const uid = document.body.dataset.adminUserId;
+          if (!supabase || !uid || !(reportReceiveCb instanceof HTMLInputElement)) return;
+          const on = reportReceiveCb.checked;
+          const { error } = await supabase.from('admin_profiles').update({ receive_report: on }).eq('id', uid);
+          if (error) {
+            setReportMessage(error.message, 'error');
+            reportReceiveCb.checked = !on;
+            return;
+          }
+          setReportMessage(on ? '리포트 수신을 켰습니다.' : '리포트 수신을 껐습니다.', 'success');
+        });
+
+        reportSendBtn?.addEventListener('click', async () => {
+          if (!getCurrentRole()) {
+            setReportMessage('관리자 권한이 확인된 뒤에 발송할 수 있습니다.', 'error');
+            return;
+          }
+          if (!supabase) return;
+          setReportMessage('리포트 발송 중…', 'info');
+          if (reportSendBtn instanceof HTMLButtonElement) reportSendBtn.disabled = true;
+          try {
+            const {
+              data: { session },
+            } = await supabase.auth.getSession();
+            if (!session?.access_token) {
+              setReportMessage('세션이 없습니다. 다시 로그인해 주세요.', 'error');
+              return;
+            }
+            const fnUrl = `${supabaseUrl.replace(/\/$/, '')}/functions/v1/admin-weekly-report`;
+            const res = await fetch(fnUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session.access_token}`,
+                apikey: supabaseKey,
+              },
+              body: '{}',
+            });
+            const payload = await res.json().catch(() => ({}));
+            if (!res.ok) {
+              setReportMessage(payload?.error || `발송 실패 (${res.status})`, 'error');
+              return;
+            }
+            if (payload.skipped === 'no_recipients') {
+              setReportMessage(String(payload.message || '수신자가 없습니다. owner·수신 설정을 확인하세요.'), 'info');
+            } else {
+              setReportMessage(`발송 완료: 수신 ${payload.sentTo ?? 0}명`, 'success');
+            }
+            await loadWeeklyReportPanel(supabase);
+          } catch (e) {
+            setReportMessage(e instanceof Error ? e.message : '요청 실패', 'error');
+          } finally {
+            if (reportSendBtn instanceof HTMLButtonElement) reportSendBtn.disabled = false;
+          }
+        });
+
+        newsletterSendBtn?.addEventListener('click', async () => {
+          if (!getCurrentRole()) {
+            setNewsletterMessage('관리자 권한이 확인된 뒤에 발송할 수 있습니다.', 'error');
+            return;
+          }
+          if (!supabase) return;
+          setNewsletterMessage('발송 요청 중…', 'info');
+          if (newsletterSendBtn instanceof HTMLButtonElement) newsletterSendBtn.disabled = true;
+          try {
+            const {
+              data: { session },
+            } = await supabase.auth.getSession();
+            if (!session?.access_token) {
+              setNewsletterMessage('세션이 없습니다. 다시 로그인해 주세요.', 'error');
+              return;
+            }
+            const fnUrl = `${supabaseUrl.replace(/\/$/, '')}/functions/v1/weekly-newsletter`;
+            const res = await fetch(fnUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session.access_token}`,
+                apikey: supabaseKey,
+              },
+              body: '{}',
+            });
+            const payload = await res.json().catch(() => ({}));
+            if (!res.ok) {
+              setNewsletterMessage(payload?.error || `발송 실패 (${res.status})`, 'error');
+              return;
+            }
+            if (payload.skipped === 'no_posts') {
+              setNewsletterMessage('지난 7일간 발행된 글이 없어 메일을 보내지 않았습니다.', 'info');
+            } else if (payload.skipped === 'no_subscribers') {
+              setNewsletterMessage('구독자가 없어 메일을 보내지 않았습니다.', 'info');
+            } else {
+              setNewsletterMessage(
+                `발송 완료: 수신자 약 ${payload.sent ?? 0}명, 글 ${payload.posts ?? 0}편`,
+                'success',
+              );
+            }
+            await loadNewsletterPanel(supabase);
+          } catch (e) {
+            setNewsletterMessage(e instanceof Error ? e.message : '요청 실패', 'error');
+          } finally {
+            if (newsletterSendBtn instanceof HTMLButtonElement) newsletterSendBtn.disabled = false;
+          }
+        });
 
         if (!operatorsUiBound && operatorsTbody) {
           operatorsUiBound = true;

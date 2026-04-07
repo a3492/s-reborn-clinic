@@ -7,6 +7,7 @@ import AnalyticsScripts from '../components/AnalyticsScripts.astro';
 import Header from '../components/Header.astro';
 import Topbar from '../components/Topbar.astro';
 import Footer from '../components/Footer.astro';
+import WebVitalsCollector from '../components/WebVitalsCollector.astro';
 import { SITE_TITLE } from '../consts';
 import { getPublicSiteSettings } from '../lib/site-settings';
 import { getCollection } from 'astro:content';
@@ -224,6 +225,7 @@ const faqSchema = faqs.length > 0 ? {
       </div>
     </main>
     <Footer />
+    <WebVitalsCollector />
   </body>
 </html>
 

@@ -1,8 +1,15 @@
 import type { CollectionEntry } from 'astro:content';
 import { ACADEMY_CONTENT_ID_PREFIX, ACADEMY_LEGACY_CONTENT_PREFIX } from './academy-constants';
 
-/** localStorage: { [series이름]: string[] } — 읽은 글의 content id */
+/** @deprecated 과거 진도용 — Task 54 이후 `readPostStorageKey` 사용 */
 export const SERIES_READ_STORAGE_KEY = 'sreborn_series_read_v1';
+
+/** 읽음 완료 플래그: localStorage `read:{postId}` === 'true' (로그인 불필요) */
+export const READ_POST_STORAGE_PREFIX = 'read:';
+
+export function readPostStorageKey(postId: string): string {
+	return `${READ_POST_STORAGE_PREFIX}${postId}`;
+}
 
 export function entryIsAcademyBlogId(postId: string): boolean {
 	return (

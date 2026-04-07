@@ -17,6 +17,18 @@ ADMIN_EMAIL=
 # 발행 후 구독자 일괄 알림 (`/api/notify-subscribers`) — 임의의 긴 문자열
 NOTIFY_SUBSCRIBERS_SECRET=
 
+# R2 미디어 업로드 (Pages Function 전용 — 브라우저/저장소에 노출 금지)
+# npx wrangler r2 bucket create s-reborn-media
+R2_ACCOUNT_ID=
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+R2_BUCKET_NAME=s-reborn-media
+R2_PUBLIC_URL=https://media.s-reborn-blog.pages.dev
+# R2_REGION=auto
+
+# Astro 클라이언트: R2_PUBLIC_URL 과 동일 권장 (히어로·미디어 UI에서 WebP 쿼리 자동)
+PUBLIC_R2_MEDIA_URL=
+
 # 프로덕션 공개 사이트 원점 URL (알림 메일 링크용, 선택)
 PUBLIC_SITE_URL=https://s-reborn-clinic.pages.dev
 

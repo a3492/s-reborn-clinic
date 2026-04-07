@@ -68,6 +68,28 @@ export function postPermalink(post: CollectionEntry<'blog'>): string {
 	return `/blog/${post.id}/`;
 }
 
+/** Supabase `posts.slug` 등 DB 슬러그 → 공개 URL (세그먼트 인코딩, Academy 접두 처리) */
+export function postHrefFromDbSlug(slug: string): string {
+	const s = String(slug || '').trim();
+	if (!s) return '/blog/';
+	const enc = (path: string) =>
+		path
+			.split('/')
+			.map((x) => x.trim())
+			.filter(Boolean)
+			.map((seg) => encodeURIComponent(seg))
+			.join('/');
+	if (s.startsWith(ACADEMY_CONTENT_ID_PREFIX)) {
+		const rest = s.slice(ACADEMY_CONTENT_ID_PREFIX.length);
+		return `${ACADEMY_PUBLIC_PATH}/${enc(rest)}/`;
+	}
+	if (s.startsWith(ACADEMY_LEGACY_CONTENT_PREFIX)) {
+		const rest = s.slice(ACADEMY_LEGACY_CONTENT_PREFIX.length);
+		return `${ACADEMY_PUBLIC_PATH}/${enc(rest)}/`;
+	}
+	return `/blog/${enc(s)}/`;
+}
+
 export function sortAcademyPosts(a: CollectionEntry<'blog'>, b: CollectionEntry<'blog'>): number {
 	const ao = a.data.academy_order;
 	const bo = b.data.academy_order;

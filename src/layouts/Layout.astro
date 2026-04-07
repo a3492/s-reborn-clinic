@@ -6,9 +6,11 @@ import AnalyticsScripts from '../components/AnalyticsScripts.astro';
 import Header from '../components/Header.astro';
 import Topbar from '../components/Topbar.astro';
 import Footer from '../components/Footer.astro';
+import WebVitalsCollector from '../components/WebVitalsCollector.astro';
 import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 import { getPublicSiteSettings } from '../lib/site-settings';
 import { buildOrganizationAndWebSiteJsonLd } from '../lib/structured-data';
+import { t, type Locale } from '../i18n';
 
 interface Props {
   title?: string;
@@ -23,10 +25,17 @@ const siteSettings = await getPublicSiteSettings();
 const resolvedSiteTitle = siteSettings.siteTitle || SITE_TITLE;
 const resolvedDescription = description || siteSettings.siteDescription || SITE_DESCRIPTION;
 const jsonLd = buildOrganizationAndWebSiteJsonLd(Astro.site);
+
+const locale: Locale = Astro.currentLocale === 'en' ? 'en' : 'ko';
+const layoutCopyAttributionName = t(locale, 'layout.copy.attributionName');
+const layoutCopyAttributionUrl = t(locale, 'layout.copy.attributionUrl');
+const layoutCopyNoReprint = t(locale, 'layout.copy.noReprint');
+const layoutCopySourceLabel = t(locale, 'layout.copy.sourceLabel');
+const layoutMainAria = t(locale, 'layout.mainAria');
 ---
 
 <!doctype html>
-<html lang="ko">
+<html lang={locale}>
   <head>
     <BaseHead
       title={title ? `${title} | ${resolvedSiteTitle}` : resolvedSiteTitle}
@@ -42,20 +51,32 @@ const jsonLd = buildOrganizationAndWebSiteJsonLd(Astro.site);
     <!-- Pretendard: global.css @import 보다 먼저 DNS 연결 -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <AnalyticsScripts />
-    <script is:inline>
+    <script
+      is:inline
+      define:vars={{
+        layoutCopyAttributionName,
+        layoutCopyAttributionUrl,
+        layoutCopyNoReprint,
+        layoutCopySourceLabel,
+      }}
+    >
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js');
       }
 
-      /* 복사 시 출처 자동 추가 */
+      /* 복사 시 출처 자동 추가 (문구는 i18n layout.copy.*) */
       document.addEventListener('copy', function (e) {
         var selection = window.getSelection();
         if (!selection || selection.toString().length === 0) return;
         var originalText = selection.toString();
         var attribution =
-          '\n\n출처: 에스리본 클리닉\n' +
-          'https://s-reborn-clinic.pages.dev/\n' +
-          '무단 전재 및 재배포를 금지합니다.';
+          '\n\n' +
+          layoutCopySourceLabel +
+          layoutCopyAttributionName +
+          '\n' +
+          layoutCopyAttributionUrl +
+          '\n' +
+          layoutCopyNoReprint;
         if (e.clipboardData) {
           e.clipboardData.setData('text/plain', originalText + attribution);
           e.clipboardData.setData(
@@ -64,8 +85,13 @@ const jsonLd = buildOrganizationAndWebSiteJsonLd(Astro.site);
               originalText.replace(/\n/g, '<br>') +
               '</span>' +
               '<p style="color:#888;font-size:0.85em;margin-top:8px;">' +
-              '출처: <a href="https://s-reborn-clinic.pages.dev/">에스리본 클리닉</a><br>' +
-              '무단 전재 및 재배포를 금지합니다.' +
+              layoutCopySourceLabel +
+              '<a href="' +
+              layoutCopyAttributionUrl.replace(/"/g, '&quot;') +
+              '">' +
+              layoutCopyAttributionName.replace(/</g, '&lt;').replace(/>/g, '&gt;') +
+              '</a><br>' +
+              layoutCopyNoReprint.replace(/</g, '&lt;').replace(/>/g, '&gt;') +
               '</p>'
           );
           e.preventDefault();
@@ -77,10 +103,11 @@ const jsonLd = buildOrganizationAndWebSiteJsonLd(Astro.site);
     <div class="site-wrap">
       <Header />
       <Topbar />
-      <main class="site-main" id="main-content">
+      <main class="site-main" id="main-content" aria-label={layoutMainAria}>
         <slot />
       </main>
       <Footer siteTitle={resolvedSiteTitle} socialLinks={siteSettings.socialLinks} />
     </div>
+    <WebVitalsCollector />
   </body>
 </html>

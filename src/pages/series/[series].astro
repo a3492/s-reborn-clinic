@@ -37,8 +37,11 @@ const matched = allClinic
 	.filter((p) => String(p.data.series ?? '').trim() === decodedSeries)
 	.sort(sortSeriesPosts);
 
-const postIdsJson = JSON.stringify(matched.map((p) => p.id));
+const seriesPostIds = matched.map((p) => p.id);
+const postIdsJson = JSON.stringify(seriesPostIds);
 const pageTitle = decodedSeries ? `${decodedSeries} 시리즈` : '시리즈';
+const seriesShareOrigin = Astro.site?.origin ?? Astro.url.origin;
+const seriesShareUrl = `${seriesShareOrigin}/series/${encodeURIComponent(decodedSeries)}/`;
 ---
 
 <Layout title={pageTitle} description={`에스리본 클리닉 — ${decodedSeries} 시리즈 글 모음`}>
@@ -48,15 +51,41 @@ const pageTitle = decodedSeries ? `${decodedSeries} 시리즈` : '시리즈';
 		<div class="blog-main">
 			<div class="blog-header">
 				<h1 class="blog-header-title">{decodedSeries || '시리즈'}</h1>
+				{
+					matched.length > 0 && (
+						<div class="blog-series-complete-banner" data-series-complete hidden>
+							<p class="blog-series-complete-msg">
+								🎉 「{decodedSeries}」 시리즈를 완독했습니다!
+							</p>
+							<button type="button" class="btn btn-primary blog-series-share-btn" data-share-complete>
+								완독 공유하기
+							</button>
+						</div>
+					)
+				}
 				<p class="blog-series-meta">
 					<a href="/blog/" class="blog-series-back">← 블로그 전체</a>
-					{matched.length > 0 && (
-						<span class="blog-series-progress" data-series-hub-progress>
-							완독 진행률: <strong data-series-hub-progress-text>—</strong>
-							<span class="blog-series-progress-hint">(이 브라우저에만 저장)</span>
-						</span>
-					)}
 				</p>
+				{
+					matched.length > 0 && (
+						<div class="blog-series-read-panel" data-series-read-panel>
+							<div
+								class="blog-series-progress-track"
+								role="progressbar"
+								aria-valuemin="0"
+								aria-valuemax="100"
+								aria-valuenow="0"
+								data-series-progress-track
+							>
+								<div class="blog-series-progress-fill" data-series-progress-fill style="width: 0%"></div>
+							</div>
+							<p class="blog-series-read-panel-text">
+								<strong data-series-hub-progress-detail>—</strong>
+								<span class="blog-series-progress-hint">(이 브라우저에만 저장)</span>
+							</p>
+						</div>
+					)
+				}
 			</div>
 
 			{
@@ -70,7 +99,10 @@ const pageTitle = decodedSeries ? `${decodedSeries} 시리즈` : '시리즈';
 				) : (
 					<div class="blog-grid">
 						{matched.map((post, index) => (
-							<article class="blog-post-card" data-series-card-id={post.id}>
+							<article class="blog-post-card blog-series-card" data-series-card-id={post.id}>
+								<span class="blog-series-card-read-check" data-series-card-check hidden aria-hidden="true">
+									✓
+								</span>
 								<a href={postPermalink(post)} class="blog-post-card-main">
 									{post.data.thumbnail && (
 										<div class="blog-post-card-thumb">
@@ -125,25 +157,99 @@ const pageTitle = decodedSeries ? `${decodedSeries} 시리즈` : '시리즈';
 		</div>
 	</div>
 
-	<script is:inline define:vars={{ seriesLabel: decodedSeries, postIdsJson }}>
+	<script
+		is:inline
+		define:vars={{
+			seriesLabel: decodedSeries,
+			postIdsJson,
+			seriesShareUrl,
+			seriesTotalPosts: matched.length,
+		}}
+	>
 		(function () {
-			var textEl = document.querySelector('[data-series-hub-progress-text]');
-			if (!textEl || !seriesLabel) return;
-			try {
-				var key = 'sreborn_series_read_v1';
-				var ids = JSON.parse(postIdsJson || '[]');
-				var raw = localStorage.getItem(key);
-				var map = raw ? JSON.parse(raw) : {};
-				var readList = map[seriesLabel] || [];
-				var readSet = {};
-				for (var i = 0; i < readList.length; i++) readSet[readList[i]] = true;
-				var n = 0;
-				for (var j = 0; j < ids.length; j++) {
-					if (readSet[ids[j]]) n++;
+			var detailEl = document.querySelector('[data-series-hub-progress-detail]');
+			var fillEl = document.querySelector('[data-series-progress-fill]');
+			var trackEl = document.querySelector('[data-series-progress-track]');
+			var bannerEl = document.querySelector('[data-series-complete]');
+			var shareBtn = document.querySelector('[data-share-complete]');
+			if (!seriesLabel || !detailEl) return;
+
+			var SESSION_KEY = 'series_complete_seen_v1:' + encodeURIComponent(seriesLabel);
+
+			function readKey(id) {
+				return 'read:' + id;
+			}
+
+			function refreshSeriesHub() {
+				var ids = [];
+				try {
+					ids = JSON.parse(postIdsJson || '[]');
+				} catch (e) {
+					ids = [];
 				}
-				textEl.textContent = n + ' / ' + ids.length + '편 읽음';
-			} catch (e) {
-				textEl.textContent = '—';
+				var total = ids.length;
+				var n = 0;
+				for (var i = 0; i < total; i++) {
+					if (localStorage.getItem(readKey(ids[i])) === 'true') n++;
+				}
+				var pct = total ? Math.round((n / total) * 100) : 0;
+
+				detailEl.textContent = n + ' / ' + total + '편 완료 (' + pct + '%)';
+
+				if (fillEl) fillEl.style.width = pct + '%';
+				if (trackEl) {
+					trackEl.setAttribute('aria-valuenow', String(pct));
+					trackEl.setAttribute('aria-label', '시리즈 완독 진도 ' + pct + '%');
+				}
+
+				document.querySelectorAll('[data-series-card-id]').forEach(function (card) {
+					var id = card.getAttribute('data-series-card-id');
+					var check = card.querySelector('[data-series-card-check]');
+					if (!id || !check) return;
+					var done = localStorage.getItem(readKey(id)) === 'true';
+					check.hidden = !done;
+				});
+
+				if (bannerEl) {
+					if (total > 0 && n === total) {
+						if (!sessionStorage.getItem(SESSION_KEY)) {
+							bannerEl.hidden = false;
+							sessionStorage.setItem(SESSION_KEY, '1');
+						} else {
+							bannerEl.hidden = true;
+						}
+					} else {
+						bannerEl.hidden = true;
+					}
+				}
+			}
+
+			refreshSeriesHub();
+			window.addEventListener('storage', function (e) {
+				if (e.key && e.key.indexOf('read:') === 0) refreshSeriesHub();
+			});
+
+			if (shareBtn) {
+				shareBtn.addEventListener('click', function () {
+					var body =
+						"S-Reborn AI Blog의 '" +
+						seriesLabel +
+						"' 시리즈를 완독했습니다.\n의료 AI 핵심 개념 " +
+						seriesTotalPosts +
+						'편 → ' +
+						seriesShareUrl;
+					if (navigator.share) {
+						navigator.share({ text: body, url: seriesShareUrl }).catch(function () {});
+					} else if (navigator.clipboard && navigator.clipboard.writeText) {
+						navigator.clipboard.writeText(body).then(function () {
+							var t = shareBtn.textContent;
+							shareBtn.textContent = '복사했습니다';
+							setTimeout(function () {
+								shareBtn.textContent = t;
+							}, 2000);
+						});
+					}
+				});
 			}
 		})();
 	</script>
@@ -160,6 +266,58 @@ const pageTitle = decodedSeries ? `${decodedSeries} 시리즈` : '시리즈';
 		color: var(--t2);
 	}
 
+	.blog-series-complete-banner {
+		margin: 0.75rem 0 1rem;
+		padding: 1rem 1.15rem;
+		border-radius: 14px;
+		border: 1px solid var(--rule);
+		background: linear-gradient(135deg, rgba(184, 149, 106, 0.18), rgba(184, 149, 106, 0.06));
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.75rem 1rem;
+	}
+
+	.blog-series-complete-msg {
+		margin: 0;
+		flex: 1;
+		min-width: 12rem;
+		font-size: 0.95rem;
+		font-weight: 800;
+		color: var(--text);
+	}
+
+	.blog-series-read-panel {
+		margin: 0.5rem 0 1.25rem;
+		max-width: 36rem;
+	}
+
+	.blog-series-progress-track {
+		height: 0.45rem;
+		border-radius: 999px;
+		background: var(--bg2, rgba(0, 0, 0, 0.06));
+		overflow: hidden;
+		border: 1px solid var(--rule);
+	}
+
+	.blog-series-progress-fill {
+		height: 100%;
+		border-radius: inherit;
+		background: linear-gradient(90deg, var(--accent-dark, #8c6d45), var(--accent, #b8956a));
+		transition: width 0.35s ease;
+	}
+
+	.blog-series-read-panel-text {
+		margin: 0.45rem 0 0;
+		font-size: 0.88rem;
+		color: var(--t2);
+	}
+
+	.blog-series-read-panel-text strong {
+		color: var(--text);
+		font-weight: 800;
+	}
+
 	.blog-series-back {
 		color: var(--accent-dark);
 		font-weight: 700;
@@ -170,15 +328,32 @@ const pageTitle = decodedSeries ? `${decodedSeries} 시리즈` : '시리즈';
 		text-decoration: underline;
 	}
 
-	.blog-series-progress strong {
-		color: var(--text);
-		font-weight: 800;
-	}
-
 	.blog-series-progress-hint {
 		margin-left: 0.35rem;
 		font-size: 0.78rem;
 		color: var(--t3);
+	}
+
+	.blog-series-card {
+		position: relative;
+	}
+
+	.blog-series-card-read-check {
+		position: absolute;
+		top: 0.5rem;
+		right: 0.5rem;
+		z-index: 2;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.65rem;
+		height: 1.65rem;
+		border-radius: 999px;
+		font-size: 0.95rem;
+		font-weight: 800;
+		color: #fff;
+		background: var(--accent-dark, #8c6d45);
+		box-shadow: 0 2px 8px rgba(28, 25, 23, 0.12);
 	}
 
 	.blog-post-card-series-pill {

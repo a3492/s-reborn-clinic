@@ -15,6 +15,7 @@ import ContentImage from '../components/ContentImage.astro';
 import SubscribeForm from '../components/SubscribeForm.astro';
 import BookmarkButton from '../components/BookmarkButton.astro';
 import Poll from '../components/Poll.astro';
+import WebVitalsCollector from '../components/WebVitalsCollector.astro';
 import { CATEGORIES, SITE_TITLE } from '../consts';
 import { ACADEMY_CONTENT_ID_PREFIX, ACADEMY_PUBLIC_PATH } from '../lib/academy-constants';
 import { buildArticlePageGraph } from '../lib/structured-data';
@@ -22,11 +23,15 @@ import { isAcademyBlogPost, postPermalink } from '../lib/academy';
 import { blogTagPageHref } from '../lib/blog-tag-url';
 import { entryIsAcademyBlogId, sortSeriesPosts, seriesHubPath } from '../lib/blog-series';
 import { getActiveDisclaimerBodyForCategory } from '../lib/disclaimers';
+import type { BlogTocItem } from '../lib/blog-post-toc';
 
 type Props = CollectionEntry<'blog'>['data'] & {
 	slug?: string;
 	/** URI 인코딩된 전체 MD(frontmatter+body) — article data-markdown 에만 사용 */
 	encodedDownloadMarkdown?: string;
+	/** 마크다운 본문 — 서버에서 읽기 시간·목차 계산용 */
+	body?: string;
+	tocItems?: BlogTocItem[];
 };
 
 const {
@@ -38,7 +43,14 @@ const {
 	tags,
 	series: postSeries,
 	encodedDownloadMarkdown = '',
+	body: rawMarkdownBody = '',
+	tocItems = [],
 } = Astro.props;
+
+const readingStrip = (rawMarkdownBody ?? '').replace(/[#*`>\-\[\]()]/g, '').trim();
+const readingCharCount = readingStrip.replace(/\s+/g, '').length;
+const readingTimeLabel =
+	readingCharCount === 0 ? null : readingCharCount < 250 ? '1분 미만' : `읽기 약 ${Math.ceil(readingCharCount / 250)}분`;
 const pathNorm = Astro.url.pathname.replace(/\/$/, '');
 const slug = pathNorm.startsWith('/blog/')
 	? pathNorm.slice('/blog/'.length)
@@ -94,6 +106,18 @@ const relatedFallback = category
 const categoryLabelRecord = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label]));
 
 const thumbTrim = thumbnail && String(thumbnail).trim();
+const publicR2MediaBase = (import.meta.env.PUBLIC_R2_MEDIA_URL || '').trim().replace(/\/$/, '');
+const thumbnailDisplaySrc = thumbTrim
+	? publicR2MediaBase
+		? (() => {
+				const t = thumbTrim;
+				const abs = t.startsWith('http') ? t : new URL(t, Astro.site ?? Astro.url).href;
+				if (!abs.startsWith(publicR2MediaBase)) return t;
+				const j = abs.includes('?') ? '&' : '?';
+				return `${abs}${j}width=800&format=webp&quality=85`;
+			})()
+		: thumbTrim
+	: '';
 const absoluteThumbnail = thumbTrim
 	? thumbTrim.startsWith('http')
 		? thumbTrim
@@ -124,6 +148,8 @@ const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
       siteTitle={SITE_TITLE}
       ogType="article"
       jsonLd={articleJsonLd}
+      rssCategoryId={category ?? null}
+      rssCategoryLabel={category ? categoryLabelRecord[category] ?? category : null}
     />
     <!-- PWA: 아이콘은 public/icon-192.png, public/icon-512.png (manifest.json). -->
     <link rel="manifest" href="/manifest.json" />
@@ -163,6 +189,7 @@ const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
   </head>
 
   <body class="blog-post-shell">
+    <div class="blog-reading-progress-track" data-reading-progress aria-hidden="true"></div>
     <div
       id="blog-reading-mode-exit"
       class="blog-reading-mode-exit-bar"
@@ -198,7 +225,7 @@ const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
             />
             {thumbnail && (
               <div class="blog-post-hero">
-                <ContentImage src={thumbnail} alt={title} width={960} height={540} loading="eager" decoding="async" fetchpriority="high" />
+                <ContentImage src={thumbnailDisplaySrc} alt={title} width={960} height={540} loading="eager" decoding="async" fetchpriority="high" />
               </div>
             )}
             <div class="blog-post-prose prose">
@@ -209,13 +236,21 @@ const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
                       {CATEGORIES.find(c => c.id === category)?.label ?? category}
                     </span>
                   )}
-                  {date && (
-                    <time datetime={date.toISOString()}>
-                      {new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }).format(date)}
-                    </time>
-                  )}
                 </div>
                 <h1>{title}</h1>
+                {(date || readingTimeLabel) && (
+                  <div class="blog-post-submeta">
+                    {date && (
+                      <time datetime={date.toISOString()}>
+                        {new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }).format(date)}
+                      </time>
+                    )}
+                    {date && readingTimeLabel && <span class="blog-post-submeta-sep" aria-hidden="true"> · </span>}
+                    {readingTimeLabel && (
+                      <span class="blog-post-reading-time">{readingTimeLabel}</span>
+                    )}
+                  </div>
+                )}
                 {disclaimerBody && (
                   <aside class="disclaimer" role="note" aria-label="의료 면책 고지">
                     <p>⚕️ {disclaimerBody}</p>
@@ -237,7 +272,12 @@ const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
               </div>
 
               {seriesName && seriesTotal > 0 && (
-                <nav class="blog-post-series" aria-label="시리즈 네비게이션">
+                <nav
+                  class="blog-post-series"
+                  aria-label="시리즈 네비게이션"
+                  data-blog-series-nav
+                  data-series-current-slug={slug}
+                >
                   <div class="blog-post-series-head">
                     <a href={seriesHubPath(seriesName)} class="blog-post-series-hub">
                       {seriesName}
@@ -245,35 +285,71 @@ const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
                     <span class="blog-post-series-pos">
                       {seriesPosition} / {seriesTotal}편
                     </span>
+                    <p class="blog-post-series-reread" data-series-reread-msg hidden>
+                      이전에 읽었습니다
+                    </p>
                   </div>
                   <div class="blog-post-series-nav">
                     {seriesPrev ? (
-                      <a class="blog-post-series-btn" href={postPermalink(seriesPrev)}>
+                      <a class="blog-post-series-btn" href={postPermalink(seriesPrev)} data-series-nav-prev={seriesPrev.id}>
                         ← 이전 편
                       </a>
                     ) : (
                       <span class="blog-post-series-btn is-disabled" aria-disabled="true">← 이전 편</span>
                     )}
                     {seriesNext ? (
-                      <a class="blog-post-series-btn" href={postPermalink(seriesNext)}>
+                      <a
+                        class="blog-post-series-btn"
+                        href={postPermalink(seriesNext)}
+                        data-series-nav-next={seriesNext.id}
+                      >
                         다음 편 →
                       </a>
                     ) : (
                       <span class="blog-post-series-btn is-disabled" aria-disabled="true">다음 편 →</span>
                     )}
                   </div>
+                  <p class="blog-post-series-next-hint" data-series-next-unread-hint hidden>
+                    다음으로 읽을 편 ▶
+                  </p>
                   <details class="blog-post-series-details">
                     <summary class="blog-post-series-summary">시리즈 전체 목록</summary>
                     <ol class="blog-post-series-list">
                       {seriesSiblings.map((p, i) => (
-                        <li class:list={{ 'is-current': p.id === slug }}>
-                          <a href={postPermalink(p)}>
-                            {i + 1}. {p.data.title}
+                        <li
+                          class:list={{ 'is-current': p.id === slug }}
+                          data-series-post-slug={p.id}
+                        >
+                          <a href={postPermalink(p)} class="blog-post-series-list-link">
+                            <span class="blog-post-series-item-check" aria-hidden="true"></span>
+                            <span class="blog-post-series-item-text">
+                              {i + 1}. {p.data.title}
+                            </span>
                           </a>
                         </li>
                       ))}
                     </ol>
                   </details>
+                </nav>
+              )}
+
+              {tocItems.length >= 2 && (
+                <nav class="blog-post-toc" aria-label="이 글 목차">
+                  <p class="blog-post-toc-heading">목차</p>
+                  <ul class="blog-post-toc-list">
+                    {tocItems.map((item) => (
+                      <li
+                        class:list={[
+                          'blog-post-toc-item',
+                          item.depth === 3 ? 'blog-post-toc-item--depth-3' : 'blog-post-toc-item--depth-2',
+                        ]}
+                      >
+                        <a href={`#${item.id}`} class="blog-post-toc-link" data-toc-link={item.id}>
+                          {item.text}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
                 </nav>
               )}
 
@@ -1360,21 +1436,325 @@ const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
       });
     </script>
 
+    <script is:inline>
+      (function () {
+        var article = document.querySelector('article.blog-post-article');
+        var bar = document.querySelector('[data-reading-progress]');
+        if (!article || !bar) return;
+        function update() {
+          var r = article.getBoundingClientRect();
+          var windowH = window.innerHeight;
+          var scrolled = Math.max(0, -r.top);
+          var total = r.height - windowH;
+          var pct = total > 0 ? Math.min(100, (scrolled / total) * 100) : 0;
+          bar.style.width = pct + '%';
+        }
+        window.addEventListener('scroll', update, { passive: true });
+        window.addEventListener('resize', update, { passive: true });
+        update();
+      })();
+    </script>
+
+    <script define:vars={{ tocAnchorIds: tocItems.map((t) => t.id) }}>
+      (() => {
+        if (!tocAnchorIds.length) return;
+        const tocLinks = document.querySelectorAll('[data-toc-link]');
+        if (!tocLinks.length) return;
+        const idSet = new Set(tocAnchorIds);
+        const headings = [
+          ...document.querySelectorAll('article.blog-post-article h2, article.blog-post-article h3'),
+        ].filter((el): el is HTMLElement => el instanceof HTMLElement && idSet.has(el.id));
+        if (!headings.length) return;
+        const observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) return;
+              const id = entry.target.id;
+              tocLinks.forEach((link) => {
+                link.classList.toggle('is-active', link.dataset.tocLink === id);
+              });
+            });
+          },
+          { rootMargin: '-20% 0px -70% 0px' },
+        );
+        headings.forEach((h) => observer.observe(h));
+      })();
+    </script>
+
     {seriesName && seriesTotal > 0 && (
-      <script is:inline define:vars={{ seriesStoreName: seriesName, seriesStoreSlug: slug }}>
-        (function () {
+      <script
+        define:vars={{
+          seriesReadSlug: slug,
+          seriesSiblingIdsJson: JSON.stringify(seriesSiblings.map((p) => p.id)),
+        }}
+      >
+        (() => {
+          const READ_PREFIX = 'read:';
+          const readKey = (id: string) => READ_PREFIX + id;
+
+          const nav = document.querySelector('[data-blog-series-nav]');
+          const rereadEl = document.querySelector('[data-series-reread-msg]');
+          const nextHint = document.querySelector('[data-series-next-unread-hint]');
+          const nextBtn = document.querySelector('a.blog-post-series-btn[data-series-nav-next]');
+
+          let siblingIds: string[] = [];
           try {
-            var key = 'sreborn_series_read_v1';
-            var raw = localStorage.getItem(key);
-            var map = raw ? JSON.parse(raw) : {};
-            var list = map[seriesStoreName] || [];
-            if (list.indexOf(seriesStoreSlug) === -1) list.push(seriesStoreSlug);
-            map[seriesStoreName] = list;
-            localStorage.setItem(key, JSON.stringify(map));
-          } catch (e) {}
+            siblingIds = JSON.parse(seriesSiblingIdsJson || '[]') as string[];
+          } catch {
+            siblingIds = [];
+          }
+
+          function updateSeriesProgress() {
+            if (!nav) return;
+
+            const firstUnread = siblingIds.find((id) => localStorage.getItem(readKey(id)) !== 'true');
+
+            document.querySelectorAll('[data-series-post-slug]').forEach((li) => {
+              if (!(li instanceof HTMLElement)) return;
+              const sid = li.dataset.seriesPostSlug;
+              if (!sid) return;
+              const read = localStorage.getItem(readKey(sid)) === 'true';
+              li.classList.toggle('is-read', read);
+              const mark = li.querySelector('.blog-post-series-item-check');
+              if (mark) mark.textContent = read ? '✓' : '';
+              li.classList.toggle('is-next-unread', Boolean(firstUnread && sid === firstUnread));
+            });
+
+            if (rereadEl instanceof HTMLElement) {
+              rereadEl.hidden = localStorage.getItem(readKey(seriesReadSlug)) !== 'true';
+            }
+
+            if (nextBtn instanceof HTMLAnchorElement) {
+              const nextId = nextBtn.getAttribute('data-series-nav-next');
+              nextBtn.classList.toggle(
+                'blog-post-series-btn--next-unread',
+                Boolean(firstUnread && nextId && nextId === firstUnread),
+              );
+            }
+
+            if (nextHint instanceof HTMLElement) {
+              nextHint.hidden = !(
+                firstUnread &&
+                nextBtn instanceof HTMLAnchorElement &&
+                nextBtn.getAttribute('data-series-nav-next') === firstUnread
+              );
+            }
+          }
+
+          const article = document.querySelector('article.blog-post-article');
+          if (!article) return;
+
+          const prose = article.querySelector('.blog-post-prose');
+          const lastEl = (prose?.lastElementChild ?? article.lastElementChild) as Element | null;
+          if (!lastEl) {
+            updateSeriesProgress();
+            return;
+          }
+
+          updateSeriesProgress();
+
+          if (localStorage.getItem(readKey(seriesReadSlug)) === 'true') {
+            return;
+          }
+
+          const observer = new IntersectionObserver(
+            ([entry]) => {
+              if (!entry?.isIntersecting) return;
+              try {
+                localStorage.setItem(readKey(seriesReadSlug), 'true');
+              } catch {
+                /* ignore quota */
+              }
+              observer.disconnect();
+              updateSeriesProgress();
+            },
+            { threshold: 0.1 },
+          );
+          observer.observe(lastEl);
         })();
       </script>
     )}
+
+    <div
+      data-highlight-popup
+      class="blog-highlight-share-popup"
+      hidden
+      role="dialog"
+      aria-label="선택 인용 공유"
+    >
+      <button type="button" class="blog-highlight-share-btn" data-share-twitter>X에 인용</button>
+      <button type="button" class="blog-highlight-share-btn" data-share-copy>링크 복사</button>
+    </div>
+
+    <script define:vars={{ pageUrl, highlightShareTitle: title, highlightContentId: slug }}>
+      (() => {
+        const popup = document.querySelector('[data-highlight-popup]');
+        const btnTw = document.querySelector('[data-share-twitter]');
+        const btnCopy = document.querySelector('[data-share-copy]');
+        if (!(popup instanceof HTMLElement) || !(btnTw instanceof HTMLButtonElement) || !(btnCopy instanceof HTMLButtonElement)) {
+          return;
+        }
+
+        const copyDefaultLabel = btnCopy.textContent || '링크 복사';
+
+        let storedSelection = '';
+
+        function hidePopup() {
+          storedSelection = '';
+          popup.setAttribute('hidden', '');
+          popup.removeAttribute('style');
+        }
+
+        function proseRoot(): Element | null {
+          return document.querySelector('article.blog-post-article .blog-post-prose.prose');
+        }
+
+        function selectionInProseOnly(range: Range): boolean {
+          const root = proseRoot();
+          if (!root) return false;
+          const startN = range.startContainer;
+          const endN = range.endContainer;
+          const startEl =
+            startN.nodeType === Node.TEXT_NODE ? (startN.parentElement as Element | null) : (startN as Element);
+          const endEl = endN.nodeType === Node.TEXT_NODE ? (endN.parentElement as Element | null) : (endN as Element);
+          if (!startEl || !endEl) return false;
+          if (!root.contains(startEl) || !root.contains(endEl)) return false;
+          if (startEl.closest('input, textarea, button, [data-highlight-popup], .blog-post-comments')) return false;
+          return true;
+        }
+
+        function showPopup(rect: DOMRectReadOnly, text: string) {
+          storedSelection = text;
+          popup.removeAttribute('hidden');
+          const margin = 8;
+          const place = () => {
+            const w = popup.offsetWidth || 200;
+            const h = popup.offsetHeight || 40;
+            const centerX = rect.left + rect.width / 2;
+            const halfW = w / 2;
+            const leftPx = Math.min(Math.max(centerX, margin + halfW), window.innerWidth - margin - halfW);
+            let topPx = rect.top - h - margin;
+            if (topPx < margin) {
+              topPx = Math.min(rect.bottom + margin, window.innerHeight - h - margin);
+            }
+            popup.style.left = `${leftPx}px`;
+            popup.style.top = `${topPx}px`;
+            popup.style.transform = 'translateX(-50%)';
+          };
+          place();
+          requestAnimationFrame(place);
+        }
+
+        function handleSelectionDone() {
+          const sel = window.getSelection();
+          if (!sel || sel.rangeCount === 0) {
+            hidePopup();
+            return;
+          }
+          const selected = sel.toString().trim();
+          if (!selected || selected.length < 10 || selected.length > 280) {
+            hidePopup();
+            return;
+          }
+          let range: Range;
+          try {
+            range = sel.getRangeAt(0);
+          } catch {
+            hidePopup();
+            return;
+          }
+          if (!selectionInProseOnly(range)) {
+            hidePopup();
+            return;
+          }
+          const r = range.getBoundingClientRect();
+          if (r.width === 0 && r.height === 0) {
+            hidePopup();
+            return;
+          }
+          showPopup(r, selected);
+        }
+
+        document.addEventListener(
+          'mouseup',
+          () => {
+            requestAnimationFrame(handleSelectionDone);
+          },
+          { passive: true },
+        );
+
+        document.addEventListener(
+          'touchend',
+          () => {
+            requestAnimationFrame(handleSelectionDone);
+          },
+          { passive: true },
+        );
+
+        document.addEventListener(
+          'mousedown',
+          (e) => {
+            if (e.target instanceof Node && popup.contains(e.target)) return;
+            hidePopup();
+          },
+          true,
+        );
+
+        window.addEventListener(
+          'scroll',
+          () => {
+            hidePopup();
+          },
+          { passive: true },
+        );
+
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && !popup.hasAttribute('hidden')) {
+            hidePopup();
+          }
+        });
+
+        btnTw.addEventListener('click', () => {
+          const selected = storedSelection;
+          if (!selected) return;
+          const quote = `"${selected}" — ${highlightShareTitle}`;
+          const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(quote)}&url=${encodeURIComponent(pageUrl)}`;
+          window.open(url, '_blank', 'noopener,noreferrer');
+          globalThis.gtag?.('event', 'share', { method: 'twitter_quote', content_id: highlightContentId });
+          hidePopup();
+        });
+
+        btnCopy.addEventListener('click', async () => {
+          const selected = storedSelection;
+          if (!selected) return;
+          let base: string;
+          try {
+            const u = new URL(pageUrl);
+            u.hash = '';
+            base = u.href;
+          } catch {
+            base = pageUrl.split('#')[0] || pageUrl;
+          }
+          const fragmentUrl = `${base}#:~:text=${encodeURIComponent(selected)}`;
+          try {
+            await navigator.clipboard.writeText(fragmentUrl);
+            btnCopy.textContent = '복사됨!';
+            globalThis.gtag?.('event', 'share', { method: 'highlight_fragment', content_id: highlightContentId });
+            window.setTimeout(() => {
+              btnCopy.textContent = copyDefaultLabel;
+            }, 2000);
+            hidePopup();
+          } catch {
+            btnCopy.textContent = '복사 실패';
+            window.setTimeout(() => {
+              btnCopy.textContent = copyDefaultLabel;
+            }, 2000);
+          }
+        });
+      })();
+    </script>
+
+    <WebVitalsCollector />
   </body>
 </html>
 
@@ -1790,6 +2170,21 @@ const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
     font-variant-numeric: tabular-nums;
   }
 
+  .blog-post-series-reread {
+    margin: 0.15rem 0 0;
+    width: 100%;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--accent-dark, #8c6d45);
+  }
+
+  .blog-post-series-next-hint {
+    margin: 0 0 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: var(--accent-dark, #8c6d45);
+  }
+
   .blog-post-series-nav {
     display: flex;
     flex-wrap: wrap;
@@ -1825,6 +2220,12 @@ const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
     pointer-events: none;
   }
 
+  a.blog-post-series-btn.blog-post-series-btn--next-unread {
+    border-color: var(--accent, #b8956a);
+    background: rgba(184, 149, 106, 0.18);
+    box-shadow: 0 0 0 1px rgba(184, 149, 106, 0.35);
+  }
+
   .blog-post-series-details {
     margin-top: 0.35rem;
     font-size: 0.88rem;
@@ -1848,18 +2249,33 @@ const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
     line-height: 1.55;
   }
 
-  .blog-post-series-list a {
+  .blog-post-series-list-link {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 0.35rem;
     color: var(--text);
     text-decoration: none;
     font-weight: 600;
   }
 
-  .blog-post-series-list a:hover {
+  .blog-post-series-list-link:hover {
     color: var(--accent-dark);
     text-decoration: underline;
   }
 
-  .blog-post-series-list li.is-current a {
+  .blog-post-series-item-check {
+    flex-shrink: 0;
+    width: 1.1rem;
+    font-size: 0.85rem;
+    color: var(--accent-dark, #8c6d45);
+  }
+
+  .blog-post-series-list li.is-next-unread .blog-post-series-list-link {
+    font-weight: 800;
+    color: var(--accent-dark, #8c6d45);
+  }
+
+  .blog-post-series-list li.is-current .blog-post-series-list-link {
     color: var(--accent-dark);
   }
 
@@ -2156,5 +2572,150 @@ const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
 
   .blog-post-article :global(aside.disclaimer p) {
     margin: 0;
+  }
+
+  [data-reading-progress] {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    width: 0%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: var(--accent, #b8956a);
+    z-index: 1000;
+    transition: width 0.1s linear;
+    pointer-events: none;
+    box-sizing: border-box;
+  }
+
+  body.blog-post-shell.reading-mode [data-reading-progress] {
+    top: 2.75rem;
+  }
+
+  .blog-post-submeta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.15rem 0;
+    margin: 0.35rem 0 0.75rem;
+    font-size: 0.88rem;
+    color: var(--t2);
+  }
+
+  .blog-post-submeta time {
+    color: var(--t2);
+  }
+
+  .blog-post-reading-time {
+    color: var(--t2);
+    font-weight: 600;
+  }
+
+  .blog-post-toc {
+    margin: 0 0 1.5rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    background: var(--bg2, rgba(0, 0, 0, 0.03));
+  }
+
+  .blog-post-toc-heading {
+    margin: 0 0 0.5rem;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--t3);
+  }
+
+  .blog-post-toc-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .blog-post-toc-item--depth-3 {
+    padding-left: 0.85rem;
+  }
+
+  .blog-post-toc-link {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+    text-decoration: none;
+    line-height: 1.4;
+    border-radius: 6px;
+    padding: 0.1rem 0.2rem;
+    margin: 0 -0.2rem;
+    transition:
+      color 0.12s ease,
+      background 0.12s ease;
+  }
+
+  .blog-post-toc-link:hover {
+    color: var(--accent-dark);
+    text-decoration: underline;
+  }
+
+  .blog-post-toc-link.is-active {
+    color: var(--accent-dark);
+    background: rgba(184, 149, 106, 0.14);
+    text-decoration: none;
+  }
+
+  .blog-post-toc-link:focus-visible {
+    outline: 2px solid var(--accent, #b8956a);
+    outline-offset: 2px;
+  }
+
+  /* 선택 인용 공유 — z-index: 집중모드 바(10070)·신고 모달(10050)보다 위 */
+  .blog-highlight-share-popup {
+    position: fixed;
+    z-index: 10080;
+    background: var(--surface, #fff);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 0.375rem 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    pointer-events: auto;
+    max-width: min(calc(100vw - 16px), 20rem);
+    box-sizing: border-box;
+  }
+
+  .blog-highlight-share-popup[hidden] {
+    display: none !important;
+  }
+
+  .blog-highlight-share-btn {
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 0.35rem 0.55rem;
+    border-radius: 6px;
+    border: 1px solid var(--rule);
+    background: var(--bg2, rgba(0, 0, 0, 0.04));
+    color: var(--text);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .blog-highlight-share-btn:hover {
+    border-color: var(--accent, #b8956a);
+    color: var(--accent-dark, #8c6d45);
+  }
+
+  .blog-highlight-share-btn:focus-visible {
+    outline: 2px solid var(--accent, #b8956a);
+    outline-offset: 2px;
   }
 </style>

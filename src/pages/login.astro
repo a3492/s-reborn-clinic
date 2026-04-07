@@ -41,7 +41,7 @@ import Layout from '../layouts/Layout.astro';
     setMsg('Supabase 환경 변수가 설정되지 않았습니다.');
   } else {
     const params = new URLSearchParams(window.location.search);
-    const fromQuery = params.get('return');
+    const fromQuery = params.get('return') || params.get('returnUrl');
     if (fromQuery) {
       sessionStorage.setItem(READER_RETURN_STORAGE_KEY, safeInternalPath(fromQuery));
     } else {
@@ -67,8 +67,8 @@ import Layout from '../layouts/Layout.astro';
       if (event === 'SIGNED_IN' && session) goAfterLogin();
     });
 
-    const { data: existing } = await supabase.auth.getSession();
-    if (existing.session) goAfterLogin();
+    const { data: existing } = await supabase.auth.getUser();
+    if (existing.user) goAfterLogin();
 
     document.querySelectorAll('[data-oauth]').forEach((btn) => {
       btn.addEventListener('click', async () => {

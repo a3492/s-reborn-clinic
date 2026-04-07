@@ -534,6 +534,14 @@ a.blog-post-tag:hover {
 	border: 1px solid var(--rule);
 }
 
+.blog-post-share-btn.md-download,
+.blog-post-share-btn.txt-download,
+.blog-post-share-btn.reading-mode-toggle {
+	background: rgba(255, 255, 255, 0.1);
+	color: var(--text);
+	border: 1px solid var(--rule);
+}
+
 .blog-post-share-btn.reader-bookmark {
 	display: inline-flex;
 	align-items: center;
@@ -651,6 +659,9 @@ html[data-theme="dark"] .blog-post-share-btn:focus-visible {
 
 html[data-theme="dark"] .blog-post-share-btn.copy,
 html[data-theme="dark"] .blog-post-share-btn.print,
+html[data-theme="dark"] .blog-post-share-btn.md-download,
+html[data-theme="dark"] .blog-post-share-btn.txt-download,
+html[data-theme="dark"] .blog-post-share-btn.reading-mode-toggle,
 html[data-theme="dark"] .blog-post-share-btn.reader-bookmark {
 	background: rgba(255, 255, 255, 0.06);
 }

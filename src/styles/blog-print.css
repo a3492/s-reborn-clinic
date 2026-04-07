@@ -34,12 +34,15 @@
     line-height: 1.6;
   }
 
+  body.blog-post-shell [data-reading-progress],
+  body.blog-post-shell [data-highlight-popup],
   body.blog-post-shell .site-header,
   body.blog-post-shell .topbar,
   body.blog-post-shell .blog-sidebar,
   body.blog-post-shell .site-footer,
   body.blog-post-shell .blog-post-series,
   body.blog-post-shell .blog-post-tag-cloud-wrap,
+  body.blog-post-shell .blog-post-poll,
   body.blog-post-shell .blog-post-reactions,
   body.blog-post-shell .blog-post-share-section,
   body.blog-post-shell .subscribe-form-card,
@@ -49,6 +52,27 @@
   body.blog-post-shell .post-report-modal-root,
   body.blog-post-shell a[href*='/admin'] {
     display: none !important;
+  }
+
+  body.blog-post-shell .blog-reading-mode-exit-bar {
+    display: none !important;
+  }
+
+  body.blog-post-shell.reading-mode .blog-post-main {
+    max-width: none !important;
+    margin-inline: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  body.blog-post-shell.reading-mode .blog-post-prose.prose {
+    font-size: 12pt !important;
+    line-height: 1.6 !important;
+  }
+
+  body.blog-post-shell.reading-mode .site-main.blog-with-sidebar {
+    padding-top: 0 !important;
   }
 
   /* 본문에 삽입된 목차·TOC 패턴 (향후 플러그인 대비) */
@@ -131,6 +155,13 @@
     content: ' (' attr(href) ')';
     font-size: 0.88em;
     font-weight: normal;
+  }
+
+  body.blog-post-shell article.blog-post-article aside.disclaimer {
+    border-left-color: #888 !important;
+    color: #333 !important;
+    background: transparent !important;
+    font-size: 9pt !important;
   }
 
   body.blog-post-shell * {

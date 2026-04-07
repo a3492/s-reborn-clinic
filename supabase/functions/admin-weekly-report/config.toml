@@ -1,0 +1,2 @@
+[functions.admin-weekly-report]
+verify_jwt = true

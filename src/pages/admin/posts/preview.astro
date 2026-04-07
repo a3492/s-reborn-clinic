@@ -3,6 +3,10 @@ import '../../../styles/design.css';
 import '../../../styles/global.css';
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 
+const previewSlugParam = Astro.url.searchParams.get('slug') ?? '';
+const editHref = previewSlugParam
+  ? `/admin/posts/edit?slug=${encodeURIComponent(previewSlugParam)}`
+  : '/admin/posts/edit';
 ---
 
 <AdminLayout
@@ -41,6 +45,11 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
           <span class="admin-seo-url" data-admin-seo-url>https://s-reborn-blog.pages.dev/...</span>
           <p class="admin-seo-desc" data-admin-seo-desc></p>
         </div>
+
+        <p class="admin-help" style="margin-top: 0.65rem">
+          트위터·카카오·슬랙 카드 시뮬레이션과 메타 체크리스트는
+          <a href={editHref}>글 편집 화면</a>의 「소셜 미리보기」에서 폼과 연동해 사용할 수 있습니다.
+        </p>
 
         <ul class="admin-list">
           <li class="admin-list-row"><div><p class="admin-item-title">Canonical</p><p class="admin-item-meta" data-admin-seo-canonical>-</p></div></li>

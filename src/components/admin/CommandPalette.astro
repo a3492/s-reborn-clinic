@@ -1,0 +1,468 @@
+---
+import { CATEGORIES } from '../../consts';
+
+const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label]));
+---
+
+<div
+  class="admin-cp-root"
+  data-command-palette
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="admin-cp-title"
+  hidden
+>
+  <div class="admin-cp-backdrop" data-cp-backdrop tabindex="-1"></div>
+  <div class="admin-cp-panel" data-cp-panel>
+    <h2 id="admin-cp-title" class="admin-cp-sr-only">전체 검색</h2>
+    <input
+      class="admin-cp-input admin-input"
+      data-cp-input
+      type="search"
+      placeholder="글 제목, slug, 명령어 검색..."
+      autocomplete="off"
+      spellcheck="false"
+      aria-autocomplete="list"
+      aria-controls="admin-cp-list"
+    />
+    <ul class="admin-cp-results" data-cp-results id="admin-cp-list" role="listbox"></ul>
+  </div>
+</div>
+
+<script define:vars={{ categoryLabelsPayload: categoryLabels }}>
+  /** @type {Record<string, string>} */
+  const CATEGORY_LABELS = categoryLabelsPayload;
+
+  const STATIC_COMMANDS = [
+    { type: 'cmd', label: '새 글 작성', icon: '✏️', href: '/admin/posts/new' },
+    { type: 'cmd', label: 'Pipeline 헬스체크', icon: '🔧', href: '/admin/pipeline' },
+    { type: 'cmd', label: '미디어 관리', icon: '🖼️', href: '/admin/media' },
+    { type: 'cmd', label: '설정', icon: '⚙️', href: '/admin/settings' },
+  ];
+
+  const root = document.querySelector('[data-command-palette]');
+  const backdrop = document.querySelector('[data-cp-backdrop]');
+  const panel = document.querySelector('[data-cp-panel]');
+  const input = document.querySelector('[data-cp-input]');
+  const listEl = document.querySelector('[data-cp-results]');
+
+  if (!root || !backdrop || !panel || !input || !(input instanceof HTMLInputElement) || !listEl) {
+    // 레이아웃에 필수 노드가 없으면 조용히 중단
+  } else {
+    const adminApp = document.querySelector('[data-admin-app]');
+    const canUsePalette = () => Boolean(adminApp && !adminApp.hasAttribute('hidden'));
+
+    let savedFocus = /** @type {HTMLElement | null} */ (null);
+    let debounceTimer = 0;
+    let searchGeneration = 0;
+    let selectedIndex = -1;
+    /** @type {{ type: string; label: string; icon: string; href: string; meta?: string }[]} */
+    let flatItems = [];
+
+    const isOpen = () => !root.hasAttribute('hidden');
+
+    const setBodyScrollLocked = (lock) => {
+      document.body.style.overflow = lock ? 'hidden' : '';
+    };
+
+    const clearList = () => {
+      while (listEl.firstChild) listEl.removeChild(listEl.firstChild);
+    };
+
+    /** PostgREST ilike 패턴용 이스케이프 (search.astro와 동일) */
+    const escapeIlikePattern = (q) => q.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+
+    const normalizeSearchTerm = (q) => q.trim().slice(0, 64).replace(/,/g, ' ');
+
+    const closePalette = () => {
+      if (!isOpen()) return;
+      root.setAttribute('hidden', '');
+      setBodyScrollLocked(false);
+      window.clearTimeout(debounceTimer);
+      debounceTimer = 0;
+      clearList();
+      flatItems = [];
+      selectedIndex = -1;
+      input.value = '';
+      input.removeAttribute('aria-activedescendant');
+      if (savedFocus && typeof savedFocus.focus === 'function') {
+        savedFocus.focus();
+      }
+      savedFocus = null;
+    };
+
+    const openPalette = () => {
+      if (isOpen() || !canUsePalette()) return;
+      savedFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      root.removeAttribute('hidden');
+      setBodyScrollLocked(true);
+      input.value = '';
+      selectedIndex = -1;
+      window.requestAnimationFrame(() => {
+        input.focus();
+      });
+      void executeSearch();
+    };
+
+    const togglePalette = () => {
+      if (isOpen()) closePalette();
+      else if (canUsePalette()) openPalette();
+    };
+
+    const makeOptionId = (i) => `admin-cp-opt-${i}`;
+
+    /**
+     * @param {string} icon
+     * @param {string} label
+     * @param {string} [meta]
+     * @param {string} href
+     */
+    const buildRow = (icon, label, meta, href, index) => {
+      const li = document.createElement('li');
+      li.className = 'admin-cp-result-row';
+      li.setAttribute('role', 'option');
+      li.id = makeOptionId(index);
+
+      const a = document.createElement('a');
+      a.href = href;
+      a.className = 'admin-cp-result';
+      a.tabIndex = -1;
+
+      const iconEl = document.createElement('span');
+      iconEl.className = 'admin-cp-result-icon';
+      iconEl.textContent = icon;
+      iconEl.setAttribute('aria-hidden', 'true');
+
+      const textWrap = document.createElement('span');
+      textWrap.className = 'admin-cp-result-text';
+
+      const titleEl = document.createElement('span');
+      titleEl.className = 'admin-cp-result-title';
+      titleEl.textContent = label;
+
+      textWrap.appendChild(titleEl);
+      if (meta) {
+        const metaEl = document.createElement('span');
+        metaEl.className = 'admin-cp-result-meta';
+        metaEl.textContent = meta;
+        textWrap.appendChild(metaEl);
+      }
+
+      a.appendChild(iconEl);
+      a.appendChild(textWrap);
+      li.appendChild(a);
+      return li;
+    };
+
+    const syncSelectionHighlight = () => {
+      const opts = listEl.querySelectorAll('[role="option"]');
+      opts.forEach((el, i) => {
+        el.classList.toggle('admin-cp-result-row--active', i === selectedIndex);
+      });
+      if (selectedIndex >= 0 && selectedIndex < flatItems.length) {
+        input.setAttribute('aria-activedescendant', makeOptionId(selectedIndex));
+      } else {
+        input.removeAttribute('aria-activedescendant');
+      }
+    };
+
+    const moveSelection = (delta) => {
+      if (flatItems.length === 0) return;
+      if (selectedIndex < 0) selectedIndex = 0;
+      else {
+        selectedIndex = (selectedIndex + delta + flatItems.length) % flatItems.length;
+      }
+      syncSelectionHighlight();
+      const active = listEl.querySelector(`#${CSS.escape(makeOptionId(selectedIndex))}`);
+      active?.scrollIntoView({ block: 'nearest' });
+    };
+
+    const activateSelection = () => {
+      if (selectedIndex < 0 || selectedIndex >= flatItems.length) return;
+      const href = flatItems[selectedIndex].href;
+      if (href) window.location.href = href;
+    };
+
+    const renderList = () => {
+      clearList();
+      flatItems.forEach((item, i) => {
+        const li = buildRow(item.icon, item.label, item.meta, item.href, i);
+        listEl.appendChild(li);
+      });
+      selectedIndex = flatItems.length > 0 ? 0 : -1;
+      syncSelectionHighlight();
+    };
+
+    const mergeItems = (
+      /** @type {{ type: string; label: string; icon: string; href: string; meta?: string }[]} */ cmds,
+      /** @type {{ type: string; label: string; icon: string; href: string; meta?: string }[]} */ posts,
+      /** @type {{ type: string; label: string; icon: string; href: string; meta?: string }[]} */ jobs,
+    ) => {
+      flatItems = [...cmds, ...posts, ...jobs];
+      renderList();
+    };
+
+    async function executeSearch() {
+      const gen = ++searchGeneration;
+      const q = input.value;
+      const term = normalizeSearchTerm(q);
+      const hasLongQuery = term.length >= 2;
+
+      /** @type {{ type: string; label: string; icon: string; href: string; meta?: string }[]} */
+      const cmds = STATIC_COMMANDS.map((c) => ({
+        type: 'cmd',
+        label: c.label,
+        icon: c.icon,
+        href: c.href,
+      }));
+
+      const supabase = window.__adminSupabase;
+
+      /** @type {{ type: string; label: string; icon: string; href: string; meta?: string }[]} */
+      const postItems = [];
+      /** @type {{ type: string; label: string; icon: string; href: string; meta?: string }[]} */
+      const jobItems = [];
+
+      if (!supabase) {
+        mergeItems(cmds, postItems, hasLongQuery ? [] : jobItems);
+        return;
+      }
+
+      if (hasLongQuery) {
+        const esc = escapeIlikePattern(term);
+        const orFilter = `title.ilike.%${esc}%,slug.ilike.%${esc}%`;
+        const { data, error } = await supabase
+          .from('posts')
+          .select('slug, title, status, category')
+          .or(orFilter)
+          .limit(5);
+
+        if (gen !== searchGeneration) return;
+
+        if (!error && data) {
+          for (const row of data) {
+            const slug = String(row.slug ?? '').trim();
+            if (!slug) continue;
+            const title = String(row.title ?? '').trim() || slug;
+            const cat = row.category ? CATEGORY_LABELS[row.category] ?? row.category : '';
+            const st = String(row.status ?? '');
+            const meta = [cat, st].filter(Boolean).join(' · ');
+            postItems.push({
+              type: 'post',
+              label: title,
+              icon: '📄',
+              href: `/admin/posts/edit?slug=${encodeURIComponent(slug)}`,
+              meta,
+            });
+          }
+        }
+        mergeItems(cmds, postItems, []);
+        return;
+      }
+
+      const { data: jobRows, error: jobErr } = await supabase
+        .from('publish_jobs')
+        .select('id, status, target_path, created_at, posts(slug, title)')
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      if (gen !== searchGeneration) return;
+
+      if (!jobErr && jobRows) {
+        for (const row of jobRows) {
+          const rel = row.posts;
+          const relObj = rel && !Array.isArray(rel) ? rel : Array.isArray(rel) ? rel[0] : null;
+          const slug = relObj?.slug ? String(relObj.slug).trim() : '';
+          const postTitle = relObj?.title ? String(relObj.title).trim() : '';
+          const path = row.target_path ? String(row.target_path) : '';
+          const labelBase = postTitle || path || 'Publish 작업';
+          const status = String(row.status ?? '');
+          const t = row.created_at ? new Date(row.created_at).toLocaleString('ko-KR') : '';
+          const href = slug
+            ? `/admin/posts/edit?slug=${encodeURIComponent(slug)}`
+            : '/admin/pipeline/';
+          jobItems.push({
+            type: 'job',
+            label: labelBase,
+            icon: '📋',
+            href,
+            meta: `${status}${t ? ` · ${t}` : ''}`,
+          });
+        }
+      }
+
+      mergeItems(cmds, postItems, jobItems);
+    }
+
+    const scheduleSearch = (ms) => {
+      window.clearTimeout(debounceTimer);
+      debounceTimer = window.setTimeout(() => void executeSearch(), ms);
+    };
+
+    input.addEventListener('input', () => scheduleSearch(200));
+
+    document.addEventListener('keydown', (e) => {
+      const meta = e.metaKey || e.ctrlKey;
+      if (meta && e.key === 'k') {
+        e.preventDefault();
+        togglePalette();
+        return;
+      }
+      if (!isOpen()) return;
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closePalette();
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        moveSelection(1);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        moveSelection(-1);
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        activateSelection();
+      }
+    });
+
+    backdrop.addEventListener('click', () => closePalette());
+
+    document.addEventListener('click', (e) => {
+      const t = e.target;
+      if (t instanceof HTMLElement && t.closest('[data-command-palette-open]')) {
+        e.preventDefault();
+        if (canUsePalette()) openPalette();
+      }
+    });
+  }
+</script>
+
+<style is:global>
+  /* 스크립트로 추가되는 li/a에도 적용되도록 global */
+  .admin-cp-root[hidden] {
+    display: none !important;
+  }
+
+  .admin-cp-root {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 8vh 1rem 2rem;
+    box-sizing: border-box;
+  }
+
+  .admin-cp-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(28, 25, 23, 0.45);
+    cursor: pointer;
+  }
+
+  .admin-cp-panel {
+    position: relative;
+    z-index: 1;
+    width: min(36rem, 100%);
+    max-height: min(70vh, 28rem);
+    display: flex;
+    flex-direction: column;
+    border-radius: 14px;
+    border: 1px solid var(--admin-border);
+    background: var(--admin-surface);
+    box-shadow: 0 24px 48px rgba(28, 25, 23, 0.18);
+    overflow: hidden;
+  }
+
+  .admin-cp-input {
+    margin: 0;
+    border: none;
+    border-bottom: 1px solid var(--admin-border);
+    border-radius: 0;
+    font-size: 1rem;
+    padding: 0.85rem 1rem;
+  }
+
+  .admin-cp-input:focus {
+    outline: none;
+    box-shadow: inset 0 -2px 0 var(--admin-accent);
+  }
+
+  .admin-cp-results {
+    list-style: none;
+    margin: 0;
+    padding: 0.35rem 0;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .admin-cp-result {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    padding: 0.55rem 1rem;
+    text-decoration: none;
+    color: inherit;
+    border: none;
+    background: transparent;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+  }
+
+  .admin-cp-result:hover,
+  .admin-cp-result:focus-visible {
+    background: var(--admin-surface-2);
+    outline: none;
+  }
+
+  .admin-cp-result-row--active > .admin-cp-result {
+    background: rgba(184, 149, 106, 0.14);
+  }
+
+  .admin-cp-result-icon {
+    flex-shrink: 0;
+    width: 1.35rem;
+    text-align: center;
+    opacity: 0.92;
+  }
+
+  .admin-cp-result-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+  }
+
+  .admin-cp-result-title {
+    font-weight: 650;
+    color: var(--admin-text);
+    word-break: break-word;
+  }
+
+  .admin-cp-result-meta {
+    font-size: 0.82rem;
+    color: var(--admin-text-3);
+    word-break: break-word;
+  }
+
+  .admin-cp-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+</style>

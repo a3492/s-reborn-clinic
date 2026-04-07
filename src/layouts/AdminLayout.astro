@@ -3,6 +3,7 @@ import '../styles/admin.css';
 import BaseHead from '../components/BaseHead.astro';
 import AdminSidebar from '../components/admin/AdminSidebar.astro';
 import AdminHeader from '../components/admin/AdminHeader.astro';
+import CommandPalette from '../components/admin/CommandPalette.astro';
 
 interface Props {
   title: string;
@@ -53,6 +54,7 @@ const pathname = Astro.url.pathname;
         <div data-admin-page-slot>
           <slot />
         </div>
+        <CommandPalette />
       </main>
     </div>
 

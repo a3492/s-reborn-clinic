@@ -210,6 +210,32 @@ body.admin-shell {
   gap: 0.75rem;
 }
 
+.admin-cp-open-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+  background: var(--admin-surface);
+  color: var(--admin-text-3);
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.admin-cp-open-btn:hover {
+  border-color: var(--admin-accent);
+  color: var(--admin-text);
+}
+
+.admin-cp-open-kbd {
+  pointer-events: none;
+}
+
 .admin-user-pill {
   display: inline-flex;
   align-items: center;
@@ -702,6 +728,206 @@ body.sidebar-open .admin-sidebar-backdrop {
   .admin-media-preview { grid-template-columns: 1fr; }
 }
 
+/* 알림 벨 (헤더) */
+.admin-notif-wrap {
+  position: relative;
+}
+
+.admin-notif-bell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 1px solid var(--admin-border);
+  border-radius: 12px;
+  background: var(--admin-surface);
+  cursor: pointer;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.admin-notif-bell:hover {
+  border-color: var(--admin-border-2);
+}
+
+.admin-notif-bell-icon {
+  display: block;
+}
+
+.admin-notif-badge {
+  position: absolute;
+  top: -0.35rem;
+  right: -0.35rem;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.28rem;
+  border-radius: 999px;
+  background: var(--admin-warn);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  line-height: 1.15rem;
+  text-align: center;
+}
+
+.admin-notif-panel {
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  right: 0;
+  width: min(100vw - 2rem, 22rem);
+  max-height: min(70vh, 24rem);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--admin-border);
+  border-radius: 16px;
+  background: rgba(255, 253, 252, 0.98);
+  box-shadow: 0 18px 48px rgba(28, 25, 23, 0.12);
+  z-index: 80;
+  overflow: hidden;
+}
+
+.admin-notif-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid var(--admin-border-2);
+}
+
+.admin-notif-panel-title {
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.admin-notif-mark-all {
+  border: none;
+  background: none;
+  color: var(--admin-accent, #2563eb);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0.15rem;
+}
+
+.admin-notif-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.35rem 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.admin-notif-empty {
+  padding: 1rem 0.85rem;
+  color: var(--admin-text-2);
+  font-size: 0.85rem;
+}
+
+.admin-notif-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 0.55rem 0.85rem;
+  text-decoration: none;
+  color: inherit;
+  font-size: 0.84rem;
+  border: none;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  cursor: default;
+  box-sizing: border-box;
+}
+
+a.admin-notif-item {
+  cursor: pointer;
+}
+
+a.admin-notif-item:hover {
+  background: rgba(28, 25, 23, 0.04);
+}
+
+.admin-notif-item--unread {
+  background: rgba(174, 110, 21, 0.08);
+}
+
+.admin-notif-item-icon {
+  flex-shrink: 0;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.admin-notif-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.admin-notif-item-title {
+  font-weight: 600;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.admin-notif-item-meta {
+  font-size: 0.72rem;
+  color: var(--admin-text-2);
+}
+
+.admin-notif-panel-foot {
+  padding: 0.5rem 0.85rem 0.65rem;
+  border-top: 1px solid var(--admin-border-2);
+}
+
+.admin-notif-all-link {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--admin-accent, #2563eb);
+}
+
+/* 알림 목록 페이지 탭 */
+.admin-notif-type-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-notif-type-tabs a {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--admin-border);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--admin-text-2);
+  background: var(--admin-surface);
+}
+
+.admin-notif-type-tabs a.is-active {
+  border-color: var(--admin-text);
+  color: var(--admin-text);
+  background: rgba(28, 25, 23, 0.06);
+}
+
+.admin-notif-pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
 @media (max-width: 720px) {
   .admin-main { padding: 4rem 0.9rem 1.4rem; }
   .admin-topbar {
@@ -853,6 +1079,11 @@ body.sidebar-open .admin-sidebar-backdrop {
 .admin-inline-note[data-state='error'] {
   background: rgba(184, 66, 53, 0.12);
   color: var(--admin-danger);
+}
+
+.admin-inline-note[data-state='warning'] {
+  background: rgba(180, 130, 40, 0.14);
+  color: var(--admin-accent-strong);
 }
 
 @media (max-width: 720px) {

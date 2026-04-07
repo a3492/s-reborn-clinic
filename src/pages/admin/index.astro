@@ -105,6 +105,19 @@ const draftPreviews = localDrafts.map(post => {
       </p>
     </section>
 
+    <section class="admin-card pad-lg span-4 admin-stat-card">
+      <a href="/admin/posts/?filter=needs_review" class="admin-stat-card-inner" style="text-decoration: none; color: inherit; display: block;">
+        <span class="admin-stat-icon" aria-hidden="true">🔄</span>
+        <div class="admin-stat-body">
+          <strong class="admin-kpi-value" data-admin-stat-needs-review>—</strong>
+          <span class="admin-kpi-label">검토 필요</span>
+        </div>
+      </a>
+      <p class="admin-help" style="margin: 0.65rem 0 0; font-size: 0.78rem;">
+        의료 정보 주기 검토로 표시된 글 수 · 클릭 시 해당 목록으로 이동
+      </p>
+    </section>
+
     <section class="admin-card pad-lg span-12">
       <h2 class="admin-section-title">최근 발행 글</h2>
       <p class="admin-section-desc">published 상태 기준 최신 5건 · 편집으로 이동합니다.</p>
@@ -171,6 +184,17 @@ const draftPreviews = localDrafts.map(post => {
         <a href="/admin/consults" class="admin-btn">상담 관리 보기</a>
       </div>
     </section>
+
+    <section class="admin-card pad-lg span-12" data-admin-vitals>
+      <h2 class="admin-section-title">Core Web Vitals</h2>
+      <p class="admin-section-desc">
+        최근 7일 샘플 집계 · 공개 페이지 방문자 브라우저에서 수집됩니다. LCP 기준 좋음 &lt; 2.5s, CLS &lt; 0.1, FCP &lt; 1.8s.
+      </p>
+      <p class="admin-inline-note" data-admin-vitals-message hidden></p>
+      <div class="admin-vitals-body" data-admin-vitals-body>
+        <p class="admin-item-meta">로그인 후 불러옵니다…</p>
+      </div>
+    </section>
   </div>
 
   <script>
@@ -184,6 +208,7 @@ const draftPreviews = localDrafts.map(post => {
     const statReactions = document.querySelector('[data-admin-stat-reactions]');
     const statJobs = document.querySelector('[data-admin-stat-jobs]');
     const statWeekScheduled = document.querySelector('[data-admin-stat-week-scheduled]');
+    const statNeedsReview = document.querySelector('[data-admin-stat-needs-review]');
     const recentPublishedList = document.querySelector('[data-admin-recent-published]');
     const consultsKpi = document.querySelector('[data-admin-kpi-consults]');
     const draftList = document.querySelector('[data-admin-dashboard-drafts]');
@@ -283,11 +308,164 @@ const draftPreviews = localDrafts.map(post => {
       `).join('');
     };
 
+    const vitalsBody = document.querySelector('[data-admin-vitals-body]');
+    const vitalsMessage = document.querySelector('[data-admin-vitals-message]');
+
+    const fmtMs = (v) => (v === null || v === undefined || Number.isNaN(v) ? '—' : `${Math.round(v)}ms`);
+    const fmtCls = (v) => (v === null || v === undefined || Number.isNaN(v) ? '—' : Number(v).toFixed(3));
+    const fmtPct = (n) => `${Math.round(n * 10) / 10}%`;
+
+    const avgForName = (rows, name) => {
+      const vals = rows.filter((r) => r.name === name).map((r) => Number(r.value));
+      if (!vals.length) return null;
+      return vals.reduce((a, b) => a + b, 0) / vals.length;
+    };
+
+    const lcpSlowPagesTop5 = (rows) => {
+      const lcp = rows.filter((r) => r.name === 'LCP');
+      const byPage = new Map();
+      for (const r of lcp) {
+        const p = String(r.page || '/');
+        if (!byPage.has(p)) byPage.set(p, []);
+        byPage.get(p).push(Number(r.value));
+      }
+      return [...byPage.entries()]
+        .map(([page, vals]) => ({
+          page,
+          avg: vals.reduce((a, b) => a + b, 0) / vals.length,
+        }))
+        .sort((a, b) => b.avg - a.avg)
+        .slice(0, 5);
+    };
+
+    const ratingShares = (rows) => {
+      const g = { good: 0, 'needs-improvement': 0, poor: 0 };
+      for (const r of rows) {
+        if (g[r.rating] !== undefined) g[r.rating]++;
+      }
+      const t = rows.length || 1;
+      return {
+        good: (g.good / t) * 100,
+        mid: (g['needs-improvement'] / t) * 100,
+        poor: (g.poor / t) * 100,
+        total: rows.length,
+      };
+    };
+
+    const renderWebVitals = (rows, errText) => {
+      if (!vitalsBody) return;
+      if (errText) {
+        vitalsBody.innerHTML = `<p class="admin-item-meta">${escapeHtml(errText)}</p>`;
+        return;
+      }
+      if (!rows.length) {
+        vitalsBody.innerHTML =
+          '<p class="admin-item-meta">최근 7일 Vitals 데이터가 없습니다. <code>supabase/web_vitals.sql</code> 적용 및 공개 페이지 트래픽을 확인하세요.</p>';
+        return;
+      }
+
+      const lcpAvg = avgForName(rows, 'LCP');
+      const clsAvg = avgForName(rows, 'CLS');
+      const fcpAvg = avgForName(rows, 'FCP');
+      const ttfbAvg = avgForName(rows, 'TTFB');
+      const inpAvg = avgForName(rows, 'INP');
+      const shares = ratingShares(rows);
+      const slow = lcpSlowPagesTop5(rows);
+
+      const lcpClass =
+        lcpAvg === null ? '' : lcpAvg <= 2500 ? ' admin-vitals-metric--good' : lcpAvg <= 4000 ? ' admin-vitals-metric--mid' : ' admin-vitals-metric--poor';
+      const clsClass =
+        clsAvg === null ? '' : clsAvg <= 0.1 ? ' admin-vitals-metric--good' : clsAvg <= 0.25 ? ' admin-vitals-metric--mid' : ' admin-vitals-metric--poor';
+      const fcpClass =
+        fcpAvg === null ? '' : fcpAvg <= 1800 ? ' admin-vitals-metric--good' : fcpAvg <= 3000 ? ' admin-vitals-metric--mid' : ' admin-vitals-metric--poor';
+
+      vitalsBody.innerHTML = `
+        <div class="admin-vitals-grid">
+          <div class="admin-vitals-metric">
+            <span class="admin-vitals-metric-label">LCP 평균</span>
+            <strong class="admin-vitals-metric-val${lcpClass}">${fmtMs(lcpAvg)}</strong>
+            <span class="admin-vitals-metric-hint">페이지·리소스별 상이</span>
+          </div>
+          <div class="admin-vitals-metric">
+            <span class="admin-vitals-metric-label">CLS 평균</span>
+            <strong class="admin-vitals-metric-val${clsClass}">${fmtCls(clsAvg)}</strong>
+          </div>
+          <div class="admin-vitals-metric">
+            <span class="admin-vitals-metric-label">FCP 평균</span>
+            <strong class="admin-vitals-metric-val${fcpClass}">${fmtMs(fcpAvg)}</strong>
+          </div>
+          <div class="admin-vitals-metric">
+            <span class="admin-vitals-metric-label">TTFB 평균</span>
+            <strong class="admin-vitals-metric-val">${fmtMs(ttfbAvg)}</strong>
+          </div>
+          <div class="admin-vitals-metric">
+            <span class="admin-vitals-metric-label">INP 평균</span>
+            <strong class="admin-vitals-metric-val">${fmtMs(inpAvg)}</strong>
+          </div>
+        </div>
+        <p class="admin-vitals-rating-title">샘플 기준 rating 비율 <span class="admin-vitals-n">(${shares.total}건)</span></p>
+        <div class="admin-vitals-rating-bar" role="img" aria-label="good, needs improvement, poor 비율">
+          <span class="admin-vitals-rating-seg" style="width:${shares.good}%;background:var(--admin-success)"></span>
+          <span class="admin-vitals-rating-seg" style="width:${shares.mid}%;background:var(--admin-warn)"></span>
+          <span class="admin-vitals-rating-seg" style="width:${shares.poor}%;background:var(--admin-danger)"></span>
+        </div>
+        <ul class="admin-vitals-legend">
+          <li><span class="admin-vitals-dot" style="background:var(--admin-success)"></span> 좋음 ${fmtPct(shares.good)}</li>
+          <li><span class="admin-vitals-dot" style="background:var(--admin-warn)"></span> 개선 필요 ${fmtPct(shares.mid)}</li>
+          <li><span class="admin-vitals-dot" style="background:var(--admin-danger)"></span> 나쁨 ${fmtPct(shares.poor)}</li>
+        </ul>
+        <h3 class="admin-vitals-subtitle">LCP 느린 페이지 TOP 5 <span class="admin-item-meta">(경로별 평균)</span></h3>
+        ${
+          slow.length
+            ? `<ul class="admin-list admin-vitals-slow-list">
+                ${slow.map((s) => `
+                  <li class="admin-list-row">
+                    <div>
+                      <p class="admin-item-title"><code>${escapeHtml(s.page)}</code></p>
+                      <p class="admin-item-meta">평균 LCP ${fmtMs(s.avg)}</p>
+                    </div>
+                  </li>`).join('')}
+              </ul>`
+            : '<p class="admin-item-meta">LCP 샘플이 없습니다.</p>'
+        }
+      `;
+    };
+
+    const loadWebVitals = async (sb) => {
+      if (!vitalsBody) return;
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await sb
+        .from('web_vitals')
+        .select('name, value, rating, page')
+        .gte('created_at', sevenDaysAgo)
+        .order('created_at', { ascending: false })
+        .limit(8000);
+      if (error) {
+        if (vitalsMessage) {
+          vitalsMessage.hidden = false;
+          vitalsMessage.textContent = 'web_vitals 테이블을 읽지 못했습니다. SQL 마이그레이션·RLS를 확인하세요.';
+          vitalsMessage.dataset.state = 'warn';
+        }
+        renderWebVitals([], error.message || '조회 실패');
+        return;
+      }
+      if (vitalsMessage) {
+        vitalsMessage.hidden = true;
+        vitalsMessage.textContent = '';
+        vitalsMessage.removeAttribute('data-state');
+      }
+      renderWebVitals(data ?? [], null);
+    };
+
     if (!supabaseUrl || !supabaseKey) {
       if (message) {
         message.hidden = false;
         message.textContent = 'Supabase 환경 변수가 없어 대시보드를 불러올 수 없습니다.';
         message.dataset.state = 'error';
+      }
+      if (vitalsBody) {
+        vitalsBody.innerHTML =
+          '<p class="admin-item-meta">Supabase 환경 변수가 없어 Core Web Vitals 집계를 불러올 수 없습니다.</p>';
       }
       renderDrafts([]);
       renderConsults([]);
@@ -308,6 +486,7 @@ const draftPreviews = localDrafts.map(post => {
           reactionsRes,
           jobsRes,
           weekScheduledRes,
+          needsReviewRes,
           recentPubRes,
           draftsRes,
           consultsRes,
@@ -326,6 +505,7 @@ const draftPreviews = localDrafts.map(post => {
             .gte('scheduled_at', weekStartIso)
             .lt('scheduled_at', weekEndIso)
             .in('status', ['draft', 'review', 'scheduled']),
+          supabase.from('posts').select('*', { count: 'exact', head: true }).eq('needs_review', true),
           supabase.from('posts').select('slug, title, published_at').eq('status', 'published').order('published_at', { ascending: false, nullsFirst: false }).limit(5),
           supabase.from('posts').select('id, title, slug, status, updated_at').eq('status', 'draft').order('updated_at', { ascending: false }).limit(5),
           supabase.from('consult_requests').select('id, name, phone, interest, status, created_at').order('created_at', { ascending: false }).limit(5),
@@ -346,6 +526,7 @@ const draftPreviews = localDrafts.map(post => {
         setStat(statReactions, reactionsRes.error ? null : reactionsRes.count ?? 0);
         setStat(statJobs, jobsRes.error ? null : jobsRes.count ?? 0);
         setStat(statWeekScheduled, weekScheduledRes.error ? null : weekScheduledRes.count ?? 0);
+        setStat(statNeedsReview, needsReviewRes.error ? null : needsReviewRes.count ?? 0);
 
         if (recentPubRes.error) {
           renderRecentPublished([]);
@@ -367,7 +548,7 @@ const draftPreviews = localDrafts.map(post => {
         setStat(consultsKpi, consultPendingRes.error ? null : consultPendingRes.count ?? 0);
 
         if (!silent && message) {
-          const errs = [pubTotalRes.error, pubMonthRes.error, draftRes.error, viewsRes.error, reactionsRes.error, jobsRes.error, weekScheduledRes.error, recentPubRes.error, draftsRes.error, consultsRes.error, consultPendingRes.error].filter(Boolean);
+          const errs = [pubTotalRes.error, pubMonthRes.error, draftRes.error, viewsRes.error, reactionsRes.error, jobsRes.error, weekScheduledRes.error, needsReviewRes.error, recentPubRes.error, draftsRes.error, consultsRes.error, consultPendingRes.error].filter(Boolean);
           if (errs.length) {
             message.hidden = false;
             message.textContent = '일부 지표를 불러오지 못했습니다. 테이블·RLS·마이그레이션을 확인하세요.';
@@ -383,10 +564,127 @@ const draftPreviews = localDrafts.map(post => {
       document.addEventListener('admin:session-ready', async () => {
         supabase = window.__adminSupabase;
         await loadDashboard();
+        await loadWebVitals(supabase);
         refreshTimer = window.setInterval(() => {
           if (!document.hidden) loadDashboard(true);
         }, 30000);
       });
     }
   </script>
+
+  <style>
+    .admin-vitals-body {
+      margin-top: 0.75rem;
+    }
+
+    .admin-vitals-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .admin-vitals-metric {
+      padding: 0.65rem 0.75rem;
+      border: 1px solid var(--admin-border);
+      border-radius: 10px;
+      background: var(--admin-surface);
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .admin-vitals-metric-label {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--admin-text-3);
+    }
+
+    .admin-vitals-metric-val {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--admin-text);
+    }
+
+    .admin-vitals-metric-val.admin-vitals-metric--good {
+      color: var(--admin-success);
+    }
+
+    .admin-vitals-metric-val.admin-vitals-metric--mid {
+      color: var(--admin-warn);
+    }
+
+    .admin-vitals-metric-val.admin-vitals-metric--poor {
+      color: var(--admin-danger);
+    }
+
+    .admin-vitals-metric-hint {
+      font-size: 0.72rem;
+      color: var(--admin-text-3);
+    }
+
+    .admin-vitals-rating-title {
+      margin: 0 0 0.4rem;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--admin-text);
+    }
+
+    .admin-vitals-n {
+      font-weight: 600;
+      color: var(--admin-text-3);
+    }
+
+    .admin-vitals-rating-bar {
+      display: flex;
+      height: 10px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: var(--admin-surface-2);
+      margin-bottom: 0.5rem;
+    }
+
+    .admin-vitals-rating-seg {
+      display: block;
+      height: 100%;
+      min-width: 0;
+    }
+
+    .admin-vitals-legend {
+      list-style: none;
+      margin: 0 0 1.25rem;
+      padding: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem 1.25rem;
+      font-size: 0.82rem;
+      color: var(--admin-text-2);
+    }
+
+    .admin-vitals-legend li {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .admin-vitals-dot {
+      width: 0.55rem;
+      height: 0.55rem;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .admin-vitals-subtitle {
+      margin: 0 0 0.5rem;
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--admin-text);
+    }
+
+    .admin-vitals-slow-list {
+      margin-top: 0.35rem;
+    }
+  </style>
 </AdminLayout>

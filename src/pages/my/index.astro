@@ -1,0 +1,591 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="마이페이지" description="저장·반응·댓글과 계정 설정" noindex>
+  <div class="reader-my-page" data-reader-my-root hidden>
+    <h1 class="reader-my-title">마이페이지</h1>
+
+    <div class="reader-my-tabs" role="tablist" aria-label="마이페이지 섹션">
+      <button type="button" class="reader-my-tab is-active" role="tab" aria-selected="true" data-my-tab="activity">
+        내 활동
+      </button>
+      <button type="button" class="reader-my-tab" role="tab" aria-selected="false" data-my-tab="account">
+        계정 설정
+      </button>
+    </div>
+
+    <section
+      class="reader-my-panel"
+      role="tabpanel"
+      data-my-panel="activity"
+      aria-labelledby="reader-my-activity"
+    >
+      <h2 class="visually-hidden" id="reader-my-activity">내 활동</h2>
+
+      <div class="reader-my-block">
+        <h3 class="reader-my-subtitle">북마크한 글</h3>
+        <p class="reader-my-loading" data-my-bookmarks-loading>불러오는 중…</p>
+        <ul class="reader-my-list" data-my-bookmarks-list hidden></ul>
+        <p class="reader-my-empty" data-my-bookmarks-empty hidden>북마크한 글이 없습니다.</p>
+      </div>
+
+      <div class="reader-my-block">
+        <h3 class="reader-my-subtitle">반응한 글 (최근 10개)</h3>
+        <p class="reader-my-loading" data-my-reactions-loading hidden>불러오는 중…</p>
+        <ul class="reader-my-list" data-my-reactions-list hidden></ul>
+        <p class="reader-my-empty" data-my-reactions-empty hidden>반응 기록이 없습니다.</p>
+      </div>
+
+      <div class="reader-my-block">
+        <h3 class="reader-my-subtitle">작성한 댓글 (최근 10개)</h3>
+        <p class="reader-my-loading" data-my-comments-loading hidden>불러오는 중…</p>
+        <ul class="reader-my-list reader-my-list--comments" data-my-comments-list hidden></ul>
+        <p class="reader-my-empty" data-my-comments-empty hidden>작성한 댓글이 없습니다.</p>
+      </div>
+    </section>
+
+    <section class="reader-my-panel" role="tabpanel" data-my-panel="account" hidden>
+      <h2 class="reader-my-subtitle">계정</h2>
+      <dl class="reader-my-account-dl">
+        <div>
+          <dt>이름</dt>
+          <dd data-my-display-name>—</dd>
+        </div>
+        <div>
+          <dt>이메일</dt>
+          <dd data-my-email>—</dd>
+        </div>
+      </dl>
+      <p class="reader-my-account-note">이름·이메일은 소셜 로그인 제공 정보이며 여기서는 수정할 수 없습니다.</p>
+      <div class="reader-my-account-actions">
+        <button type="button" class="reader-my-btn reader-my-btn-secondary" data-my-logout>로그아웃</button>
+        <button type="button" class="reader-my-btn reader-my-btn-danger" data-my-delete>계정 삭제</button>
+      </div>
+      <p class="reader-my-inline-msg" data-my-account-msg hidden></p>
+    </section>
+  </div>
+</Layout>
+
+<script>
+  import { createClient } from '@supabase/supabase-js';
+  import type { User } from '@supabase/supabase-js';
+  import { fetchBookmarkMetaIndex, removeReaderBookmark } from '../../lib/reader-bookmark-button';
+  import { readerLoginHref } from '../../lib/reader-auth';
+
+  const MY_PATH = '/my/';
+  const url = import.meta.env.PUBLIC_SUPABASE_URL as string | undefined;
+  const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string | undefined;
+
+  const REACTION_LABELS: Record<string, string> = {
+    helpful: '도움돼요',
+    like: '유용해요',
+    bookmark: '저장할게요',
+  };
+
+  function blogHref(slug: string): string {
+    const segs = String(slug || '')
+      .split('/')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((s) => encodeURIComponent(s));
+    return `/blog/${segs.join('/')}/`;
+  }
+
+  function esc(s: string): string {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function escAttr(s: string): string {
+    return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function displayName(u: User) {
+    const m = u.user_metadata || {};
+    return (
+      (m.full_name as string) ||
+      (m.name as string) ||
+      (m.preferred_username as string) ||
+      u.email?.split('@')[0] ||
+      '사용자'
+    );
+  }
+
+  const root = document.querySelector('[data-reader-my-root]');
+  const tabButtons = document.querySelectorAll('[data-my-tab]');
+  const panels = document.querySelectorAll('[data-my-panel]');
+
+  const bookmarksLoading = document.querySelector('[data-my-bookmarks-loading]');
+  const bookmarksList = document.querySelector('[data-my-bookmarks-list]');
+  const bookmarksEmpty = document.querySelector('[data-my-bookmarks-empty]');
+
+  const reactionsLoading = document.querySelector('[data-my-reactions-loading]');
+  const reactionsList = document.querySelector('[data-my-reactions-list]');
+  const reactionsEmpty = document.querySelector('[data-my-reactions-empty]');
+
+  const commentsLoading = document.querySelector('[data-my-comments-loading]');
+  const commentsList = document.querySelector('[data-my-comments-list]');
+  const commentsEmpty = document.querySelector('[data-my-comments-empty]');
+
+  const displayNameEl = document.querySelector('[data-my-display-name]');
+  const emailEl = document.querySelector('[data-my-email]');
+  const logoutBtn = document.querySelector('[data-my-logout]');
+  const deleteBtn = document.querySelector('[data-my-delete]');
+  const accountMsg = document.querySelector('[data-my-account-msg]');
+
+  function setAccountMsg(text: string, kind: 'error' | 'success' | '') {
+    if (!(accountMsg instanceof HTMLElement)) return;
+    if (!text) {
+      accountMsg.hidden = true;
+      accountMsg.textContent = '';
+      delete accountMsg.dataset.state;
+      return;
+    }
+    accountMsg.hidden = false;
+    accountMsg.textContent = text;
+    accountMsg.dataset.state = kind;
+  }
+
+  function activateTab(id: string) {
+    tabButtons.forEach((btn) => {
+      const on = btn.getAttribute('data-my-tab') === id;
+      btn.classList.toggle('is-active', on);
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    panels.forEach((p) => {
+      const on = p.getAttribute('data-my-panel') === id;
+      if (on) p.removeAttribute('hidden');
+      else p.setAttribute('hidden', '');
+    });
+  }
+
+  tabButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-my-tab');
+      if (id) activateTab(id);
+    });
+  });
+
+  if (!url || !key || !root) {
+    if (root instanceof HTMLElement) {
+      root.hidden = false;
+      root.innerHTML = '<p class="reader-my-error">Supabase 환경 변수가 없습니다.</p>';
+    }
+  } else {
+    const supabase = createClient(url, key, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: false,
+      },
+    });
+
+    const { data: authData, error: authErr } = await supabase.auth.getUser();
+    const user = authData?.user ?? null;
+
+    if (authErr || !user) {
+      window.location.replace(readerLoginHref(MY_PATH));
+    } else {
+      if (root instanceof HTMLElement) root.hidden = false;
+
+      if (displayNameEl) displayNameEl.textContent = displayName(user);
+      if (emailEl) emailEl.textContent = user.email ?? '—';
+
+      const meta = await fetchBookmarkMetaIndex();
+
+      async function loadBookmarks() {
+        if (!bookmarksLoading || !bookmarksList || !bookmarksEmpty) return;
+        bookmarksLoading.hidden = false;
+        bookmarksList.hidden = true;
+        bookmarksEmpty.hidden = true;
+        const { data, error } = await supabase
+          .from('bookmarks')
+          .select('slug')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        bookmarksLoading.hidden = true;
+        if (error) {
+          bookmarksEmpty.hidden = false;
+          bookmarksEmpty.textContent = '북마크를 불러오지 못했습니다.';
+          return;
+        }
+        const slugs = (data ?? []).map((r) => r.slug).filter(Boolean);
+        if (!slugs.length) {
+          bookmarksEmpty.hidden = false;
+          bookmarksEmpty.textContent = '북마크한 글이 없습니다.';
+          return;
+        }
+        bookmarksList.hidden = false;
+        bookmarksList.innerHTML = '';
+        for (const slug of slugs) {
+          const m = meta.get(slug);
+          const title = m?.title ?? slug;
+          const href = m?.href ?? blogHref(slug);
+          const li = document.createElement('li');
+          li.className = 'reader-my-row';
+          const main = document.createElement('div');
+          main.className = 'reader-my-row-main';
+          const a = document.createElement('a');
+          a.href = href;
+          a.textContent = title;
+          main.appendChild(a);
+          li.appendChild(main);
+          const rm = document.createElement('button');
+          rm.type = 'button';
+          rm.className = 'reader-my-row-action';
+          rm.textContent = '제거';
+          rm.addEventListener('click', async () => {
+            rm.disabled = true;
+            await removeReaderBookmark(supabase, slug);
+            rm.disabled = false;
+            await loadBookmarks();
+          });
+          li.appendChild(rm);
+          bookmarksList.appendChild(li);
+        }
+      }
+
+      async function loadReactions() {
+        if (!reactionsLoading || !reactionsList || !reactionsEmpty) return;
+        reactionsLoading.hidden = false;
+        reactionsList.hidden = true;
+        reactionsEmpty.hidden = true;
+        const { data, error } = await supabase
+          .from('post_reactions')
+          .select('slug, reaction, created_at')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(10);
+        reactionsLoading.hidden = true;
+        if (error) {
+          reactionsEmpty.hidden = false;
+          reactionsEmpty.textContent = '반응 목록을 불러오지 못했습니다.';
+          return;
+        }
+        const rows = data ?? [];
+        if (!rows.length) {
+          reactionsEmpty.hidden = false;
+          return;
+        }
+        reactionsList.hidden = false;
+        reactionsList.innerHTML = rows
+          .map((r) => {
+            const m = meta.get(r.slug);
+            const title = esc(m?.title ?? r.slug);
+            const href = escAttr(m?.href ?? blogHref(r.slug));
+            const label = esc(REACTION_LABELS[r.reaction] ?? r.reaction);
+            return `<li class="reader-my-row"><div class="reader-my-row-main"><a href="${href}">${title}</a><span class="reader-my-meta">${label}</span></div></li>`;
+          })
+          .join('');
+      }
+
+      async function loadComments() {
+        if (!commentsLoading || !commentsList || !commentsEmpty) return;
+        commentsLoading.hidden = false;
+        commentsList.hidden = true;
+        commentsEmpty.hidden = true;
+        const { data, error } = await supabase
+          .from('comments')
+          .select('slug, body, is_approved, created_at')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(10);
+        commentsLoading.hidden = true;
+        if (error) {
+          commentsEmpty.hidden = false;
+          commentsEmpty.textContent = '댓글을 불러오지 못했습니다.';
+          return;
+        }
+        const rows = data ?? [];
+        if (!rows.length) {
+          commentsEmpty.hidden = false;
+          return;
+        }
+        commentsList.hidden = false;
+        commentsList.innerHTML = rows
+          .map((r) => {
+            const m = meta.get(r.slug);
+            const title = esc(m?.title ?? r.slug);
+            const href = escAttr(m?.href ?? blogHref(r.slug));
+            const st = r.is_approved ? '공개' : '검토 대기';
+            const rawBody = String(r.body ?? '');
+            const body = esc(rawBody.slice(0, 120));
+            const more = rawBody.length > 120 ? '…' : '';
+            return `<li class="reader-my-row reader-my-row--stack"><div class="reader-my-row-main"><a href="${href}">${title}</a><span class="reader-my-meta">${st}</span><p class="reader-my-comment-preview">${body}${more}</p></div></li>`;
+          })
+          .join('');
+      }
+
+      await Promise.all([loadBookmarks(), loadReactions(), loadComments()]);
+
+      logoutBtn?.addEventListener('click', async () => {
+        setAccountMsg('', '');
+        await supabase.auth.signOut();
+        window.location.replace('/');
+      });
+
+      deleteBtn?.addEventListener('click', async () => {
+        if (!(deleteBtn instanceof HTMLButtonElement)) return;
+        setAccountMsg('', '');
+        if (!window.confirm('정말 계정을 삭제할까요? 이 작업은 되돌릴 수 없습니다.')) return;
+        if (!window.confirm('저장·반응·댓글 등 연결된 데이터가 모두 삭제됩니다. 계속할까요?')) return;
+
+        deleteBtn.disabled = true;
+        const prev = deleteBtn.textContent;
+        deleteBtn.textContent = '처리 중…';
+
+        const { data: refreshed, error: refErr } = await supabase.auth.refreshSession();
+        const accessToken = refreshed.session?.access_token;
+        if (refErr || !accessToken) {
+          setAccountMsg('세션이 만료되었습니다. 다시 로그인한 뒤 시도해 주세요.', 'error');
+          deleteBtn.disabled = false;
+          deleteBtn.textContent = prev ?? '계정 삭제';
+          return;
+        }
+
+        const res = await fetch('/api/delete-account', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: '{}',
+        });
+        const payload = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          setAccountMsg(String(payload?.error || '계정 삭제에 실패했습니다.'), 'error');
+          deleteBtn.disabled = false;
+          deleteBtn.textContent = prev ?? '계정 삭제';
+          return;
+        }
+
+        await supabase.auth.signOut();
+        window.location.replace('/');
+      });
+    }
+  }
+</script>
+
+<style>
+  .reader-my-page {
+    max-width: 44rem;
+    margin: 2rem auto;
+    padding: 0 max(var(--page-inline, 1rem), env(safe-area-inset-left, 0px)) 3rem
+      max(var(--page-inline, 1rem), env(safe-area-inset-right, 0px));
+  }
+
+  .reader-my-title {
+    margin: 0 0 1.25rem;
+    font-size: 1.65rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .reader-my-tabs {
+    display: flex;
+    gap: 0.35rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 0.25rem;
+  }
+
+  .reader-my-tab {
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    padding: 0.5rem 0.85rem;
+    border: none;
+    border-radius: 10px 10px 0 0;
+    background: transparent;
+    color: var(--t2);
+    cursor: pointer;
+  }
+
+  .reader-my-tab.is-active {
+    color: var(--accent-dark);
+    background: rgba(184, 149, 106, 0.12);
+  }
+
+  .reader-my-tab:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .reader-my-block {
+    margin-bottom: 2rem;
+  }
+
+  .reader-my-subtitle {
+    margin: 0 0 0.65rem;
+    font-size: 1.05rem;
+    font-weight: 800;
+  }
+
+  .reader-my-loading {
+    margin: 0;
+    color: var(--t2);
+    font-size: 0.9rem;
+  }
+
+  .reader-my-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .reader-my-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.65rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-md, 14px);
+    background: var(--surface, #fff);
+  }
+
+  .reader-my-row--stack {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .reader-my-row-main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .reader-my-row-main a {
+    font-weight: 700;
+    color: var(--accent-dark);
+    text-decoration: none;
+  }
+
+  .reader-my-row-main a:hover {
+    text-decoration: underline;
+  }
+
+  .reader-my-meta {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.8rem;
+    color: var(--t2);
+  }
+
+  .reader-my-comment-preview {
+    margin: 0.4rem 0 0;
+    font-size: 0.86rem;
+    color: var(--t2);
+    line-height: 1.45;
+    white-space: pre-wrap;
+  }
+
+  .reader-my-row-action {
+    flex-shrink: 0;
+    min-height: 40px;
+    padding: 0.35rem 0.75rem;
+    border-radius: 10px;
+    border: 1px solid var(--rule);
+    background: var(--bg2);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .reader-my-empty {
+    margin: 0;
+    padding: 1rem;
+    color: var(--t2);
+    font-size: 0.9rem;
+    border: 1px dashed var(--rule);
+    border-radius: var(--radius-md, 14px);
+    background: var(--bg2);
+  }
+
+  .reader-my-account-dl {
+    margin: 0 0 1rem;
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .reader-my-account-dl dt {
+    margin: 0;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--t2);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .reader-my-account-dl dd {
+    margin: 0.15rem 0 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  .reader-my-account-note {
+    margin: 0 0 1.25rem;
+    font-size: 0.86rem;
+    color: var(--t2);
+    line-height: 1.5;
+  }
+
+  .reader-my-account-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .reader-my-btn {
+    min-height: 44px;
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+    font: inherit;
+    font-weight: 700;
+    font-size: 0.88rem;
+    cursor: pointer;
+    border: 1px solid var(--rule);
+  }
+
+  .reader-my-btn-secondary {
+    background: var(--surface);
+    color: var(--text);
+  }
+
+  .reader-my-btn-danger {
+    border-color: #b42318;
+    background: transparent;
+    color: #b42318;
+  }
+
+  :global(html[data-theme='dark'] .reader-my-btn-danger) {
+    border-color: #f97066;
+    color: #f97066;
+  }
+
+  .reader-my-btn:disabled {
+    opacity: 0.65;
+    cursor: wait;
+  }
+
+  .reader-my-inline-msg {
+    margin: 1rem 0 0;
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+
+  .reader-my-inline-msg[data-state='error'] {
+    color: #b42318;
+  }
+
+  .reader-my-error {
+    color: #b42318;
+  }
+</style>

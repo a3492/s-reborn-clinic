@@ -20,6 +20,13 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
       <a href="/admin/posts/new" class="admin-btn primary">새 글 작성</a>
     </div>
 
+    <div class="admin-posts-review-tabs" role="tablist" aria-label="검토 필터">
+      <button type="button" class="admin-btn admin-btn-sm" data-admin-posts-tab="all">전체</button>
+      <button type="button" class="admin-btn admin-btn-sm" data-admin-posts-tab="needs_review">
+        검토 필요 <span data-needs-review-count>(—)</span>
+      </button>
+    </div>
+
     <form class="admin-posts-filters" data-admin-posts-filters>
       <div class="admin-field">
         <label class="admin-label" for="admin-filter-status">상태</label>
@@ -103,12 +110,13 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
             </th>
             <th>반응</th>
             <th>신고</th>
+            <th>복사</th>
             <th>공개 관리</th>
           </tr>
         </thead>
         <tbody data-admin-posts-body>
           <tr>
-            <td colspan="10">불러오는 중...</td>
+            <td colspan="11">불러오는 중...</td>
           </tr>
         </tbody>
       </table>
@@ -222,6 +230,30 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
     .admin-th-sort:hover {
       color: var(--accent-dark);
     }
+
+    .admin-bulk-warn-badge {
+      margin-left: 0.3rem;
+      font-size: 0.95rem;
+      vertical-align: middle;
+    }
+
+    .admin-posts-review-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 0.85rem;
+      align-items: center;
+    }
+
+    .admin-posts-review-tabs .admin-btn.primary {
+      box-shadow: 0 0 0 2px var(--accent-dark, #b88a5e);
+    }
+
+    .admin-needs-review-badge {
+      margin-left: 0.35rem;
+      font-size: 0.95rem;
+      vertical-align: middle;
+    }
   </style>
 
   <script>
@@ -243,6 +275,7 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
     const filterFrom = document.querySelector('[data-filter-from]');
     const filterTo = document.querySelector('[data-filter-to]');
     const filterReset = document.querySelector('[data-filter-reset]');
+    const needsReviewCountEl = document.querySelector('[data-needs-review-count]');
     const selectAllCb = document.querySelector('[data-admin-select-all]');
     const bulkBar = document.querySelector('[data-admin-bulk-bar]');
     const bulkCount = document.querySelector('[data-admin-bulk-count]');
@@ -250,6 +283,8 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
     const bulkPublishBtn = document.querySelector('[data-admin-bulk-publish]');
     const bulkArchiveBtn = document.querySelector('[data-admin-bulk-archive]');
     const bulkDeleteBtn = document.querySelector('[data-admin-bulk-delete]');
+
+    const getCurrentRole = () => document.body.dataset.adminRole || '';
 
     const setMessage = (text, state = 'info') => {
       if (!message) return;
@@ -317,6 +352,7 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
       dateTo: string;
       sort: string;
       dir: 'asc' | 'desc';
+      reviewFilter: '' | 'needs_review';
     };
 
     const readFiltersFromUrl = (): FilterState => {
@@ -329,6 +365,7 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
         dateTo: p.get('to') ?? '',
         sort: p.get('sort') || 'published_at',
         dir: p.get('dir') === 'asc' ? 'asc' : 'desc',
+        reviewFilter: p.get('filter') === 'needs_review' ? 'needs_review' : '',
       };
     };
 
@@ -339,6 +376,7 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
       if (f.date) p.set('date', f.date);
       if (f.dateFrom) p.set('from', f.dateFrom);
       if (f.dateTo) p.set('to', f.dateTo);
+      if (f.reviewFilter === 'needs_review') p.set('filter', 'needs_review');
       if (f.sort && f.sort !== 'published_at') p.set('sort', f.sort);
       if (f.dir !== 'desc') p.set('dir', f.dir);
 
@@ -352,17 +390,19 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
       history.replaceState(null, '', s ? `${path}?${s}` : path);
     };
 
-    const readFiltersFromForm = (): FilterState => ({
-      status: filterStatus instanceof HTMLSelectElement ? filterStatus.value : '',
-      category: filterCategory instanceof HTMLSelectElement ? filterCategory.value : '',
-      date: filterDate instanceof HTMLSelectElement ? filterDate.value : '',
-      dateFrom: filterFrom instanceof HTMLInputElement ? filterFrom.value : '',
-      dateTo: filterTo instanceof HTMLInputElement ? filterTo.value : '',
-      ...(() => {
-        const u = readFiltersFromUrl();
-        return { sort: u.sort, dir: u.dir };
-      })(),
-    });
+    const readFiltersFromForm = (): FilterState => {
+      const u = readFiltersFromUrl();
+      return {
+        status: filterStatus instanceof HTMLSelectElement ? filterStatus.value : '',
+        category: filterCategory instanceof HTMLSelectElement ? filterCategory.value : '',
+        date: filterDate instanceof HTMLSelectElement ? filterDate.value : '',
+        dateFrom: filterFrom instanceof HTMLInputElement ? filterFrom.value : '',
+        dateTo: filterTo instanceof HTMLInputElement ? filterTo.value : '',
+        sort: u.sort,
+        dir: u.dir,
+        reviewFilter: u.reviewFilter,
+      };
+    };
 
     const applyFiltersToForm = (f: FilterState) => {
       if (filterStatus instanceof HTMLSelectElement) filterStatus.value = f.status;
@@ -417,6 +457,8 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
     let supabase: ReturnType<typeof createClient> | null = null;
     let selectedSlugs = new Set<string>();
     let lastRows: any[] = [];
+    /** 일괄 발행 dry run에서 경고가 있었던 slug (목록 ⚠️ 표시) */
+    let bulkPublishWarningSlugs = new Set<string>();
 
     const updateSortIndicators = (f: FilterState) => {
       document.querySelectorAll('[data-sort-indicator]').forEach((el) => {
@@ -474,7 +516,7 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
       if (!tbody) return;
       lastRows = rows;
       if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="10">조건에 맞는 글이 없습니다.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11">조건에 맞는 글이 없습니다.</td></tr>';
         syncSelectAllState();
         updateBulkUi();
         return;
@@ -502,6 +544,13 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
               ? `<span class="admin-report-open-badge" title="미해결 신고">${openReports}</span>`
               : '<span class="admin-cell-subtle">—</span>';
           const checked = selectedSlugs.has(row.slug) ? ' checked' : '';
+          const copyBtn = `<button type="button" class="admin-btn admin-btn-sm" data-admin-copy-slug="${escapeHtml(row.slug)}">복사</button>`;
+          const warnBadge = bulkPublishWarningSlugs.has(row.slug)
+            ? '<span class="admin-bulk-warn-badge" title="Dry Run 품질 경고 있음" aria-label="경고">⚠️</span>'
+            : '';
+          const reviewBadge = row.needs_review
+            ? '<span class="admin-needs-review-badge" title="검토 필요">🔄</span>'
+            : '';
 
           return `
           <tr data-post-slug="${escapeHtml(row.slug)}" data-post-status="${escapeHtml(row.status)}">
@@ -509,7 +558,7 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
               <input type="checkbox" data-post-select="${escapeHtml(row.slug)}" aria-label="선택"${checked} />
             </td>
             <td>
-              <a class="admin-table-link" href="/admin/posts/edit?slug=${encodeURIComponent(row.slug)}">${escapeHtml(row.title)}</a>
+              <a class="admin-table-link" href="/admin/posts/edit?slug=${encodeURIComponent(row.slug)}">${escapeHtml(row.title)}</a>${reviewBadge}${warnBadge}
               <div class="admin-cell-subtle">${escapeHtml(row.slug)}</div>
             </td>
             <td>${escapeHtml(row.category ?? '-')}</td>
@@ -522,6 +571,7 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
             <td><span class="admin-cell-mono">${views}</span></td>
             <td><span class="admin-cell-mono">${reactionTotal}</span></td>
             <td>${reportCell}</td>
+            <td>${copyBtn}</td>
             <td>
               <button
                 class="${escapeHtml(toggleClass)}"
@@ -541,11 +591,12 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
     const buildPostsQuery = (client: ReturnType<typeof createClient>, f: FilterState) => {
       let q = client
         .from('posts')
-        .select('id, title, slug, category, status, updated_at, published_at')
+        .select('id, title, slug, category, status, updated_at, published_at, needs_review')
         .limit(500);
 
       if (f.status) q = q.eq('status', f.status);
       if (f.category) q = q.eq('category', f.category);
+      if (f.reviewFilter === 'needs_review') q = q.eq('needs_review', true);
 
       if (f.date === 'week') {
         q = q.gte('updated_at', startOfWeekMonday().toISOString());
@@ -586,13 +637,33 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
         return String(a.title ?? '').localeCompare(String(b.title ?? ''), 'ko');
       });
 
+    const syncReviewTabs = (f: FilterState) => {
+      document.querySelectorAll('[data-admin-posts-tab]').forEach((btn) => {
+        if (!(btn instanceof HTMLButtonElement)) return;
+        const tab = btn.getAttribute('data-admin-posts-tab');
+        const active =
+          (tab === 'needs_review' && f.reviewFilter === 'needs_review') ||
+          (tab === 'all' && f.reviewFilter !== 'needs_review');
+        btn.classList.toggle('primary', active);
+      });
+    };
+
     const loadPosts = async () => {
       if (!supabase || !tbody) return;
       const f = readFiltersFromUrl();
       applyFiltersToForm(f);
       updateSortIndicators(f);
+      syncReviewTabs(f);
 
-      const postsResult = await buildPostsQuery(supabase, f);
+      const [postsResult, needsReviewCountRes] = await Promise.all([
+        buildPostsQuery(supabase, f),
+        supabase.from('posts').select('*', { count: 'exact', head: true }).eq('needs_review', true),
+      ]);
+
+      if (needsReviewCountEl) {
+        const n = needsReviewCountRes.error ? '—' : String(needsReviewCountRes.count ?? 0);
+        needsReviewCountEl.textContent = `(${n})`;
+      }
       const jobsResult = await supabase
         .from('publish_jobs')
         .select('post_id, status, commit_sha, error_message, created_at')
@@ -651,6 +722,16 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
         applyFiltersToForm(readFiltersFromUrl());
         updateSortIndicators(readFiltersFromUrl());
         await loadPosts();
+
+        document.querySelectorAll('[data-admin-posts-tab]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const tab = btn.getAttribute('data-admin-posts-tab');
+            const cur = readFiltersFromUrl();
+            const reviewFilter = tab === 'needs_review' ? 'needs_review' : '';
+            writeFiltersToUrl({ ...cur, reviewFilter });
+            void loadPosts();
+          });
+        });
       });
 
       filterDate?.addEventListener('change', syncCustomDateVisibility);
@@ -670,7 +751,16 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
         if (filterTo instanceof HTMLInputElement) filterTo.value = '';
         syncCustomDateVisibility();
         const u = readFiltersFromUrl();
-        writeFiltersToUrl({ status: '', category: '', date: '', dateFrom: '', dateTo: '', sort: u.sort, dir: u.dir });
+        writeFiltersToUrl({
+          status: '',
+          category: '',
+          date: '',
+          dateFrom: '',
+          dateTo: '',
+          sort: u.sort,
+          dir: u.dir,
+          reviewFilter: '',
+        });
         void loadPosts();
       });
 
@@ -679,6 +769,100 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
           const key = btn.getAttribute('data-sort');
           if (key) toggleSort(key);
         });
+      });
+
+      tbody?.addEventListener('click', async (e) => {
+        const copyBtn = e.target.closest('[data-admin-copy-slug]');
+        if (!copyBtn || !supabase) return;
+        if (!(copyBtn instanceof HTMLButtonElement)) return;
+        const srcSlug = copyBtn.getAttribute('data-admin-copy-slug')?.trim();
+        if (!srcSlug) return;
+        if (!getCurrentRole()) {
+          setMessage('admin_profiles 권한 확인이 끝나기 전에는 복사할 수 없습니다.', 'error');
+          return;
+        }
+        const uid = document.body.dataset.adminUserId ?? null;
+        const prevText = copyBtn.textContent;
+        copyBtn.disabled = true;
+        copyBtn.textContent = '복사 중…';
+        const { data: src, error: fetchErr } = await supabase
+          .from('posts')
+          .select(
+            'title, description, category, subcategory, tags, body_markdown, thumbnail_url, seo_title, seo_description, canonical_url, series',
+          )
+          .eq('slug', srcSlug)
+          .maybeSingle();
+        if (fetchErr || !src) {
+          setMessage(fetchErr?.message || '원본 글을 불러오지 못했습니다.', 'error');
+          copyBtn.disabled = false;
+          copyBtn.textContent = prevText ?? '복사';
+          return;
+        }
+        const newSlug = `${srcSlug}-copy-${Date.now()}`;
+        const newTitle = `[복사] ${src.title ?? ''}`;
+        const payload = {
+          title: newTitle,
+          description: src.description ?? '',
+          slug: newSlug,
+          category: src.category ?? null,
+          subcategory: src.subcategory ?? null,
+          tags: Array.isArray(src.tags) ? src.tags : [],
+          body_markdown: src.body_markdown ?? '',
+          thumbnail_url: src.thumbnail_url ?? null,
+          status: 'draft',
+          published_at: null,
+          scheduled_at: null,
+          seo_title: src.seo_title ?? null,
+          seo_description: src.seo_description ?? null,
+          canonical_url: src.canonical_url ?? null,
+          series: src.series ?? null,
+          created_by: uid,
+          updated_by: uid,
+        };
+        const { data: created, error: insErr } = await supabase
+          .from('posts')
+          .insert(payload)
+          .select('id, slug')
+          .single();
+        if (insErr || !created?.slug) {
+          setMessage(insErr?.message || '복사 저장에 실패했습니다.', 'error');
+          copyBtn.disabled = false;
+          copyBtn.textContent = prevText ?? '복사';
+          return;
+        }
+        const body = String(payload.body_markdown ?? '');
+        const { error: revErr } = await supabase.from('post_revisions').insert({
+          post_id: created.id,
+          body_markdown: body,
+          meta_snapshot: {
+            title: newTitle,
+            description: payload.description,
+            slug: created.slug,
+            category: payload.category,
+            tags: payload.tags,
+            status: 'draft',
+            thumbnail_url: payload.thumbnail_url,
+            seo_title: payload.seo_title,
+            seo_description: payload.seo_description,
+            canonical_url: payload.canonical_url,
+            scheduled_at: null,
+          },
+          created_by: uid,
+        });
+        if (revErr) {
+          setMessage(`글은 복사됐지만 revision 기록에 실패했습니다: ${revErr.message}`, 'error');
+          copyBtn.disabled = false;
+          copyBtn.textContent = prevText ?? '복사';
+          return;
+        }
+        await supabase.from('audit_logs').insert({
+          actor_id: uid,
+          action: 'post_created',
+          resource_type: 'post',
+          resource_id: created.id,
+          after_json: { title: newTitle, slug: created.slug, status: 'draft', copied_from: srcSlug },
+        });
+        window.location.href = `/admin/posts/edit?slug=${encodeURIComponent(created.slug)}`;
       });
 
       tbody?.addEventListener('change', (e) => {
@@ -767,12 +951,71 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
         const rows = getSelectedRows();
         if (!rows.length) return;
         setBulkBusy(true);
+        bulkPublishWarningSlugs.clear();
         const uid = document.body.dataset.adminUserId ?? null;
+        const N = rows.length;
+
+        type DryEntry =
+          | { skipped: true }
+          | { skipped?: false; ok: boolean; warnings: string[]; payload: Record<string, unknown> };
+        const dryBySlug = new Map<string, DryEntry>();
+
+        for (const row of rows) {
+          const slug = row.slug;
+          if (row.status === 'archived') {
+            dryBySlug.set(slug, { skipped: true });
+            continue;
+          }
+          const dryRes = await fetch('/api/admin/publish', {
+            method: 'POST',
+            headers: await publishRequestHeaders(),
+            body: JSON.stringify({ slug, requestedBy: uid, dryRun: true }),
+          });
+          const dryJson = (await dryRes.json().catch(() => ({}))) as Record<string, unknown>;
+          const warnings = Array.isArray(dryJson.warnings) ? (dryJson.warnings as string[]) : [];
+          dryBySlug.set(slug, { ok: dryRes.ok, warnings, payload: dryJson });
+          if (dryRes.ok && warnings.length > 0) {
+            bulkPublishWarningSlugs.add(slug);
+          }
+        }
+
+        await loadPosts();
+
+        let M = 0;
+        for (const row of rows) {
+          if (row.status === 'archived') continue;
+          const d = dryBySlug.get(row.slug);
+          if (d && !('skipped' in d && d.skipped) && d.ok && d.warnings.length > 0) {
+            M += 1;
+          }
+        }
+
+        if (M > 0) {
+          if (!confirm(`${N}개 중 ${M}개에 품질 경고가 있습니다. 그래도 발행하시겠습니까?`)) {
+            setBulkBusy(false);
+            return;
+          }
+        }
+
         let done = 0;
         const total = rows.length;
         for (const row of rows) {
           const slug = row.slug;
           if (row.status === 'archived') {
+            done++;
+            showBulkProgress(done, total);
+            continue;
+          }
+          const d = dryBySlug.get(slug);
+          if (!d || ('skipped' in d && d.skipped)) {
+            done++;
+            showBulkProgress(done, total);
+            continue;
+          }
+          if (!d.ok) {
+            const errText =
+              typeof d.payload?.error === 'string' ? d.payload.error : 'dry run 실패';
+            setToggleMessage(`${slug}: ${errText}`, 'error');
             done++;
             showBulkProgress(done, total);
             continue;
@@ -788,13 +1031,14 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
             headers: await publishRequestHeaders(),
             body: JSON.stringify({ slug, requestedBy: uid }),
           });
-          const publishResult = await publishRes.json().catch(() => ({}));
+          const publishResult = (await publishRes.json().catch(() => ({}))) as Record<string, unknown>;
           if (!publishRes.ok) {
             setToggleMessage(`${slug}: 발행 실패 — ${publishResult.error ?? publishRes.status}`, 'error');
           }
           done++;
           showBulkProgress(done, total);
         }
+        bulkPublishWarningSlugs.clear();
         setBulkBusy(false);
         selectedSlugs.clear();
         setToggleMessage('일괄 발행 작업이 끝났습니다. 실패한 항목은 메시지를 확인하세요.', 'info');

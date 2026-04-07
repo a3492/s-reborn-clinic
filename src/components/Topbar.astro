@@ -1,9 +1,12 @@
 ---
 import { CATEGORIES } from '../consts';
 import { readerLoginHref } from '../lib/reader-auth';
+import { t, type Locale } from '../i18n';
 
+const locale: Locale = Astro.currentLocale === 'en' ? 'en' : 'ko';
 const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label]));
 const readerLoginReturn = readerLoginHref(`${Astro.url.pathname}${Astro.url.search}`);
+const fallbackBlogBadge = t(locale, 'topbar.fallbackBlogBadge');
 ---
 
 <div class="topbar">
@@ -14,9 +17,9 @@ const readerLoginReturn = readerLoginHref(`${Astro.url.pathname}${Astro.url.sear
           class="topbar-search-input"
           type="search"
           name="q"
-          placeholder="시술명, 증상, 키워드 검색..."
+          placeholder={t(locale, 'blog.searchPlaceholder')}
           role="combobox"
-          aria-label="블로그 검색"
+          aria-label={t(locale, 'topbar.searchAriaLabel')}
           aria-autocomplete="list"
           aria-haspopup="listbox"
           aria-expanded="false"
@@ -24,7 +27,7 @@ const readerLoginReturn = readerLoginHref(`${Astro.url.pathname}${Astro.url.sear
           data-topbar-search-input
           id="topbar-blog-search-input"
         />
-        <button type="submit" class="topbar-search-btn" aria-label="검색">
+        <button type="submit" class="topbar-search-btn" aria-label={t(locale, 'topbar.searchSubmitAria')}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -39,7 +42,7 @@ const readerLoginReturn = readerLoginHref(`${Astro.url.pathname}${Astro.url.sear
       >
         <div class="topbar-search-loading" hidden data-topbar-search-loading>
           <span class="topbar-search-spinner" aria-hidden="true"></span>
-          <span>검색 중…</span>
+          <span>{t(locale, 'topbar.searchLoading')}</span>
         </div>
         <ul
           id="topbar-search-listbox"
@@ -47,29 +50,56 @@ const readerLoginReturn = readerLoginHref(`${Astro.url.pathname}${Astro.url.sear
           data-topbar-search-results
           hidden
           role="listbox"
-          aria-label="블로그 검색 제안"
+          aria-label={t(locale, 'topbar.searchListboxLabel')}
         ></ul>
         <p class="topbar-search-empty" hidden data-topbar-search-empty>
-          검색 결과가 없습니다. 다른 키워드를 시도해보세요.
+          {t(locale, 'topbar.searchEmpty')}
         </p>
       </div>
     </div>
 
     <div class="topbar-trailing">
-      <a href="/bookmarks/" class="topbar-bookmarks" aria-label="읽기 목록" title="읽기 목록">
+      <a
+        href="#"
+        class="topbar-lang-switch"
+        title={t(locale, 'topbar.langSwitchTitle')}
+        aria-disabled="true"
+        onclick="return false;"
+      >
+        {t(locale, 'topbar.langSwitchLabel')}
+      </a>
+      <a
+        href="/bookmarks/"
+        class="topbar-bookmarks"
+        aria-label={t(locale, 'topbar.bookmarksAria')}
+        title={t(locale, 'topbar.bookmarksTitle')}
+      >
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
         </svg>
       </a>
 
       <div class="topbar-auth" data-topbar-auth>
-        <a href={readerLoginReturn} class="topbar-auth-login" data-topbar-login>로그인</a>
+        <a href={readerLoginReturn} class="topbar-auth-login" data-topbar-login>{t(locale, 'topbar.login')}</a>
         <div class="topbar-auth-user" data-topbar-user hidden>
-          <img class="topbar-auth-avatar" alt="" width="28" height="28" data-topbar-avatar hidden />
-          <span class="topbar-auth-avatar-fallback" data-topbar-avatar-fallback aria-hidden="true"></span>
+          <a
+            href="/my/"
+            class="topbar-auth-my"
+            data-topbar-my-link
+            aria-label={t(locale, 'topbar.myPageAria')}
+            title={t(locale, 'topbar.myPageTitle')}
+          >
+            <img class="topbar-auth-avatar" alt="" width="28" height="28" data-topbar-avatar hidden />
+            <span class="topbar-auth-avatar-fallback" data-topbar-avatar-fallback aria-hidden="true"></span>
+          </a>
           <span class="topbar-auth-name" data-topbar-name></span>
-          <button type="button" class="topbar-auth-logout" data-topbar-logout aria-label="로그아웃">
-            로그아웃
+          <button
+            type="button"
+            class="topbar-auth-logout"
+            data-topbar-logout
+            aria-label={t(locale, 'topbar.logoutAria')}
+          >
+            {t(locale, 'topbar.logout')}
           </button>
         </div>
       </div>
@@ -79,9 +109,9 @@ const readerLoginReturn = readerLoginHref(`${Astro.url.pathname}${Astro.url.sear
       type="button"
       class="topbar-theme-toggle"
       data-theme-toggle
-      aria-label="색 테마 전환"
+      aria-label={t(locale, 'topbar.themeToggleAria')}
       aria-pressed="false"
-      title="라이트 / 다크 모드"
+      title={t(locale, 'topbar.themeToggleTitle')}
     >
       <span class="topbar-theme-icon" data-theme-icon-moon aria-hidden="true">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -308,6 +338,27 @@ const readerLoginReturn = readerLoginHref(`${Astro.url.pathname}${Astro.url.sear
     border-radius: 8px;
   }
 
+  .topbar-lang-switch {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0.35rem 0.55rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--t3);
+    text-decoration: none;
+    border-radius: 10px;
+    cursor: not-allowed;
+    opacity: 0.72;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .topbar-lang-switch:hover {
+    color: var(--t3);
+  }
+
   .topbar-trailing {
     display: flex;
     align-items: center;
@@ -375,6 +426,21 @@ const readerLoginReturn = readerLoginHref(`${Astro.url.pathname}${Astro.url.sear
     align-items: center;
     gap: 0.35rem;
     min-width: 0;
+  }
+
+  .topbar-auth-my {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    text-decoration: none;
+    color: inherit;
+    border-radius: 999px;
+  }
+
+  .topbar-auth-my:focus-visible {
+    outline: 2px solid var(--accent, #b8956a);
+    outline-offset: 2px;
   }
 
   .topbar-auth-avatar {
@@ -483,9 +549,15 @@ const readerLoginReturn = readerLoginHref(`${Astro.url.pathname}${Astro.url.sear
 <script is:inline>
   (function () {
     var path = location.pathname.replace(/\/$/, '') || '/';
-    if (path !== '/blog') return;
+    if (path !== '/blog' && path !== '/search') return;
     var q = new URLSearchParams(location.search).get('q');
-    if (q == null || q === '') return;
+    if (q == null || q === '') {
+      if (path === '/search') {
+        var inp = document.querySelector('.topbar-search-input');
+        if (inp && typeof inp.focus === 'function') inp.focus();
+      }
+      return;
+    }
     var input = document.querySelector('.topbar-search-input');
     if (input) input.value = q;
   })();
@@ -594,8 +666,8 @@ const readerLoginReturn = readerLoginHref(`${Astro.url.pathname}${Astro.url.sear
     });
 
     const sync = async () => {
-      const { data } = await supabase.auth.getSession();
-      renderUser(data.session?.user ?? null);
+      const { data } = await supabase.auth.getUser();
+      renderUser(data.user ?? null);
     };
 
     await sync();
@@ -610,7 +682,7 @@ const readerLoginReturn = readerLoginHref(`${Astro.url.pathname}${Astro.url.sear
   }
 </script>
 
-<script define:vars={{ categoryLabels }}>
+<script define:vars={{ categoryLabels, fallbackBlogBadge }}>
   import { createClient } from '@supabase/supabase-js';
   import Fuse from 'fuse.js';
 
@@ -755,7 +827,7 @@ const readerLoginReturn = readerLoginHref(`${Astro.url.pathname}${Astro.url.sear
       resultsEl.innerHTML = hits
         .map((row, i) => {
           const cat = row.category || '';
-          const badge = categoryLabels[cat] || cat || '블로그';
+          const badge = categoryLabels[cat] || cat || fallbackBlogBadge;
           const desc = oneLine(row.description || '');
           return `<li class="topbar-search-hit" role="option" id="topbar-opt-${i}">
             <a href="${escapeHtml(blogHref(row.slug))}">
@@ -921,8 +993,21 @@ const readerLoginReturn = readerLoginHref(`${Astro.url.pathname}${Astro.url.sear
       }, 0);
     });
 
-    form.addEventListener('submit', () => {
+    form.addEventListener('submit', (e) => {
       hideDropdown();
+      const rawQ = input.value.trim();
+      const path = (location.pathname || '/').replace(/\/$/, '') || '/';
+      if (path === '/blog') {
+        return;
+      }
+      e.preventDefault();
+      if (!rawQ) {
+        if (path === '/search') {
+          input.focus();
+        }
+        return;
+      }
+      window.location.assign(`/search?q=${encodeURIComponent(rawQ)}`);
     });
 
     document.addEventListener('click', (e) => {

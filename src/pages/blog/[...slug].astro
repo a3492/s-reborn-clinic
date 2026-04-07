@@ -2,6 +2,8 @@
 import { getCollection, render } from 'astro:content';
 import BlogPost from '../../layouts/BlogPost.astro';
 import { isAcademyBlogPost } from '../../lib/academy';
+import { buildBlogPostDownloadMarkdown } from '../../lib/blog-post-download-markdown';
+import { buildTocFromMarkdown } from '../../lib/blog-post-toc';
 
 export async function getStaticPaths() {
   const posts = await getCollection('blog', ({ data }) => !data.draft);
@@ -15,8 +17,10 @@ export async function getStaticPaths() {
 
 const post = Astro.props;
 const { Content } = await render(post);
+const encodedDownloadMarkdown = encodeURIComponent(buildBlogPostDownloadMarkdown(post));
+const tocItems = buildTocFromMarkdown(post.body ?? '');
 ---
 
-<BlogPost {...post.data}>
+<BlogPost {...post.data} body={post.body} tocItems={tocItems} encodedDownloadMarkdown={encodedDownloadMarkdown}>
   <Content />
 </BlogPost>

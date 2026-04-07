@@ -22,6 +22,7 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
           <a href="/admin/posts/preview" class="admin-btn" data-admin-edit-preview-link>저장본 미리보기</a>
           <button type="button" class="admin-btn" data-admin-publish-dryrun>Publish Dry Run</button>
           <button type="button" class="admin-btn" data-admin-publish-live>Publish 요청</button>
+          <button type="button" class="admin-btn" data-admin-save-as-template>템플릿으로 저장</button>
           <button type="submit" form="admin-edit-post-form" class="admin-btn primary" data-admin-save-button>변경 저장</button>
         </div>
       </div>
@@ -30,6 +31,47 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
         <div class="admin-field full">
           <label class="admin-label" for="title">제목</label>
           <input id="title" name="title" class="admin-input" type="text" required />
+        </div>
+
+        <div class="admin-field full admin-ab-test-wrap" data-admin-ab-root>
+          <p class="admin-label" style="margin-bottom: 0.35rem">제목 A/B 테스트</p>
+          <p class="admin-help" style="margin-top: 0">
+            목록 카드에만 B안 제목이 노출됩니다. 승자 확정 전까지 <code>posts.title</code>(본문·발행용)은 바꾸지 않습니다.
+          </p>
+          <label class="admin-label" for="title_ab_b">제목 B (A/B 테스트용)</label>
+          <input
+            id="title_ab_b"
+            name="title_ab_b"
+            class="admin-input"
+            type="text"
+            data-ab-title-b
+            placeholder="A안은 위「제목」필드와 동일하게 취급됩니다"
+          />
+          <div class="admin-actions-cluster" style="margin-top: 0.65rem">
+            <button type="button" class="admin-btn" data-ab-start>테스트 시작</button>
+          </div>
+          <div class="admin-ab-stats" data-ab-stats hidden>
+            <p class="admin-item-title" style="margin: 0.75rem 0 0.35rem">진행 중 통계</p>
+            <ul class="admin-list" style="margin-bottom: 0.75rem">
+              <li class="admin-list-row" data-ab-row-a>
+                <div>
+                  <p class="admin-item-title">A안</p>
+                  <p class="admin-item-meta" data-ab-line-a>노출 0회 · 클릭 0회 · CTR 0%</p>
+                </div>
+              </li>
+              <li class="admin-list-row" data-ab-row-b>
+                <div>
+                  <p class="admin-item-title">B안</p>
+                  <p class="admin-item-meta" data-ab-line-b>노출 0회 · 클릭 0회 · CTR 0%</p>
+                </div>
+              </li>
+            </ul>
+            <div class="admin-actions-cluster">
+              <button type="button" class="admin-btn primary" data-ab-winner="a">승자: A안 → 제목 반영</button>
+              <button type="button" class="admin-btn primary" data-ab-winner="b">승자: B안 → 제목 반영</button>
+            </div>
+          </div>
+          <p class="admin-inline-note" data-ab-msg hidden></p>
         </div>
 
         <div class="admin-field full">
@@ -108,6 +150,90 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
     </section>
 
     <div class="admin-panel-stack">
+      <section class="admin-card pad-md admin-quality-card" data-admin-quality-panel>
+        <h2 class="admin-section-title">품질 점수</h2>
+        <p class="admin-section-desc">「변경 저장」에 성공한 뒤에만 점수·체크리스트가 갱신됩니다.</p>
+        <p class="admin-quality-score-line" data-admin-quality-score>점수: —</p>
+        <ul class="admin-list admin-quality-checklist" data-admin-quality-checklist>
+          <li class="admin-list-row"><p class="admin-help">폼을 불러오는 중…</p></li>
+        </ul>
+      </section>
+
+      <section class="admin-card pad-md" data-admin-social-preview-card>
+        <div class="admin-actions-row">
+          <div>
+            <h2 class="admin-section-title">소셜 미리보기</h2>
+            <p class="admin-section-desc">트위터·카카오·슬랙에서 링크를 공유할 때 보이는 카드를 시뮬레이션합니다. (외부 API·iframe 없음)</p>
+          </div>
+        </div>
+
+        <div class="admin-social-tabs" role="tablist" aria-label="소셜 플랫폼">
+          <button type="button" class="admin-btn admin-btn-sm admin-social-tab" role="tab" data-social-tab="twitter" aria-selected="true">Twitter / X</button>
+          <button type="button" class="admin-btn admin-btn-sm admin-social-tab" role="tab" data-social-tab="kakao" aria-selected="false">카카오톡</button>
+          <button type="button" class="admin-btn admin-btn-sm admin-social-tab" role="tab" data-social-tab="slack" aria-selected="false">슬랙</button>
+        </div>
+
+        <div class="admin-social-panel-stack">
+          <div class="admin-social-panel" role="tabpanel" data-social-panel="twitter">
+            <div class="og-preview og-preview--twitter">
+              <div class="og-preview__image" data-social-og-img-wrap>
+                <img data-social-og-img src="" alt="" loading="lazy" hidden />
+                <div class="og-preview__placeholder" data-social-img-placeholder>이미지 없음</div>
+              </div>
+              <div class="og-preview__body">
+                <p class="og-preview__domain" data-social-domain>s-reborn-blog.pages.dev</p>
+                <p class="og-preview__title" data-social-title>(제목)</p>
+                <p class="og-preview__desc" data-social-desc></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="admin-social-panel" role="tabpanel" data-social-panel="kakao" hidden>
+            <div class="og-preview og-preview--kakao">
+              <div class="og-preview__image og-preview__image--sm" data-social-kakao-img-wrap>
+                <img data-social-kakao-img src="" alt="" loading="lazy" hidden />
+                <div class="og-preview__placeholder og-preview__placeholder--sm" data-social-kakao-placeholder>이미지 없음</div>
+              </div>
+              <div class="og-preview__body">
+                <p class="og-preview__title" data-social-kakao-title>(제목)</p>
+                <p class="og-preview__domain" data-social-kakao-domain>s-reborn-blog.pages.dev</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="admin-social-panel" role="tabpanel" data-social-panel="slack" hidden>
+            <div class="og-preview og-preview--slack">
+              <div class="og-preview__slack-thumb" data-social-slack-img-wrap>
+                <img data-social-slack-img src="" alt="" loading="lazy" hidden />
+                <div class="og-preview__placeholder og-preview__placeholder--slack" data-social-slack-placeholder>—</div>
+              </div>
+              <div class="og-preview__slack-main">
+                <p class="og-preview__slack-title" data-social-slack-title>(제목)</p>
+                <p class="og-preview__slack-domain" data-social-slack-domain>s-reborn-blog.pages.dev</p>
+                <p class="og-preview__slack-desc" data-social-slack-desc></p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="admin-social-share-actions">
+          <span class="admin-help" style="margin: 0 0.35rem 0 0">공유 URL 복사</span>
+          <button type="button" class="admin-btn admin-btn-sm" data-copy-share="twitter">Twitter</button>
+          <button type="button" class="admin-btn admin-btn-sm" data-copy-share="kakao">카카오 스토리</button>
+          <button type="button" class="admin-btn admin-btn-sm" data-copy-share="link">글 링크</button>
+        </div>
+
+        <h3 class="admin-section-title" style="font-size: 0.95rem; margin-top: 1rem">메타 점검</h3>
+        <p class="admin-help">항목을 클릭하면 해당 입력란으로 포커스가 이동합니다.</p>
+        <ul class="admin-list admin-social-meta-check" data-admin-social-checklist></ul>
+
+        <div class="admin-social-fetch-block" data-admin-social-fetch-wrap hidden>
+          <button type="button" class="admin-btn admin-btn-sm" data-admin-social-fetch>실제 확인 (발행 페이지 HTML)</button>
+          <p class="admin-help" data-admin-social-fetch-hint hidden style="margin-top: 0.35rem"></p>
+          <pre class="admin-social-fetch-result" data-admin-social-fetch-result hidden></pre>
+        </div>
+      </section>
+
       <section class="admin-card pad-md">
         <h2 class="admin-section-title">Entry State</h2>
         <ul class="admin-list" data-admin-edit-meta>
@@ -116,6 +242,33 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
         <ul class="admin-list" style="margin-top:0.5rem;" data-admin-release-state>
           <li class="admin-list-row"><div><p class="admin-item-title">불러오는 중...</p></div></li>
         </ul>
+      </section>
+
+      <section class="admin-card pad-md" data-admin-content-review-card>
+        <h2 class="admin-section-title">의료 정보 검토</h2>
+        <p class="admin-item-meta" data-admin-review-line>최종 검토: —</p>
+        <p class="admin-inline-note" data-admin-review-flag hidden style="margin: 0.35rem 0;">🔄 목록에 검토 필요로 표시됨</p>
+        <div class="admin-field" style="margin-top: 0.65rem;">
+          <label class="admin-label" for="review_interval_days">재검토 주기(일)</label>
+          <input
+            form="admin-edit-post-form"
+            id="review_interval_days"
+            name="review_interval_days"
+            class="admin-input"
+            type="number"
+            min="30"
+            max="365"
+            step="1"
+            value="180"
+          />
+          <span class="admin-help">30~365일.「변경 저장」 시 이 글에만 적용됩니다.</span>
+        </div>
+        <div class="admin-actions-cluster" style="margin-top: 0.65rem;">
+          <button type="button" class="admin-btn primary" data-admin-review-complete>검토 완료</button>
+        </div>
+        <p class="admin-help" style="margin-top: 0.5rem;">
+          검토 완료 시 오늘을 기준으로 기록되며 검토 필요 표시만 해제됩니다. 발행일은 바뀌지 않습니다.
+        </p>
       </section>
 
       <section class="admin-card pad-md">
@@ -149,6 +302,165 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
           <p class="admin-job-card-meta" data-admin-current-job-meta>job 상태를 기다리는 중입니다.</p>
         </div>
       </section>
+
+      <section class="admin-card pad-md" data-admin-publish-warnings-section hidden>
+        <h2 class="admin-section-title">발행 품질 경고 (Dry Run)</h2>
+        <p class="admin-help">아래는 발행을 막지 않는 권고입니다. 확인 후에만 &ldquo;그래도 발행&rdquo;을 사용할 수 있습니다.</p>
+        <div class="admin-dryrun-warnings">
+          <ul class="admin-dryrun-warnings-list" data-admin-dryrun-warnings-list></ul>
+          <label class="admin-dryrun-warnings-ack">
+            <input type="checkbox" data-admin-warnings-ack />
+            위 경고를 확인했습니다.
+          </label>
+        </div>
+        <div class="admin-warnings-anyway-footer">
+          <button type="button" class="admin-btn primary" data-admin-publish-anyway hidden disabled>
+            그래도 발행
+          </button>
+        </div>
+      </section>
+
+      <section class="admin-card pad-md">
+        <details class="admin-details-block" data-admin-version-history-details>
+          <summary class="admin-section-title" style="cursor: pointer; list-style: none">버전 히스토리</summary>
+          <p class="admin-help" style="margin-top: 0.5rem">
+            저장·발행 시점의 제목·본문 스냅샷입니다. 복원은 편집창만 채우며, 저장은 직접 진행합니다.
+          </p>
+          <ul class="admin-list" style="margin-top: 0.5rem" data-admin-version-list>
+            <li class="admin-list-row"><p class="admin-help">불러오는 중…</p></li>
+          </ul>
+        </details>
+      </section>
+
+      <section class="admin-card pad-md" data-admin-poll-section>
+        <h2 class="admin-section-title">투표 설정</h2>
+        <p class="admin-section-desc">글당 1개만 등록할 수 있습니다. 현재 저장된 slug와 동일한 키로 블로그에 노출됩니다.</p>
+        <div data-admin-poll-current>
+          <p class="admin-help">불러오는 중…</p>
+        </div>
+        <div data-admin-poll-form-wrap hidden>
+          <label class="admin-label" for="admin-poll-question">질문</label>
+          <input
+            id="admin-poll-question"
+            class="admin-input"
+            type="text"
+            maxlength="500"
+            data-admin-poll-question
+            placeholder="예: AI를 진료에 활용하고 계신가요?"
+          />
+          <p class="admin-help" style="margin-top: 0.75rem">선택지 (2~4개, id는 영문·숫자 권장)</p>
+          <ul class="admin-list" style="margin-top: 0.35rem" data-admin-poll-options></ul>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem">
+            <button type="button" class="admin-btn admin-btn-sm" data-admin-poll-add-option>항목 추가</button>
+          </div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem">
+            <button type="button" class="admin-btn primary" data-admin-poll-create>투표 생성</button>
+          </div>
+        </div>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem">
+          <button type="button" class="admin-btn" data-admin-poll-delete hidden>투표 삭제</button>
+        </div>
+        <div style="margin-top: 1rem" data-admin-poll-preview-wrap>
+          <h3 class="admin-section-title" style="font-size: 0.95rem">결과 미리보기</h3>
+          <ul class="admin-list" style="margin-top: 0.35rem" data-admin-poll-preview-list>
+            <li class="admin-list-row"><p class="admin-help">—</p></li>
+          </ul>
+        </div>
+        <p class="admin-help admin-help-error" data-admin-poll-msg hidden style="margin-top: 0.75rem"></p>
+      </section>
+    </div>
+  </div>
+
+  <div
+    id="post-save-summary-modal"
+    class="post-version-modal-root"
+    data-post-save-summary-modal
+    hidden
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="post-save-summary-title"
+  >
+    <div class="post-version-modal-backdrop" data-post-save-summary-close tabindex="-1" aria-hidden="true"></div>
+    <div class="post-version-modal-box">
+      <h2 id="post-save-summary-title" class="post-version-modal-title">변경 저장</h2>
+      <p class="admin-help">변경 요약은 선택입니다.</p>
+      <label class="admin-label" for="post-save-summary-input">변경 요약</label>
+      <textarea
+        id="post-save-summary-input"
+        class="admin-textarea"
+        maxlength="500"
+        rows="3"
+        placeholder="예: 시술 문구 수정, 금기 추가"
+      ></textarea>
+      <div class="post-version-modal-actions">
+        <button type="button" class="admin-btn" data-post-save-summary-cancel>취소</button>
+        <button type="button" class="admin-btn primary" data-post-save-summary-confirm>저장 진행</button>
+      </div>
+    </div>
+  </div>
+
+  <div
+    id="post-template-save-modal"
+    class="post-version-modal-root"
+    data-admin-template-save-modal
+    hidden
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="post-template-save-title"
+  >
+    <div class="post-version-modal-backdrop" data-admin-template-save-close tabindex="-1" aria-hidden="true"></div>
+    <div class="post-version-modal-box">
+      <h2 id="post-template-save-title" class="post-version-modal-title">템플릿으로 저장</h2>
+      <p class="admin-help">현재 폼의 카테고리·태그·본문 Markdown으로 새 템플릿을 만듭니다.</p>
+      <label class="admin-label" for="post-template-save-name">템플릿 이름</label>
+      <input
+        id="post-template-save-name"
+        class="admin-input"
+        type="text"
+        maxlength="200"
+        data-admin-template-save-name
+        placeholder="예: 5분 AI 팁 시리즈"
+      />
+      <label class="admin-label" for="post-template-save-desc" style="margin-top: 0.65rem">설명 (선택)</label>
+      <textarea
+        id="post-template-save-desc"
+        class="admin-textarea"
+        rows="2"
+        maxlength="500"
+        data-admin-template-save-desc
+        placeholder="템플릿 용도 메모"
+      ></textarea>
+      <div class="post-version-modal-actions">
+        <button type="button" class="admin-btn" data-admin-template-save-cancel>취소</button>
+        <button type="button" class="admin-btn primary" data-admin-template-save-confirm>저장</button>
+      </div>
+    </div>
+  </div>
+
+  <div
+    id="post-version-preview-modal"
+    class="post-version-modal-root"
+    data-post-version-preview-modal
+    hidden
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="post-version-preview-title"
+  >
+    <div class="post-version-modal-backdrop" data-post-version-preview-close tabindex="-1" aria-hidden="true"></div>
+    <div class="post-version-modal-box post-version-modal-box--wide">
+      <div class="post-version-modal-head">
+        <h2 id="post-version-preview-title" class="post-version-modal-title">버전 미리보기</h2>
+        <button type="button" class="post-version-modal-x" data-post-version-preview-close aria-label="닫기">×</button>
+      </div>
+      <p class="admin-item-meta" data-post-version-preview-meta></p>
+      <h3 class="post-version-preview-h3">제목</h3>
+      <pre class="post-version-preview-block" data-post-version-preview-title-text></pre>
+      <h3 class="post-version-preview-h3">본문 (Markdown)</h3>
+      <pre class="post-version-preview-block post-version-preview-block--body" data-post-version-preview-body></pre>
+      <div class="post-version-modal-actions">
+        <button type="button" class="admin-btn" data-post-version-preview-close-btn>닫기</button>
+        <button type="button" class="admin-btn primary" data-post-version-restore>이 버전으로 복원</button>
+      </div>
     </div>
   </div>
 
@@ -158,6 +470,16 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
     <p class="admin-inline-note" data-admin-post-reports-error hidden></p>
     <p class="admin-help" data-admin-post-reports-empty hidden>등록된 신고가 없습니다.</p>
     <ul class="admin-list" data-admin-post-reports-list></ul>
+  </section>
+
+  <section class="admin-card pad-lg admin-post-comments-wrap" data-admin-post-comments hidden>
+    <h2 class="admin-section-title">댓글 검토</h2>
+    <p class="admin-section-desc">
+      이 글(slug)에 달린 미승인 댓글입니다. 승인 후 블로그에 공개됩니다.
+    </p>
+    <p class="admin-inline-note" data-admin-post-comments-error hidden></p>
+    <p class="admin-help" data-admin-post-comments-empty hidden>대기 중인 댓글이 없습니다.</p>
+    <ul class="admin-list" data-admin-post-comments-list></ul>
   </section>
 
   <style>
@@ -179,6 +501,392 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
         justify-content: flex-start;
       }
     }
+
+    .admin-post-comments-wrap .admin-post-comment-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    @media (max-width: 640px) {
+      .admin-post-comments-wrap .admin-list-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .admin-post-comments-wrap .admin-post-comment-actions {
+        justify-content: flex-start;
+      }
+    }
+
+    .admin-quality-score-line {
+      margin: 0 0 0.65rem;
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--admin-text, #1a1a1a);
+    }
+
+    .admin-quality-checklist .admin-quality-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .admin-quality-checklist .admin-quality-icon {
+      flex-shrink: 0;
+      width: 1.25rem;
+      text-align: center;
+    }
+
+    .admin-dryrun-warnings {
+      margin-top: 1rem;
+      padding: 0.85rem 1rem;
+      border-radius: 12px;
+      border: 1px solid rgba(180, 140, 0, 0.45);
+      background: rgba(255, 236, 160, 0.35);
+      color: var(--admin-text, #1a1a1a);
+    }
+
+    .admin-warnings-anyway-footer {
+      margin-top: 0.85rem;
+    }
+
+    .admin-dryrun-warnings .admin-help {
+      margin: 0 0 0.65rem;
+    }
+
+    .admin-dryrun-warnings-list {
+      margin: 0 0 0.75rem;
+      padding-left: 1.15rem;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .admin-dryrun-warnings-ack {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .admin-dryrun-warnings-ack input {
+      width: 1rem;
+      height: 1rem;
+      flex-shrink: 0;
+    }
+
+    .post-version-modal-root[hidden] {
+      display: none !important;
+    }
+
+    .post-version-modal-root:not([hidden]) {
+      position: fixed;
+      inset: 0;
+      z-index: 10040;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 0.75rem;
+      box-sizing: border-box;
+    }
+
+    @media (min-width: 560px) {
+      .post-version-modal-root:not([hidden]) {
+        align-items: center;
+      }
+    }
+
+    .post-version-modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+    }
+
+    .post-version-modal-box {
+      position: relative;
+      width: min(100%, 26rem);
+      max-height: min(88vh, 28rem);
+      overflow: auto;
+      margin: 0;
+      padding: 1.1rem 1.15rem 1.15rem;
+      border-radius: 14px;
+      border: 1px solid var(--admin-border, #e0d8cc);
+      background: var(--admin-surface, #fff);
+      color: var(--admin-text, #1a1a1a);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+    }
+
+    .post-version-modal-box--wide {
+      width: min(100%, 40rem);
+      max-height: min(90vh, 36rem);
+    }
+
+    .post-version-modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0.65rem;
+    }
+
+    .post-version-modal-title {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 800;
+    }
+
+    .post-version-modal-x {
+      border: none;
+      background: transparent;
+      font-size: 1.5rem;
+      line-height: 1;
+      cursor: pointer;
+      color: var(--admin-text-2, #666);
+      padding: 0.15rem 0.35rem;
+      border-radius: 6px;
+    }
+
+    .post-version-modal-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: flex-end;
+      margin-top: 1rem;
+    }
+
+    .post-version-preview-h3 {
+      margin: 0.75rem 0 0.35rem;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--admin-text-2, #666);
+    }
+
+    .post-version-preview-block {
+      margin: 0;
+      padding: 0.55rem 0.65rem;
+      border-radius: 8px;
+      border: 1px solid var(--admin-border, #e0d8cc);
+      background: var(--admin-bg-subtle, #f8f8f8);
+      font-size: 0.82rem;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 8rem;
+      overflow: auto;
+    }
+
+    .post-version-preview-block--body {
+      max-height: 14rem;
+    }
+
+    [data-admin-social-preview-card] .admin-social-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin: 0.75rem 0 1rem;
+    }
+
+    [data-admin-social-preview-card] .admin-social-tab[aria-selected='true'] {
+      outline: 2px solid var(--admin-accent, #b8956a);
+      outline-offset: 2px;
+    }
+
+    [data-admin-social-preview-card] .admin-social-panel-stack {
+      min-height: 8rem;
+    }
+
+    .og-preview {
+      border: 1px solid var(--admin-border, #e8e4df);
+      border-radius: 14px;
+      overflow: hidden;
+      background: #fff;
+      max-width: 520px;
+    }
+
+    .og-preview--twitter {
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    }
+
+    .og-preview__image {
+      position: relative;
+      aspect-ratio: 1.91 / 1;
+      background: #e7e9ee;
+      max-height: 240px;
+    }
+
+    .og-preview__image--sm {
+      aspect-ratio: 1.85 / 1;
+      max-height: 160px;
+    }
+
+    .og-preview__image img,
+    .og-preview__slack-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .og-preview__placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #657786;
+      font-size: 0.88rem;
+    }
+
+    .og-preview__placeholder--sm {
+      font-size: 0.8rem;
+    }
+
+    .og-preview__body {
+      padding: 0.65rem 0.85rem 0.85rem;
+    }
+
+    .og-preview__domain {
+      margin: 0 0 0.2rem;
+      font-size: 0.72rem;
+      color: #657786;
+      text-transform: lowercase;
+    }
+
+    .og-preview__title {
+      margin: 0 0 0.25rem;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: #0f1419;
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .og-preview__desc {
+      margin: 0;
+      font-size: 0.8rem;
+      color: #536471;
+      line-height: 1.45;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .og-preview--kakao {
+      border-radius: 18px;
+      border-color: #fee500;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    .og-preview--kakao .og-preview__body {
+      padding-top: 0.5rem;
+    }
+
+    .og-preview--kakao .og-preview__title {
+      font-size: 0.95rem;
+    }
+
+    .og-preview--kakao .og-preview__domain {
+      color: #8c8c8c;
+      font-size: 0.7rem;
+    }
+
+    .og-preview--slack {
+      display: flex;
+      gap: 0.75rem;
+      padding: 0.65rem 0.85rem;
+      max-width: 480px;
+      align-items: flex-start;
+    }
+
+    .og-preview__slack-thumb {
+      width: 72px;
+      height: 72px;
+      flex-shrink: 0;
+      border-radius: 6px;
+      overflow: hidden;
+      background: #e7e9ee;
+      position: relative;
+    }
+
+    .og-preview__placeholder--slack {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      color: #616061;
+    }
+
+    .og-preview__slack-main {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .og-preview__slack-title {
+      margin: 0 0 0.15rem;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #1d1c1d;
+    }
+
+    .og-preview__slack-domain {
+      margin: 0 0 0.25rem;
+      font-size: 0.72rem;
+      color: #616061;
+    }
+
+    .og-preview__slack-desc {
+      margin: 0;
+      font-size: 0.78rem;
+      color: #1d1c1d;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    [data-admin-social-preview-card] .admin-social-share-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.35rem;
+      margin-top: 1rem;
+    }
+
+    [data-admin-social-preview-card] .admin-social-meta-check .admin-social-check-row {
+      cursor: pointer;
+      border-radius: 10px;
+      padding: 0.15rem 0;
+    }
+
+    [data-admin-social-preview-card] .admin-social-meta-check .admin-social-check-row:hover {
+      background: rgba(184, 149, 106, 0.08);
+    }
+
+    .admin-social-fetch-result {
+      margin-top: 0.5rem;
+      padding: 0.65rem 0.75rem;
+      border-radius: 10px;
+      background: var(--admin-bg-subtle, #f8f8f8);
+      font-size: 0.76rem;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 14rem;
+      overflow: auto;
+    }
   </style>
 
   <script>
@@ -191,11 +899,20 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
     const message = document.querySelector('[data-admin-edit-post-message]');
     const metaList = document.querySelector('[data-admin-edit-meta]');
     const releaseState = document.querySelector('[data-admin-release-state]');
+    const reviewLineEl = document.querySelector('[data-admin-review-line]');
+    const reviewFlagEl = document.querySelector('[data-admin-review-flag]');
+    const reviewCompleteBtn = document.querySelector('[data-admin-review-complete]');
     const publishHistorySummary = document.querySelector('[data-admin-publish-history-summary]');
     const previewLink = document.querySelector('[data-admin-edit-preview-link]');
     const dryRunButton = document.querySelector('[data-admin-publish-dryrun]');
     const livePublishButton = document.querySelector('[data-admin-publish-live]');
+    const publishAnywayButton = document.querySelector('[data-admin-publish-anyway]');
     const saveButton = document.querySelector('[data-admin-save-button]');
+    const publishWarningsSection = document.querySelector('[data-admin-publish-warnings-section]');
+    const dryRunWarningsList = document.querySelector('[data-admin-dryrun-warnings-list]');
+    const warningsAckCheckbox = document.querySelector('[data-admin-warnings-ack]');
+    const qualityScoreEl = document.querySelector('[data-admin-quality-score]');
+    const qualityChecklistEl = document.querySelector('[data-admin-quality-checklist]');
     const jobCard = document.querySelector('[data-admin-current-job]');
     const jobTitle = document.querySelector('[data-admin-current-job-title]');
     const jobStatus = document.querySelector('[data-admin-current-job-status]');
@@ -205,12 +922,39 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
     const reportsList = document.querySelector('[data-admin-post-reports-list]');
     const reportsEmpty = document.querySelector('[data-admin-post-reports-empty]');
     const reportsError = document.querySelector('[data-admin-post-reports-error]');
+    const commentsSection = document.querySelector('[data-admin-post-comments]');
+    const commentsList = document.querySelector('[data-admin-post-comments-list]');
+    const commentsEmpty = document.querySelector('[data-admin-post-comments-empty]');
+    const commentsError = document.querySelector('[data-admin-post-comments-error]');
+    const versionListEl = document.querySelector('[data-admin-version-list]');
+    const saveSummaryModal = document.querySelector('[data-post-save-summary-modal]');
+    const templateSaveModal = document.querySelector('[data-admin-template-save-modal]');
+    const templateSaveName = document.querySelector('[data-admin-template-save-name]');
+    const templateSaveDesc = document.querySelector('[data-admin-template-save-desc]');
+    const versionPreviewModal = document.querySelector('[data-post-version-preview-modal]');
+    const versionPreviewMeta = document.querySelector('[data-post-version-preview-meta]');
+    const versionPreviewTitleText = document.querySelector('[data-post-version-preview-title-text]');
+    const versionPreviewBody = document.querySelector('[data-post-version-preview-body]');
+    const abTitleBInput = document.querySelector('[data-ab-title-b]');
+    const abStartBtn = document.querySelector('[data-ab-start]');
+    const abStats = document.querySelector('[data-ab-stats]');
+    const abLineA = document.querySelector('[data-ab-line-a]');
+    const abLineB = document.querySelector('[data-ab-line-b]');
+    const abMsg = document.querySelector('[data-ab-msg]');
+    const abWinnerBtns = document.querySelectorAll('[data-ab-winner]');
+    let activeAbTest = null;
     let currentPostId = null;
     let currentSlug = slug;
     let currentUserId = null;
     let publishPollTimer = null;
     let hasUnsavedChanges = false;
     let formSnapshot = '';
+    /** Dry Run 성공 직후 폼 스냅샷 — 편집 시 경고 게이트 무효화 */
+    let dryRunFormSnapshot = '';
+    let cachedPostVersions = [];
+    let versionPreviewCurrent = null;
+    /** URL·OG API용 — 폼에 없는 서브폴더 */
+    let loadedPostSubcategory = '';
     const getCurrentRole = () => document.body.dataset.adminRole || '';
 
     const escapeHtml = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -230,6 +974,28 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
       if (type === 'publish') {
         if (livePublishButton) livePublishButton.disabled = busy;
         if (dryRunButton) dryRunButton.disabled = busy;
+        if (publishAnywayButton instanceof HTMLButtonElement) {
+          if (busy) publishAnywayButton.disabled = true;
+          else syncPublishWarningButtons();
+        }
+      }
+    };
+
+    const syncPublishWarningButtons = () => {
+      if (!(publishAnywayButton instanceof HTMLButtonElement)) return;
+      const panelOpen = publishWarningsSection instanceof HTMLElement && !publishWarningsSection.hidden;
+      if (!panelOpen) {
+        publishAnywayButton.hidden = true;
+        publishAnywayButton.disabled = true;
+        if (livePublishButton instanceof HTMLButtonElement) {
+          livePublishButton.disabled = false;
+        }
+        return;
+      }
+      publishAnywayButton.hidden = false;
+      publishAnywayButton.disabled = !(warningsAckCheckbox instanceof HTMLInputElement && warningsAckCheckbox.checked);
+      if (livePublishButton instanceof HTMLButtonElement) {
+        livePublishButton.disabled = true;
       }
     };
 
@@ -266,6 +1032,63 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
     const reportTypeLabel = (t) =>
       ({ typo: '오탈자', factual_error: '사실 오류', outdated: '오래된 정보', other: '기타' })[t] || t;
 
+    const abCtrLine = (views, clicks) => {
+      const v = Number(views) || 0;
+      const c = Number(clicks) || 0;
+      const pct = v > 0 ? ((100 * c) / v).toFixed(2) : '0.00';
+      return `노출 ${v}회 · 클릭 ${c}회 · CTR ${pct}%`;
+    };
+
+    const setAbMsg = (text, state = '') => {
+      if (!abMsg) return;
+      if (!text) {
+        abMsg.hidden = true;
+        abMsg.textContent = '';
+        delete abMsg.dataset.state;
+        return;
+      }
+      abMsg.hidden = false;
+      abMsg.textContent = text;
+      if (state) abMsg.dataset.state = state;
+    };
+
+    const syncAbUi = () => {
+      if (!(abTitleBInput instanceof HTMLInputElement) || !(abStartBtn instanceof HTMLButtonElement) || !abStats) return;
+      if (activeAbTest) {
+        abTitleBInput.value = activeAbTest.title_b || '';
+        abTitleBInput.disabled = true;
+        abStartBtn.disabled = true;
+        abStats.hidden = false;
+        if (abLineA) abLineA.textContent = abCtrLine(activeAbTest.views_a, activeAbTest.clicks_a);
+        if (abLineB) abLineB.textContent = abCtrLine(activeAbTest.views_b, activeAbTest.clicks_b);
+      } else {
+        abTitleBInput.disabled = false;
+        abStartBtn.disabled = false;
+        abStats.hidden = true;
+      }
+    };
+
+    const loadAbTest = async (postSlug) => {
+      activeAbTest = null;
+      if (!supabase || !postSlug) {
+        syncAbUi();
+        return;
+      }
+      const { data, error } = await supabase
+        .from('ab_tests')
+        .select('id, slug, title_a, title_b, views_a, views_b, clicks_a, clicks_b')
+        .eq('slug', postSlug)
+        .is('ended_at', null)
+        .maybeSingle();
+      if (error) {
+        setAbMsg(`A/B 테스트 조회 실패: ${error.message}`, 'error');
+      } else {
+        activeAbTest = data || null;
+        setAbMsg('', '');
+      }
+      syncAbUi();
+    };
+
     const updatePreviewHref = (value) => {
       currentSlug = value || currentSlug;
       if (previewLink) {
@@ -278,11 +1101,353 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
       return JSON.stringify(Object.fromEntries(new FormData(form).entries()));
     };
 
+    const applyDryRunWarnings = (warnings) => {
+      const list = Array.isArray(warnings) ? warnings : [];
+      if (!(publishWarningsSection instanceof HTMLElement) || !dryRunWarningsList) return;
+
+      if (list.length === 0) {
+        publishWarningsSection.hidden = true;
+        dryRunWarningsList.innerHTML = '';
+        dryRunFormSnapshot = '';
+        if (warningsAckCheckbox instanceof HTMLInputElement) warningsAckCheckbox.checked = false;
+        syncPublishWarningButtons();
+        return;
+      }
+
+      dryRunFormSnapshot = serializeForm();
+      publishWarningsSection.hidden = false;
+      dryRunWarningsList.innerHTML = list.map((w) => `<li>${escapeHtml(String(w))}</li>`).join('');
+      if (warningsAckCheckbox instanceof HTMLInputElement) warningsAckCheckbox.checked = false;
+      syncPublishWarningButtons();
+    };
+
+    const invalidateDryRunWarningGateIfStale = () => {
+      if (dryRunFormSnapshot && serializeForm() !== dryRunFormSnapshot) {
+        applyDryRunWarnings([]);
+      }
+    };
+
+    const computeQualityItems = () => {
+      if (!form) return [];
+      const fd = new FormData(form);
+      const title = String(fd.get('title') || '').trim();
+      const body = String(fd.get('body') || '').trim();
+      const thumb = String(fd.get('thumbnail_url') || '').trim();
+      const tagsRaw = String(fd.get('tags') || '');
+      const tags = tagsRaw.split(',').map((t) => t.trim()).filter(Boolean);
+      const seoDesc = String(fd.get('seo_description') || '').trim();
+      const len = body.length;
+      return [
+        {
+          label: '본문 글자수',
+          detail: `${len}자 (권장 500자 이상)`,
+          ok: len >= 500,
+          severe: len === 0,
+        },
+        {
+          label: '썸네일',
+          detail: thumb ? 'URL 입력됨' : '없음',
+          ok: Boolean(thumb),
+          severe: false,
+        },
+        {
+          label: '태그',
+          detail: tags.length ? `${tags.length}개` : '없음',
+          ok: tags.length > 0,
+          severe: false,
+        },
+        {
+          label: 'SEO 설명',
+          detail: seoDesc ? `${seoDesc.length}자` : '없음',
+          ok: Boolean(seoDesc),
+          severe: false,
+        },
+        {
+          label: '제목 길이',
+          detail: `${title.length}자 (권장 약 10~120자)`,
+          ok: title.length >= 10 && title.length <= 120,
+          severe: title.length === 0,
+        },
+      ];
+    };
+
+    const showQualityPending = () => {
+      if (!qualityChecklistEl || !qualityScoreEl) return;
+      qualityScoreEl.textContent = '점수: —';
+      qualityChecklistEl.innerHTML =
+        '<li class="admin-list-row"><p class="admin-help">저장하면 품질 점수가 갱신됩니다.</p></li>';
+    };
+
+    const calculateQualityScore = () => {
+      if (!qualityChecklistEl || !qualityScoreEl) return;
+      const items = computeQualityItems();
+      if (items.length === 0) return;
+      const passed = items.filter((i) => i.ok).length;
+      const total = items.length;
+      qualityScoreEl.textContent = `점수: ${passed} / ${total}`;
+      qualityChecklistEl.innerHTML = items
+        .map((i) => {
+          let icon = '⚠️';
+          if (i.ok) icon = '✅';
+          else if (i.severe) icon = '❌';
+          return `<li class="admin-list-row"><div class="admin-quality-row"><span class="admin-quality-icon" aria-hidden="true">${icon}</span><div><p class="admin-item-title">${escapeHtml(i.label)}</p><p class="admin-item-meta">${escapeHtml(i.detail)}</p></div></div></li>`;
+        })
+        .join('');
+    };
+
     const updateDirtyState = () => {
       hasUnsavedChanges = serializeForm() !== formSnapshot;
       if (saveButton) {
         saveButton.dataset.dirty = hasUnsavedChanges ? 'true' : 'false';
       }
+      invalidateDryRunWarningGateIfStale();
+      refreshSocialPreview();
+    };
+
+    const publicR2MediaBase = (import.meta.env.PUBLIC_R2_MEDIA_URL || '').trim().replace(/\/$/, '');
+
+    const encodePathSegments = (pathStr) =>
+      String(pathStr || '')
+        .split('/')
+        .filter(Boolean)
+        .map((seg) => encodeURIComponent(seg))
+        .join('/');
+
+    const resolveContentSlugPath = () => {
+      if (!form) return '';
+      const slugVal = String(form.elements.slug?.value || '').trim();
+      const category = String(form.elements.category?.value || '').trim() || 'uncategorized';
+      if (!slugVal) return '';
+      if (slugVal.includes('/')) return slugVal;
+      return [category, loadedPostSubcategory, slugVal].filter(Boolean).join('/');
+    };
+
+    const buildLivePostUrl = () => {
+      const siteBase = (import.meta.env.PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, '');
+      const rel = resolveContentSlugPath();
+      if (!rel) return `${siteBase}/blog/`;
+      if (rel.startsWith('doctor-ai-academy/')) {
+        return `${siteBase}/doctor-ai-academy/${encodePathSegments(rel.slice('doctor-ai-academy/'.length))}/`;
+      }
+      if (rel.startsWith('doctor-ai/')) {
+        return `${siteBase}/doctor-ai-academy/${encodePathSegments(rel.slice('doctor-ai/'.length))}/`;
+      }
+      return `${siteBase}/blog/${encodePathSegments(rel)}/`;
+    };
+
+    const resolveOgPreviewImageUrl = (thumbRaw) => {
+      const siteBase = (import.meta.env.PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, '');
+      const t = String(thumbRaw || '').trim();
+      if (t) {
+        try {
+          return t.startsWith('http') ? t : new URL(t, window.location.origin).href;
+        } catch {
+          return t;
+        }
+      }
+      const path = resolveContentSlugPath();
+      if (!path) return '';
+      return `${siteBase}/api/og/${encodeURIComponent(path)}/`;
+    };
+
+    const focusField = (name) => {
+      const el = document.querySelector(`[name="${name}"]`);
+      if (el instanceof HTMLElement) {
+        el.focus();
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    };
+
+    const refreshSocialPreview = () => {
+      const card = document.querySelector('[data-admin-social-preview-card]');
+      if (!card || !form) return;
+
+      const siteBase = (import.meta.env.PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, '');
+      let host = 's-reborn-blog.pages.dev';
+      try {
+        host = new URL(siteBase).hostname || host;
+      } catch {
+        /* keep default */
+      }
+
+      const title = String(form.elements.title?.value || '').trim();
+      const seoTitle = String(form.elements.seo_title?.value || '').trim();
+      const description = String(form.elements.description?.value || '').trim();
+      const seoDescription = String(form.elements.seo_description?.value || '').trim();
+      const thumbRaw = String(form.elements.thumbnail_url?.value || '').trim();
+      const canonicalForm = String(form.elements.canonical_url?.value || '').trim();
+      const status = String(form.elements.status?.value || '').trim();
+
+      const ogTitleStr = seoTitle || title || '(제목 없음)';
+      const ogDescStr = seoDescription || description || '';
+      const postUrl = canonicalForm || buildLivePostUrl();
+      let ogImageUrl = resolveOgPreviewImageUrl(thumbRaw);
+
+      const setImg = (img, ph, url) => {
+        if (!(img instanceof HTMLImageElement) || !ph) return;
+        if (url) {
+          img.removeAttribute('hidden');
+          ph.setAttribute('hidden', '');
+          img.src = url;
+          img.onerror = () => {
+            img.setAttribute('hidden', '');
+            ph.removeAttribute('hidden');
+          };
+        } else {
+          img.src = '';
+          img.setAttribute('hidden', '');
+          ph.removeAttribute('hidden');
+        }
+      };
+
+      const img = card.querySelector('[data-social-og-img]');
+      const ph = card.querySelector('[data-social-img-placeholder]');
+      setImg(img, ph, ogImageUrl);
+
+      const kImg = card.querySelector('[data-social-kakao-img]');
+      const kPh = card.querySelector('[data-social-kakao-placeholder]');
+      setImg(kImg, kPh, ogImageUrl);
+
+      const sImg = card.querySelector('[data-social-slack-img]');
+      const sPh = card.querySelector('[data-social-slack-placeholder]');
+      setImg(sImg, sPh, ogImageUrl);
+
+      card.querySelectorAll('[data-social-domain]').forEach((el) => {
+        el.textContent = host;
+      });
+      card.querySelectorAll('[data-social-title]').forEach((el) => {
+        el.textContent = ogTitleStr;
+      });
+      card.querySelectorAll('[data-social-desc]').forEach((el) => {
+        el.textContent = ogDescStr;
+      });
+      const kTitle = card.querySelector('[data-social-kakao-title]');
+      if (kTitle) kTitle.textContent = ogTitleStr;
+      const kDom = card.querySelector('[data-social-kakao-domain]');
+      if (kDom) kDom.textContent = host;
+      const slT = card.querySelector('[data-social-slack-title]');
+      if (slT) slT.textContent = ogTitleStr;
+      const slD = card.querySelector('[data-social-slack-domain]');
+      if (slD) slD.textContent = host;
+      const slDe = card.querySelector('[data-social-slack-desc]');
+      if (slDe) slDe.textContent = ogDescStr;
+
+      const ogTitleLen = ogTitleStr.length;
+      const ogDescLen = ogDescStr.length;
+      const hasOgImage = Boolean(ogImageUrl);
+
+      let imageSizeOk = true;
+      let imageSizeDetail = '동적 OG 또는 외부 이미지';
+      if (!hasOgImage) {
+        imageSizeOk = false;
+        imageSizeDetail = '이미지 URL 없음';
+      } else if (ogImageUrl.includes('/api/og/')) {
+        imageSizeOk = true;
+        imageSizeDetail = '동적 OG(1200×630)';
+      } else if (publicR2MediaBase && ogImageUrl.startsWith(publicR2MediaBase)) {
+        try {
+          const u = new URL(ogImageUrl);
+          const w = parseInt(u.searchParams.get('width') || '0', 10);
+          const h = parseInt(u.searchParams.get('height') || '0', 10);
+          if (w >= 1150 && h >= 600) {
+            imageSizeOk = true;
+            imageSizeDetail = `R2 쿼리 ${w}×${h}`;
+          } else {
+            imageSizeOk = false;
+            imageSizeDetail = 'R2 URL — 권장: width≈1200·height≈630 쿼리';
+          }
+        } catch {
+          imageSizeOk = false;
+          imageSizeDetail = 'R2 URL 파싱 실패';
+        }
+      } else {
+        imageSizeDetail = '고정 이미지 — 크기는 배포 페이지에서 확인';
+      }
+
+      const canonicalOk = Boolean(canonicalForm) || Boolean(resolveContentSlugPath());
+      const twitterCardOk = true;
+
+      const rows = [
+        {
+          icon: ogTitleLen <= 60 ? '✅' : '⚠️',
+          label: `og:title (${ogTitleLen}자)`,
+          detail: ogTitleLen <= 60 ? '60자 이하' : '60자 초과 — 잘릴 수 있음',
+          focus: seoTitle ? 'seo_title' : 'title',
+        },
+        {
+          icon: ogDescLen <= 160 ? '✅' : '⚠️',
+          label: `og:description (${ogDescLen}자)`,
+          detail: ogDescLen <= 160 ? '160자 이하' : '160자 초과 — 미리보기에서 잘릴 수 있음',
+          focus: seoDescription ? 'seo_description' : 'description',
+        },
+        {
+          icon: hasOgImage ? '✅' : '❌',
+          label: 'og:image',
+          detail: hasOgImage ? ogImageUrl.split('?')[0] : '썸네일 없음·동적 OG도 불가(슬러그 필요)',
+          focus: 'thumbnail_url',
+        },
+        {
+          icon: imageSizeOk ? '✅' : '⚠️',
+          label: 'og:image 권장 1200×630',
+          detail: imageSizeDetail,
+          focus: 'thumbnail_url',
+        },
+        {
+          icon: twitterCardOk ? '✅' : '❌',
+          label: 'twitter:card',
+          detail: 'summary_large_image (블로그 기본)',
+          focus: 'title',
+        },
+        {
+          icon: canonicalOk ? '✅' : '❌',
+          label: 'canonical URL',
+          detail: canonicalForm.trim() || postUrl,
+          focus: 'canonical_url',
+        },
+      ];
+
+      const list = card.querySelector('[data-admin-social-checklist]');
+      if (list) {
+        list.innerHTML = rows
+          .map(
+            (r) => `
+          <li class="admin-list-row admin-social-check-row" tabindex="0" data-check-focus="${escapeHtml(r.focus)}">
+            <div class="admin-quality-row">
+              <span class="admin-quality-icon" aria-hidden="true">${r.icon}</span>
+              <div>
+                <p class="admin-item-title">${escapeHtml(r.label)}</p>
+                <p class="admin-item-meta">${escapeHtml(r.detail)}</p>
+              </div>
+            </div>
+          </li>`,
+          )
+          .join('');
+      }
+
+      const fetchWrap = card.querySelector('[data-admin-social-fetch-wrap]');
+      const fetchHint = card.querySelector('[data-admin-social-fetch-hint]');
+      const fetchResult = card.querySelector('[data-admin-social-fetch-result]');
+      if (fetchWrap instanceof HTMLElement) {
+        if (status === 'published') {
+          fetchWrap.hidden = false;
+          if (fetchHint instanceof HTMLElement) {
+            fetchHint.hidden = false;
+            fetchHint.textContent =
+              '발행된 공개 URL만 서버에서 가져옵니다. 미저장 변경은 반영되지 않을 수 있습니다.';
+          }
+        } else {
+          fetchWrap.hidden = true;
+          if (fetchResult instanceof HTMLElement) {
+            fetchResult.hidden = true;
+            fetchResult.textContent = '';
+          }
+        }
+      }
+
+      const encPost = encodeURIComponent(postUrl);
+      card.dataset.shareTwitter = `https://twitter.com/intent/tweet?url=${encPost}&text=${encodeURIComponent(ogTitleStr)}`;
+      card.dataset.shareKakao = `https://story.kakao.com/share?url=${encPost}`;
+      card.dataset.shareLink = postUrl;
     };
 
     const fillMeta = (post) => {
@@ -293,6 +1458,21 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
         <li class="admin-list-row"><div><p class="admin-item-title">최근 수정</p><p class="admin-item-meta">${post.updated_at ?? '-'}</p></div></li>
       `;
       updatePreviewHref(post.slug);
+    };
+
+    const updateReviewUi = (post) => {
+      if (reviewLineEl) {
+        const last = post?.last_reviewed_at;
+        if (!last) {
+          reviewLineEl.textContent = '최종 검토: 기록 없음';
+        } else {
+          const days = Math.floor((Date.now() - new Date(last).getTime()) / (24 * 60 * 60 * 1000));
+          reviewLineEl.textContent = `최종 검토: ${days}일 전`;
+        }
+      }
+      if (reviewFlagEl instanceof HTMLElement) {
+        reviewFlagEl.hidden = !post?.needs_review;
+      }
     };
 
     const fillReleaseState = (post, publishMeta = {}) => {
@@ -490,20 +1670,352 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
           .join('');
       };
 
+      const loadPostComments = async (postSlug) => {
+        if (!(commentsSection instanceof HTMLElement) || !commentsList || !commentsEmpty) return;
+        if (!supabase || !postSlug) {
+          commentsSection.hidden = true;
+          return;
+        }
+        commentsSection.hidden = false;
+        if (commentsError instanceof HTMLElement) {
+          commentsError.hidden = true;
+          commentsError.textContent = '';
+        }
+        const { data, error } = await supabase
+          .from('comments')
+          .select('id, parent_id, author_name, body, created_at, is_approved')
+          .eq('slug', postSlug)
+          .eq('is_approved', false)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          if (commentsError instanceof HTMLElement) {
+            commentsError.hidden = false;
+            commentsError.textContent = `댓글 목록을 불러오지 못했습니다: ${error.message}`;
+            commentsError.dataset.state = 'error';
+          }
+          commentsList.innerHTML = '';
+          commentsEmpty.hidden = true;
+          return;
+        }
+
+        const rows = data ?? [];
+        commentsEmpty.hidden = rows.length > 0;
+        if (!rows.length) {
+          commentsList.innerHTML = '';
+          return;
+        }
+
+        commentsList.innerHTML = rows
+          .map((c) => {
+            const parentNote = c.parent_id
+              ? `<p class="admin-item-meta">답글 (parent: <code>${escapeHtml(c.parent_id.slice(0, 8))}…</code>)</p>`
+              : '';
+            const bodyText = escapeHtml(c.body).replace(/\n/g, '<br />');
+            return `<li class="admin-list-row">
+          <div>
+            <p class="admin-item-title">${escapeHtml(c.author_name)}</p>
+            <p class="admin-item-meta">${formatDate(c.created_at)}</p>
+            ${parentNote}
+            <p class="admin-item-meta">${bodyText}</p>
+          </div>
+          <div class="admin-post-comment-actions">
+            <button type="button" class="admin-btn admin-btn-sm primary" data-admin-comment-approve data-comment-id="${escapeHtml(c.id)}">승인</button>
+            <button type="button" class="admin-btn admin-btn-sm" data-admin-comment-delete data-comment-id="${escapeHtml(c.id)}">삭제</button>
+          </div>
+        </li>`;
+          })
+          .join('');
+      };
+
+      const renderVersionList = () => {
+        if (!versionListEl) return;
+        if (!cachedPostVersions.length) {
+          versionListEl.innerHTML =
+            '<li class="admin-list-row"><p class="admin-help">저장된 버전이 없습니다.</p></li>';
+          return;
+        }
+        versionListEl.innerHTML = cachedPostVersions
+          .map((v, i) => {
+            const when = formatDate(v.created_at);
+            const who = v.changed_by ? `${String(v.changed_by).slice(0, 8)}…` : '—';
+            const sum = v.change_summary ? escapeHtml(v.change_summary) : '—';
+            return `<li class="admin-list-row" style="flex-wrap:wrap;gap:0.5rem;">
+            <div style="flex:1;min-width:0;">
+              <p class="admin-item-title">${when}</p>
+              <p class="admin-item-meta">변경자 ${escapeHtml(who)} · ${sum}</p>
+            </div>
+            <button type="button" class="admin-btn admin-btn-sm" data-version-open="${i}">이 버전 보기</button>
+          </li>`;
+          })
+          .join('');
+      };
+
+      const loadPostVersions = async (postSlug) => {
+        if (!versionListEl || !supabase || !postSlug) return;
+        versionListEl.innerHTML = '<li class="admin-list-row"><p class="admin-help">불러오는 중…</p></li>';
+        const { data, error } = await supabase
+          .from('post_versions')
+          .select('id, slug, title, body_markdown, changed_by, change_summary, created_at')
+          .eq('slug', postSlug)
+          .order('created_at', { ascending: false })
+          .limit(10);
+        if (error) {
+          cachedPostVersions = [];
+          versionListEl.innerHTML = `<li class="admin-list-row"><p class="admin-help admin-help-error">${escapeHtml(error.message)}</p></li>`;
+          return;
+        }
+        cachedPostVersions = data || [];
+        renderVersionList();
+      };
+
+      const closeVersionPreview = () => {
+        if (versionPreviewModal instanceof HTMLElement) versionPreviewModal.hidden = true;
+        versionPreviewCurrent = null;
+      };
+
+      const openVersionPreview = (v) => {
+        versionPreviewCurrent = v;
+        if (!(versionPreviewModal instanceof HTMLElement)) return;
+        if (versionPreviewMeta) {
+          versionPreviewMeta.textContent = `${formatDate(v.created_at)} · ${v.change_summary || '요약 없음'}`;
+        }
+        if (versionPreviewTitleText) versionPreviewTitleText.textContent = v.title || '(제목 없음)';
+        if (versionPreviewBody) versionPreviewBody.textContent = v.body_markdown || '';
+        versionPreviewModal.hidden = false;
+      };
+
+      const openSaveSummaryModal = () =>
+        new Promise((resolve) => {
+          const saveSummaryInput = document.getElementById('post-save-summary-input');
+          if (!saveSummaryModal || !(saveSummaryInput instanceof HTMLTextAreaElement)) {
+            resolve({ ok: true, summary: '' });
+            return;
+          }
+          let settled = false;
+          const finish = (payload) => {
+            if (settled) return;
+            settled = true;
+            saveSummaryModal.hidden = true;
+            document.removeEventListener('keydown', onKey);
+            resolve(payload);
+          };
+          const onKey = (ev) => {
+            if (ev.key === 'Escape') {
+              ev.preventDefault();
+              finish({ ok: false, summary: '' });
+            }
+          };
+          document.addEventListener('keydown', onKey);
+          saveSummaryInput.value = '';
+          saveSummaryModal.hidden = false;
+          saveSummaryInput.focus();
+          const onConfirm = () => finish({ ok: true, summary: saveSummaryInput.value.trim() });
+          const onCancel = () => finish({ ok: false, summary: '' });
+          saveSummaryModal.querySelector('[data-post-save-summary-confirm]')?.addEventListener('click', onConfirm, {
+            once: true,
+          });
+          saveSummaryModal.querySelector('[data-post-save-summary-cancel]')?.addEventListener('click', onCancel, {
+            once: true,
+          });
+          saveSummaryModal.querySelectorAll('[data-post-save-summary-close]').forEach((el) => {
+            el.addEventListener('click', onCancel, { once: true });
+          });
+        });
+
+      let adminPollCached = null;
+
+      const parseAdminPollOptions = (raw) => {
+        if (!Array.isArray(raw)) return [];
+        const out = [];
+        for (const x of raw) {
+          if (!x || typeof x !== 'object') continue;
+          const id = typeof x.id === 'string' ? x.id.trim() : '';
+          const label = typeof x.label === 'string' ? x.label.trim() : '';
+          if (id && label) out.push({ id, label });
+        }
+        return out;
+      };
+
+      const getAdminPollEls = () => ({
+        currentEl: document.querySelector('[data-admin-poll-current]'),
+        formWrap: document.querySelector('[data-admin-poll-form-wrap]'),
+        questionInput: document.querySelector('[data-admin-poll-question]'),
+        optionsList: document.querySelector('[data-admin-poll-options]'),
+        previewList: document.querySelector('[data-admin-poll-preview-list]'),
+        createBtn: document.querySelector('[data-admin-poll-create]'),
+        deleteBtn: document.querySelector('[data-admin-poll-delete]'),
+        addOptBtn: document.querySelector('[data-admin-poll-add-option]'),
+        msgEl: document.querySelector('[data-admin-poll-msg]'),
+      });
+
+      const showAdminPollMsg = (text, isErr) => {
+        const { msgEl } = getAdminPollEls();
+        if (!(msgEl instanceof HTMLElement)) return;
+        if (!text) {
+          msgEl.hidden = true;
+          msgEl.textContent = '';
+          return;
+        }
+        msgEl.hidden = false;
+        msgEl.textContent = text;
+        msgEl.classList.toggle('admin-help-error', !!isErr);
+      };
+
+      const addPollOptionRow = (id = '', label = '') => {
+        const { optionsList } = getAdminPollEls();
+        if (!optionsList) return;
+        const rows = optionsList.querySelectorAll('[data-admin-poll-opt-row]');
+        if (rows.length >= 4) return;
+        const li = document.createElement('li');
+        li.className = 'admin-list-row';
+        li.setAttribute('data-admin-poll-opt-row', '');
+        li.style.cssText = 'flex-wrap:wrap;gap:0.5rem;align-items:flex-end;';
+        li.innerHTML = `<div style="flex:1;min-width:100px;">
+            <span class="admin-label">옵션 id</span>
+            <input class="admin-input" type="text" data-admin-poll-opt-id maxlength="40" placeholder="a" value="${escapeHtml(id)}"/>
+          </div>
+          <div style="flex:2;min-width:140px;">
+            <span class="admin-label">표시</span>
+            <input class="admin-input" type="text" data-admin-poll-opt-label maxlength="200" value="${escapeHtml(label)}"/>
+          </div>
+          <button type="button" class="admin-btn admin-btn-sm" data-admin-poll-opt-remove>삭제</button>`;
+        optionsList.appendChild(li);
+      };
+
+      const resetAdminPollForm = () => {
+        const { questionInput, optionsList } = getAdminPollEls();
+        if (questionInput instanceof HTMLInputElement) questionInput.value = '';
+        if (optionsList) {
+          optionsList.innerHTML = '';
+          addPollOptionRow('a', '예');
+          addPollOptionRow('b', '아니오');
+        }
+      };
+
+      const collectAdminPollOptions = () => {
+        const { optionsList } = getAdminPollEls();
+        if (!optionsList) return [];
+        const out = [];
+        optionsList.querySelectorAll('[data-admin-poll-opt-row]').forEach((row) => {
+          const idInp = row.querySelector('[data-admin-poll-opt-id]');
+          const labInp = row.querySelector('[data-admin-poll-opt-label]');
+          const oid = idInp instanceof HTMLInputElement ? idInp.value.trim() : '';
+          const label = labInp instanceof HTMLInputElement ? labInp.value.trim() : '';
+          if (oid && label) out.push({ id: oid, label });
+        });
+        return out;
+      };
+
+      const refreshAdminPollPreview = async (pollId) => {
+        const { previewList } = getAdminPollEls();
+        if (!previewList || !supabase) return;
+        if (!pollId) {
+          previewList.innerHTML =
+            '<li class="admin-list-row"><p class="admin-help">투표가 없습니다.</p></li>';
+          return;
+        }
+        const { data: poll, error: pErr } = await supabase
+          .from('polls')
+          .select('options')
+          .eq('id', pollId)
+          .maybeSingle();
+        if (pErr || !poll) {
+          previewList.innerHTML = `<li class="admin-list-row"><p class="admin-help admin-help-error">${escapeHtml(pErr?.message || '조회 실패')}</p></li>`;
+          return;
+        }
+        const opts = parseAdminPollOptions(poll.options);
+        const { data: votes } = await supabase
+          .from('poll_votes')
+          .select('option_id')
+          .eq('poll_id', pollId);
+        const counts = new Map();
+        opts.forEach((o) => counts.set(o.id, 0));
+        (votes || []).forEach((v) => {
+          counts.set(v.option_id, (counts.get(v.option_id) ?? 0) + 1);
+        });
+        const total = votes?.length ?? 0;
+        if (!opts.length) {
+          previewList.innerHTML = '<li class="admin-list-row"><p class="admin-help">선택지 없음</p></li>';
+          return;
+        }
+        previewList.innerHTML = opts
+          .map((o) => {
+            const c = counts.get(o.id) ?? 0;
+            const pct = total > 0 ? Math.round((100 * c) / total) : 0;
+            return `<li class="admin-list-row"><div>
+              <p class="admin-item-title">${escapeHtml(o.label)}</p>
+              <p class="admin-item-meta">${c}표 · ${pct}%</p>
+            </div></li>`;
+          })
+          .join('');
+      };
+
+      const loadAdminPoll = async (postSlug) => {
+        const els = getAdminPollEls();
+        if (!els.currentEl || !els.formWrap || !els.optionsList) return;
+        showAdminPollMsg('', false);
+        if (!postSlug || !supabase) {
+          els.currentEl.innerHTML = '<p class="admin-help">slug가 있어야 투표를 설정할 수 있습니다.</p>';
+          els.formWrap.hidden = true;
+          if (els.deleteBtn instanceof HTMLElement) els.deleteBtn.hidden = true;
+          if (els.createBtn instanceof HTMLElement) els.createBtn.hidden = true;
+          adminPollCached = null;
+          await refreshAdminPollPreview(null);
+          return;
+        }
+
+        els.currentEl.innerHTML = '<p class="admin-help">불러오는 중…</p>';
+        const { data: poll, error } = await supabase
+          .from('polls')
+          .select('id, slug, question, options')
+          .eq('slug', postSlug)
+          .maybeSingle();
+
+        if (error) {
+          els.currentEl.innerHTML = `<p class="admin-help admin-help-error">${escapeHtml(error.message)}</p>`;
+          return;
+        }
+
+        adminPollCached = poll;
+        if (poll) {
+          const opts = parseAdminPollOptions(poll.options);
+          const optLines = opts.map((o) => `• ${escapeHtml(o.id)}: ${escapeHtml(o.label)}`).join('<br/>');
+          els.currentEl.innerHTML = `<p class="admin-item-title">${escapeHtml(poll.question)}</p><p class="admin-item-meta">${optLines || '선택지 없음'}</p>`;
+          els.formWrap.hidden = true;
+          if (els.createBtn instanceof HTMLElement) els.createBtn.hidden = true;
+          if (els.deleteBtn instanceof HTMLElement) els.deleteBtn.hidden = false;
+        } else {
+          els.currentEl.innerHTML = '<p class="admin-help">투표 없음</p>';
+          els.formWrap.hidden = false;
+          resetAdminPollForm();
+          if (els.createBtn instanceof HTMLElement) els.createBtn.hidden = false;
+          if (els.deleteBtn instanceof HTMLElement) els.deleteBtn.hidden = true;
+        }
+        await refreshAdminPollPreview(poll?.id ?? null);
+      };
+
       const loadPost = async () => {
         const { data: post, error } = await supabase
           .from('posts')
-          .select('id, title, description, slug, category, subcategory, tags, body_markdown, status, published_at, scheduled_at, updated_at, thumbnail_url, seo_title, seo_description, canonical_url')
+          .select(
+            'id, title, description, slug, category, subcategory, tags, body_markdown, status, published_at, scheduled_at, updated_at, thumbnail_url, seo_title, seo_description, canonical_url, last_reviewed_at, needs_review, review_interval_days',
+          )
           .eq('slug', currentSlug)
           .single();
 
         if (error || !post) {
           setMessage(error?.message || '글을 찾을 수 없습니다.', 'error');
+          loadedPostSubcategory = '';
           if (reportsSection instanceof HTMLElement) reportsSection.hidden = true;
+          if (commentsSection instanceof HTMLElement) commentsSection.hidden = true;
+          await loadAdminPoll('');
+          refreshSocialPreview();
           return null;
         }
 
         currentPostId = post.id;
+        loadedPostSubcategory = (post.subcategory || '').trim();
         form.elements.title.value = post.title || '';
         form.elements.description.value = post.description || '';
         form.elements.slug.value = post.slug || '';
@@ -517,13 +2029,33 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
         form.elements.seo_title.value = post.seo_title || '';
         form.elements.seo_description.value = post.seo_description || '';
         form.elements.canonical_url.value = post.canonical_url || '';
+        if (form.elements.title_ab_b) form.elements.title_ab_b.value = '';
+        const riInput = document.getElementById('review_interval_days');
+        if (riInput instanceof HTMLInputElement) {
+          const rd = post.review_interval_days;
+          const n = Number(rd);
+          riInput.value = String(Number.isFinite(n) ? Math.min(365, Math.max(30, Math.floor(n))) : 180);
+        }
         fillMeta(post);
         fillReleaseState(post);
+        updateReviewUi(post);
         await loadPublishHistorySummary();
         await loadPostReports(post.slug);
+        await loadPostComments(post.slug);
+        await loadAbTest(post.slug);
+        await loadPostVersions(post.slug);
+        await loadAdminPoll(post.slug);
         formSnapshot = serializeForm();
         hasUnsavedChanges = false;
         if (saveButton) saveButton.dataset.dirty = 'false';
+        applyDryRunWarnings([]);
+        const justSaved = new URLSearchParams(window.location.search).get('updated') === '1';
+        if (justSaved) {
+          calculateQualityScore();
+        } else {
+          showQualityPending();
+        }
+        refreshSocialPreview();
         return post;
       };
 
@@ -545,6 +2077,7 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
           setMessage(error?.message || 'publish job 상태를 읽을 수 없습니다.', 'error');
           stopPublishPolling();
           setActionBusy('publish', false);
+          applyDryRunWarnings([]);
           return;
         }
 
@@ -553,6 +2086,7 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
         if (job.status === 'success') {
           stopPublishPolling();
           setActionBusy('publish', false);
+          applyDryRunWarnings([]);
           const post = await loadPost();
           if (post) {
             fillReleaseState(post, {
@@ -568,6 +2102,7 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
         if (job.status === 'failed') {
           stopPublishPolling();
           setActionBusy('publish', false);
+          applyDryRunWarnings([]);
           await loadPublishHistorySummary();
           setMessage(job.error_message || 'publish job이 실패했습니다.', 'error');
         }
@@ -594,9 +2129,19 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
         return h;
       };
 
-      const requestPublish = async (requestedSlug, requestedBy, dryRun) => {
+      const requestPublish = async (requestedSlug, requestedBy, dryRun, opts = {}) => {
+        const bypassWarningGate = Boolean(opts?.bypassWarningGate);
         if (!getCurrentRole()) {
           setMessage('admin_profiles 권한 확인이 끝나기 전에는 publish를 실행할 수 없습니다.', 'error');
+          return;
+        }
+        if (
+          !dryRun &&
+          !bypassWarningGate &&
+          publishWarningsSection instanceof HTMLElement &&
+          !publishWarningsSection.hidden
+        ) {
+          setMessage('품질 경고가 있습니다. 내용을 확인한 뒤 체크하고「그래도 발행」을 눌러 주세요.', 'error');
           return;
         }
         setActionBusy('publish', true);
@@ -616,6 +2161,7 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
 
         if (!response.ok) {
           setActionBusy('publish', false);
+          applyDryRunWarnings([]);
           if (payload?.jobId) {
             renderCurrentJob({ id: payload.jobId, status: 'failed', target_path: payload.targetPath, error_message: payload.error }, 'publish 요청 실패');
           }
@@ -640,10 +2186,17 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
             targetPath: payload.targetPath,
             commitSha: null,
           });
-          setMessage(`Dry run 완료: ${payload.targetPath}`, 'success');
+          const wrn = Array.isArray(payload.warnings) ? payload.warnings : [];
+          applyDryRunWarnings(wrn);
+          let msg = `Dry run 완료: ${payload.targetPath}`;
+          if (wrn.length) {
+            msg += ` · 품질 경고 ${wrn.length}건(노란 카드). 확인 후「그래도 발행」을 사용할 수 있습니다.`;
+          }
+          setMessage(msg, 'success');
           return;
         }
 
+        applyDryRunWarnings([]);
         renderCurrentJob({ id: payload.jobId, status: 'processing', target_path: payload.targetPath }, 'publish job 생성됨');
         setMessage(`Publish 요청 완료: ${payload.targetPath}. job 상태를 추적합니다.`, 'info');
         if (payload.jobId) {
@@ -659,10 +2212,331 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
           setMessage('draft가 생성되었습니다. 이어서 메타를 다듬거나 바로 발행할 수 있습니다.', 'success');
         }
         if (params.get('updated') === '1') {
-          setMessage('변경 사항이 저장되었습니다. 이어서 preview 또는 publish를 진행할 수 있습니다.', 'success');
+          if (params.get('version_log_failed') === '1') {
+            setMessage(
+              '변경 사항은 저장되었으나 버전 히스토리 기록에 실패했습니다. 권한·RLS를 확인해 주세요.',
+              'warning',
+            );
+          } else {
+            setMessage('변경 사항이 저장되었습니다. 이어서 preview 또는 publish를 진행할 수 있습니다.', 'success');
+          }
         }
 
         await loadPost();
+
+        reviewCompleteBtn?.addEventListener('click', async () => {
+          if (!supabase || !currentPostId) return;
+          if (!getCurrentRole()) {
+            setMessage('admin_profiles 권한 확인이 끝나기 전에는 사용할 수 없습니다.', 'error');
+            return;
+          }
+          setMessage('검토 완료 처리 중...', 'info');
+          if (reviewCompleteBtn instanceof HTMLButtonElement) reviewCompleteBtn.disabled = true;
+          const { error: revErr } = await supabase
+            .from('posts')
+            .update({ last_reviewed_at: new Date().toISOString(), needs_review: false })
+            .eq('id', currentPostId);
+          if (reviewCompleteBtn instanceof HTMLButtonElement) reviewCompleteBtn.disabled = false;
+          if (revErr) {
+            setMessage(revErr.message, 'error');
+            return;
+          }
+          setMessage('검토 완료로 기록했습니다.', 'success');
+          await loadPost();
+        });
+
+        warningsAckCheckbox?.addEventListener('change', () => {
+          syncPublishWarningButtons();
+        });
+        publishAnywayButton?.addEventListener('click', () => {
+          void requestPublish(currentSlug, currentUserId, false, { bypassWarningGate: true });
+        });
+        syncPublishWarningButtons();
+
+        versionListEl?.addEventListener('click', (e) => {
+          const btn = e.target.closest('[data-version-open]');
+          if (!(btn instanceof HTMLButtonElement)) return;
+          const idx = Number.parseInt(btn.getAttribute('data-version-open') || '', 10);
+          const v = cachedPostVersions[idx];
+          if (v) openVersionPreview(v);
+        });
+
+        versionPreviewModal?.addEventListener('click', (e) => {
+          if (
+            e.target.closest('[data-post-version-preview-close]') ||
+            e.target.closest('[data-post-version-preview-close-btn]')
+          ) {
+            closeVersionPreview();
+          }
+        });
+
+        document.querySelector('[data-post-version-restore]')?.addEventListener('click', () => {
+          if (!versionPreviewCurrent || !form) return;
+          if (
+            !confirm(
+              '이 버전 내용을 편집창에 불러옵니다. 아직 서버에 저장되지 않습니다. 계속할까요?',
+            )
+          ) {
+            return;
+          }
+          form.elements.title.value = versionPreviewCurrent.title || '';
+          form.elements.body.value = versionPreviewCurrent.body_markdown || '';
+          closeVersionPreview();
+          updateDirtyState();
+          setMessage('편집창에 선택한 버전을 불러왔습니다. 확인 후 저장하세요.', 'info');
+        });
+
+        const closeTemplateSaveModal = () => {
+          if (templateSaveModal instanceof HTMLElement) templateSaveModal.hidden = true;
+          if (templateSaveName instanceof HTMLInputElement) templateSaveName.value = '';
+          if (templateSaveDesc instanceof HTMLTextAreaElement) templateSaveDesc.value = '';
+        };
+
+        document.querySelector('[data-admin-save-as-template]')?.addEventListener('click', () => {
+          if (!getCurrentRole()) {
+            setMessage('admin_profiles 권한 확인이 끝나기 전에는 템플릿으로 저장할 수 없습니다.', 'error');
+            return;
+          }
+          if (!(templateSaveModal instanceof HTMLElement)) return;
+          if (templateSaveName instanceof HTMLInputElement) templateSaveName.value = '';
+          if (templateSaveDesc instanceof HTMLTextAreaElement) templateSaveDesc.value = '';
+          templateSaveModal.hidden = false;
+          templateSaveName?.focus();
+        });
+
+        templateSaveModal?.addEventListener('click', (e) => {
+          if (
+            e.target.closest('[data-admin-template-save-close]') ||
+            e.target.closest('[data-admin-template-save-cancel]')
+          ) {
+            closeTemplateSaveModal();
+          }
+        });
+
+        document.querySelector('[data-admin-template-save-confirm]')?.addEventListener('click', async () => {
+          if (!supabase || !form) return;
+          if (!getCurrentRole()) {
+            setMessage('admin_profiles 권한 확인이 끝나기 전에는 저장할 수 없습니다.', 'error');
+            return;
+          }
+          const name = templateSaveName instanceof HTMLInputElement ? templateSaveName.value.trim() : '';
+          const desc = templateSaveDesc instanceof HTMLTextAreaElement ? templateSaveDesc.value.trim() : '';
+          const body = String(form.elements.body?.value ?? '').trim();
+          const category = String(form.elements.category?.value ?? '').trim() || null;
+          const tagsStr = String(form.elements.tags?.value ?? '');
+          const tags = tagsStr
+            .split(',')
+            .map((t) => t.trim())
+            .filter(Boolean);
+          if (!name) {
+            setMessage('템플릿 이름을 입력하세요.', 'error');
+            return;
+          }
+          if (!body) {
+            setMessage('본문이 비어 있으면 템플릿으로 저장할 수 없습니다.', 'error');
+            return;
+          }
+          const { error: tErr } = await supabase.from('post_templates').insert({
+            name,
+            description: desc || null,
+            category,
+            body_markdown: body,
+            default_tags: tags,
+            created_by: currentUserId != null ? String(currentUserId) : null,
+          });
+          if (tErr) {
+            setMessage(tErr.message, 'error');
+            return;
+          }
+          closeTemplateSaveModal();
+          setMessage('템플릿을 저장했습니다. 새 글 작성 화면에서 불러올 수 있습니다.', 'success');
+        });
+
+        document.addEventListener('keydown', (e) => {
+          if (e.key !== 'Escape') return;
+          if (templateSaveModal instanceof HTMLElement && !templateSaveModal.hidden) {
+            closeTemplateSaveModal();
+            return;
+          }
+          if (versionPreviewModal instanceof HTMLElement && !versionPreviewModal.hidden) {
+            closeVersionPreview();
+          }
+        });
+
+        document.querySelector('[data-admin-poll-options]')?.addEventListener('click', (e) => {
+          const rm = e.target.closest('[data-admin-poll-opt-remove]');
+          if (!rm) return;
+          const row = rm.closest('[data-admin-poll-opt-row]');
+          const list = document.querySelector('[data-admin-poll-options]');
+          const n = list?.querySelectorAll('[data-admin-poll-opt-row]').length ?? 0;
+          if (n <= 2) {
+            setMessage('선택지는 최소 2개 필요합니다.', 'error');
+            return;
+          }
+          row?.remove();
+        });
+
+        document.querySelector('[data-admin-poll-add-option]')?.addEventListener('click', () => {
+          const list = document.querySelector('[data-admin-poll-options]');
+          const n = list?.querySelectorAll('[data-admin-poll-opt-row]').length ?? 0;
+          if (n >= 4) {
+            setMessage('최대 4개까지 추가할 수 있습니다.', 'error');
+            return;
+          }
+          const extraIds = ['c', 'd'];
+          addPollOptionRow(extraIds[n - 2] || `opt${n + 1}`, '');
+        });
+
+        document.querySelector('[data-admin-poll-create]')?.addEventListener('click', async () => {
+          if (!supabase || !form) return;
+          if (!getCurrentRole()) {
+            setMessage('admin_profiles 권한 확인이 끝나기 전에는 투표를 만들 수 없습니다.', 'error');
+            return;
+          }
+          const slugNow = String(form.elements.slug?.value ?? '').trim() || currentSlug;
+          if (!slugNow) {
+            showAdminPollMsg('slug를 먼저 저장하거나 입력하세요.', true);
+            return;
+          }
+          const { questionInput } = getAdminPollEls();
+          const question =
+            questionInput instanceof HTMLInputElement ? questionInput.value.trim() : '';
+          const options = collectAdminPollOptions();
+          if (!question) {
+            showAdminPollMsg('질문을 입력하세요.', true);
+            return;
+          }
+          if (options.length < 2 || options.length > 4) {
+            showAdminPollMsg('선택지는 2~4개여야 합니다.', true);
+            return;
+          }
+          const idSet = new Set(options.map((o) => o.id));
+          if (idSet.size !== options.length) {
+            showAdminPollMsg('옵션 id가 중복되었습니다.', true);
+            return;
+          }
+          showAdminPollMsg('', false);
+          const { error: insErr } = await supabase.from('polls').insert({
+            slug: slugNow,
+            question,
+            options,
+          });
+          if (insErr) {
+            if (insErr.code === '23505') {
+              showAdminPollMsg('이 slug에 이미 투표가 있습니다. 삭제 후 다시 만들 수 있습니다.', true);
+            } else {
+              showAdminPollMsg(insErr.message, true);
+            }
+            return;
+          }
+          setMessage('투표가 생성되었습니다.', 'success');
+          await loadAdminPoll(slugNow);
+        });
+
+        document.querySelector('[data-admin-poll-delete]')?.addEventListener('click', async () => {
+          if (!supabase || !adminPollCached?.id) return;
+          if (!getCurrentRole()) {
+            setMessage('admin_profiles 권한 확인이 끝나기 전에는 삭제할 수 없습니다.', 'error');
+            return;
+          }
+          if (!confirm('투표와 모든 투표 결과를 삭제합니다. 계속할까요?')) return;
+          const slugNow = String(form?.elements?.slug?.value ?? '').trim() || currentSlug;
+          const { error: delErr } = await supabase.from('polls').delete().eq('id', adminPollCached.id);
+          if (delErr) {
+            setMessage(`투표 삭제 실패: ${delErr.message}`, 'error');
+            return;
+          }
+          adminPollCached = null;
+          setMessage('투표가 삭제되었습니다.', 'success');
+          await loadAdminPoll(slugNow || currentSlug);
+        });
+
+        abStartBtn?.addEventListener('click', async () => {
+          if (!(abStartBtn instanceof HTMLButtonElement) || !supabase) return;
+          if (!getCurrentRole()) {
+            setMessage('admin_profiles 권한 확인이 끝나기 전에는 테스트를 시작할 수 없습니다.', 'error');
+            return;
+          }
+          const slugNow = form?.elements?.slug?.value?.trim() || currentSlug;
+          const titleA = form?.elements?.title?.value?.trim() || '';
+          const titleB =
+            abTitleBInput instanceof HTMLInputElement ? abTitleBInput.value.trim() : '';
+          if (!slugNow) {
+            setAbMsg('slug가 필요합니다.', 'error');
+            return;
+          }
+          if (!titleA) {
+            setAbMsg('제목(A안)을 먼저 입력하세요.', 'error');
+            return;
+          }
+          if (!titleB) {
+            setAbMsg('제목 B를 입력하세요.', 'error');
+            return;
+          }
+          setAbMsg('', '');
+          abStartBtn.disabled = true;
+          const { error: insErr } = await supabase.from('ab_tests').insert({
+            slug: slugNow,
+            title_a: titleA,
+            title_b: titleB,
+          });
+          abStartBtn.disabled = false;
+          if (insErr) {
+            setAbMsg(insErr.message.includes('duplicate') || insErr.code === '23505' ? '이 글에 이미 진행 중인 테스트가 있습니다.' : insErr.message, 'error');
+            return;
+          }
+          setAbMsg('테스트가 시작되었습니다.', 'success');
+          await loadAbTest(slugNow);
+        });
+
+        abWinnerBtns?.forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            if (!(btn instanceof HTMLButtonElement) || !supabase || !activeAbTest) return;
+            const w = btn.getAttribute('data-ab-winner');
+            if (w !== 'a' && w !== 'b') return;
+            if (!getCurrentRole()) {
+              setMessage('admin_profiles 권한 확인이 끝나기 전에는 승자를 확정할 수 없습니다.', 'error');
+              return;
+            }
+            if (!currentPostId) {
+              setAbMsg('글 ID를 확인할 수 없습니다.', 'error');
+              return;
+            }
+            const chosenTitle = w === 'a' ? activeAbTest.title_a : activeAbTest.title_b;
+            abWinnerBtns.forEach((b) => {
+              if (b instanceof HTMLButtonElement) b.disabled = true;
+            });
+            setAbMsg('승자 반영 중…', 'info');
+            const endedAt = new Date().toISOString();
+            const { error: abErr } = await supabase
+              .from('ab_tests')
+              .update({ winner: w, ended_at: endedAt })
+              .eq('id', activeAbTest.id);
+            if (abErr) {
+              setAbMsg(`A/B 종료 저장 실패: ${abErr.message}`, 'error');
+              abWinnerBtns.forEach((b) => {
+                if (b instanceof HTMLButtonElement) b.disabled = false;
+              });
+              return;
+            }
+            const { error: postErr } = await supabase
+              .from('posts')
+              .update({ title: chosenTitle, updated_by: currentUserId })
+              .eq('id', currentPostId);
+            if (postErr) {
+              setAbMsg(`글 제목 반영 실패: ${postErr.message}`, 'error');
+              abWinnerBtns.forEach((b) => {
+                if (b instanceof HTMLButtonElement) b.disabled = false;
+              });
+              return;
+            }
+            setAbMsg('승자 제목이 posts.title에 반영되었습니다. 필요 시 다시 발행하세요.', 'success');
+            await loadPost();
+            abWinnerBtns.forEach((b) => {
+              if (b instanceof HTMLButtonElement) b.disabled = false;
+            });
+          });
+        });
 
         reportsList?.addEventListener('click', async (e) => {
           const btn = e.target.closest('[data-admin-report-action]');
@@ -685,10 +2559,131 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
           await loadPostReports(slugNow);
         });
 
+        commentsList?.addEventListener('click', async (e) => {
+          const approveBtn = e.target.closest('[data-admin-comment-approve]');
+          const deleteBtn = e.target.closest('[data-admin-comment-delete]');
+          const btn = approveBtn || deleteBtn;
+          if (!(btn instanceof HTMLButtonElement) || !supabase) return;
+          const id = btn.getAttribute('data-comment-id');
+          if (!id) return;
+          if (!getCurrentRole()) {
+            setMessage('admin_profiles 권한 확인이 끝나기 전에는 댓글을 처리할 수 없습니다.', 'error');
+            return;
+          }
+          btn.disabled = true;
+          const slugNow = form?.elements?.slug?.value?.trim() || currentSlug;
+          if (approveBtn) {
+            const { error: upErr } = await supabase.from('comments').update({ is_approved: true }).eq('id', id);
+            if (upErr) {
+              setMessage(`댓글 승인 실패: ${upErr.message}`, 'error');
+              btn.disabled = false;
+              return;
+            }
+          } else {
+            const { error: delErr } = await supabase.from('comments').delete().eq('id', id);
+            if (delErr) {
+              setMessage(`댓글 삭제 실패: ${delErr.message}`, 'error');
+              btn.disabled = false;
+              return;
+            }
+          }
+          await loadPostComments(slugNow);
+        });
+
         form?.elements?.slug?.addEventListener('input', (event) => {
           updatePreviewHref(event.target.value.trim());
         });
         form?.addEventListener('input', updateDirtyState);
+        form?.addEventListener('change', updateDirtyState);
+        document.getElementById('review_interval_days')?.addEventListener('input', updateDirtyState);
+
+        const socialRoot = document.querySelector('[data-admin-social-preview-card]');
+        socialRoot?.addEventListener('click', async (e) => {
+          const tab = e.target.closest('[data-social-tab]');
+          if (tab instanceof HTMLButtonElement) {
+            const name = tab.getAttribute('data-social-tab');
+            if (!socialRoot || !name) return;
+            socialRoot.querySelectorAll('[data-social-tab]').forEach((b) => {
+              b.setAttribute('aria-selected', b === tab ? 'true' : 'false');
+            });
+            socialRoot.querySelectorAll('[data-social-panel]').forEach((p) => {
+              p.hidden = p.getAttribute('data-social-panel') !== name;
+            });
+            return;
+          }
+
+          const checkRow = e.target.closest('[data-check-focus]');
+          if (checkRow) {
+            focusField(checkRow.getAttribute('data-check-focus') || '');
+            return;
+          }
+
+          const copyBtn = e.target.closest('[data-copy-share]');
+          if (copyBtn instanceof HTMLButtonElement) {
+            const kind = copyBtn.getAttribute('data-copy-share');
+            let v = '';
+            if (kind === 'twitter') v = socialRoot?.dataset.shareTwitter || '';
+            if (kind === 'kakao') v = socialRoot?.dataset.shareKakao || '';
+            if (kind === 'link') v = socialRoot?.dataset.shareLink || '';
+            if (!v) return;
+            try {
+              await navigator.clipboard.writeText(v);
+              setMessage('클립보드에 복사했습니다.', 'success');
+            } catch {
+              setMessage('복사에 실패했습니다.', 'error');
+            }
+          }
+        });
+
+        socialRoot?.addEventListener('keydown', (e) => {
+          if (e.key !== 'Enter') return;
+          const row = e.target.closest('[data-check-focus]');
+          if (row) focusField(row.getAttribute('data-check-focus') || '');
+        });
+
+        document.querySelector('[data-admin-social-fetch]')?.addEventListener('click', async () => {
+          if (!form) return;
+          const status = String(form.elements.status?.value || '');
+          if (status !== 'published') {
+            setMessage('발행된 글만 실제 확인할 수 있습니다.', 'warn');
+            return;
+          }
+          const urlToFetch =
+            String(form.elements.canonical_url?.value || '').trim() || buildLivePostUrl();
+          if (!supabase) {
+            setMessage('Supabase 클라이언트가 없습니다.', 'error');
+            return;
+          }
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          if (!session?.access_token) {
+            setMessage('로그인 세션이 필요합니다.', 'error');
+            return;
+          }
+          const resultEl = document.querySelector('[data-admin-social-fetch-result]');
+          if (resultEl instanceof HTMLElement) {
+            resultEl.hidden = false;
+            resultEl.textContent = '불러오는 중…';
+          }
+          const res = await fetch('/api/admin/og-fetch', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ url: urlToFetch }),
+          });
+          const json = await res.json().catch(() => ({}));
+          if (resultEl instanceof HTMLElement) {
+            resultEl.textContent = JSON.stringify(json, null, 2);
+          }
+          if (!res.ok) {
+            setMessage(String(json.error || '실제 확인 실패'), 'error');
+          } else {
+            setMessage('서버가 공개 HTML을 가져와 메타를 추출했습니다. 아래 JSON과 폼을 비교하세요.', 'success');
+          }
+        });
         window.addEventListener('beforeunload', (event) => {
           if (!hasUnsavedChanges) return;
           event.preventDefault();
@@ -744,8 +2739,6 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
             return;
           }
 
-          setActionBusy('save', true);
-          setMessage('변경 사항을 저장하는 중입니다...', 'info');
           const formData = new FormData(form);
           const title = String(formData.get('title') || '').trim();
           const description = String(formData.get('description') || '').trim();
@@ -763,15 +2756,16 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
           const seoTitle = String(formData.get('seo_title') || '').trim() || null;
           const seoDescription = String(formData.get('seo_description') || '').trim() || null;
           const canonicalUrl = String(formData.get('canonical_url') || '').trim() || null;
+          let reviewIntervalDays = parseInt(String(formData.get('review_interval_days') || '180'), 10);
+          if (!Number.isFinite(reviewIntervalDays)) reviewIntervalDays = 180;
+          reviewIntervalDays = Math.min(365, Math.max(30, Math.floor(reviewIntervalDays)));
 
           if (!title || !description || !body) {
-            setActionBusy('save', false);
             setMessage('제목, 설명, 본문은 필수입니다.', 'error');
             return;
           }
 
           if (!nextSlug) {
-            setActionBusy('save', false);
             setMessage('유효한 slug를 생성할 수 없습니다. 제목 또는 slug를 확인하세요.', 'error');
             return;
           }
@@ -784,16 +2778,24 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
             .maybeSingle();
 
           if (duplicateError) {
-            setActionBusy('save', false);
             setMessage(`기존 slug 확인에 실패했습니다: ${duplicateError.message}`, 'error');
             return;
           }
 
           if (duplicatePost) {
-            setActionBusy('save', false);
             setMessage(`이미 사용 중인 slug입니다: ${nextSlug}`, 'error');
             return;
           }
+
+          const summaryResult = await openSaveSummaryModal();
+          if (!summaryResult.ok) {
+            setMessage('저장을 취소했습니다.', 'info');
+            return;
+          }
+          const changeSummary = summaryResult.summary;
+
+          setActionBusy('save', true);
+          setMessage('변경 사항을 저장하는 중입니다...', 'info');
 
           const payload = {
             title,
@@ -809,6 +2811,7 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
             seo_title: seoTitle,
             seo_description: seoDescription,
             canonical_url: canonicalUrl,
+            review_interval_days: reviewIntervalDays,
             updated_by: currentUserId,
           };
 
@@ -819,6 +2822,20 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
             return;
           }
 
+          let versionLogFailed = false;
+          const { error: versionError } = await supabase.from('post_versions').insert({
+            post_id: currentPostId,
+            slug: nextSlug,
+            title,
+            body_markdown: body,
+            changed_by: currentUserId != null ? String(currentUserId) : null,
+            change_summary: changeSummary || null,
+          });
+          if (versionError) {
+            versionLogFailed = true;
+            console.warn('post_versions insert failed:', versionError);
+          }
+
           const { error: revisionError } = await supabase.from('post_revisions').insert({
             post_id: currentPostId,
             body_markdown: body,
@@ -827,7 +2844,8 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
           });
           if (revisionError) {
             setActionBusy('save', false);
-            setMessage(`수정은 저장됐지만 revision 생성에 실패했습니다: ${revisionError.message}`, 'error');
+            const extra = versionLogFailed ? ' 버전 기록도 남지 않았을 수 있습니다.' : '';
+            setMessage(`수정은 저장됐지만 revision 생성에 실패했습니다: ${revisionError.message}.${extra}`, 'error');
             return;
           }
 
@@ -843,10 +2861,14 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
           formSnapshot = serializeForm();
           hasUnsavedChanges = false;
           if (saveButton) saveButton.dataset.dirty = 'false';
+          calculateQualityScore();
+          const verQ = versionLogFailed ? '&version_log_failed=1' : '';
           if (nextSlug && nextSlug !== currentSlug) {
-            window.location.replace(`/admin/posts/edit?slug=${encodeURIComponent(nextSlug)}&updated=1`);
+            window.location.replace(`/admin/posts/edit?slug=${encodeURIComponent(nextSlug)}&updated=1${verQ}`);
           } else {
-            window.location.replace('/admin/posts/edit?slug=' + encodeURIComponent(currentSlug) + '&updated=1');
+            window.location.replace(
+              '/admin/posts/edit?slug=' + encodeURIComponent(currentSlug) + '&updated=1' + verQ,
+            );
           }
         });
       });
