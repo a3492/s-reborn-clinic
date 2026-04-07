@@ -25,19 +25,17 @@ const isFeaturedLocked = Boolean(adminFeaturedMatch);
 let featuredPost = adminFeaturedMatch ?? (clinicPosts.length > 0 ? clinicPosts[0] : null);
 
 const FEATURED_RANDOM_POOL_MAX = 30;
-const featuredRandomPool = !isFeaturedLocked
-  ? clinicPosts.slice(0, FEATURED_RANDOM_POOL_MAX).map((p) => ({
-      id: p.id,
-      title: p.data.title,
-      description: p.data.description,
-      thumbnail: p.data.thumbnail?.trim() || '',
-      categoryLabel:
-        p.data.category != null
-          ? CATEGORIES.find((c) => c.id === p.data.category)?.label ?? p.data.category
-          : '',
-      href: postPermalink(p),
-    }))
-  : [];
+const featuredRandomPool = clinicPosts.slice(0, FEATURED_RANDOM_POOL_MAX).map((p) => ({
+  id: p.id,
+  title: p.data.title,
+  description: p.data.description,
+  thumbnail: p.data.thumbnail?.trim() || '',
+  categoryLabel:
+    p.data.category != null
+      ? CATEGORIES.find((c) => c.id === p.data.category)?.label ?? p.data.category
+      : '',
+  href: postPermalink(p),
+}));
 const featuredRandomPoolJson =
   featuredRandomPool.length > 1
     ? JSON.stringify(featuredRandomPool).replace(/</g, '\\u003c')
