@@ -230,18 +230,6 @@ for (const key of Object.keys(topicsByItem)) {
         });
       }
 
-      // ── 카드 셔플 (홈 뷰) ──
-      function shuffleGrid(id) {
-        var grid = document.getElementById(id);
-        if (!grid) return;
-        var cards = Array.from(grid.children);
-        for (var i = cards.length - 1; i > 0; i--) {
-          var j = Math.floor(Math.random() * (i + 1));
-          grid.appendChild(cards[j]);
-          var tmp = cards[i]; cards[i] = cards[j]; cards[j] = tmp;
-        }
-      }
-
       // ── 초기화 ──
       document.addEventListener('DOMContentLoaded', function () {
         // 네비 클릭 이벤트 (sidebar + 카테고리 카드 + 뒤로가기 버튼 모두)
@@ -254,10 +242,6 @@ for (const key of Object.keys(topicsByItem)) {
 
         // 모두 펼치기 / 접기
         bindExpandCollapse();
-
-        // 카드 셔플
-        shuffleGrid('proc-posts-grid');
-        shuffleGrid('proc-popular-grid');
 
         // URL 해시에서 초기 뷰 결정
         var hash = (location.hash || '').slice(1);
@@ -482,71 +466,6 @@ for (const key of Object.keys(topicsByItem)) {
   .proc-pillar-card:hover .proc-pillar-card-arrow {
     opacity: 1;
     right: 0.75rem;
-  }
-
-  /* ── 포스트 섹션 ── */
-  .proc-posts-section {
-    margin-bottom: 2.5rem;
-  }
-
-  .proc-section-title {
-    margin: 0 0 1rem;
-    font-size: 1.05rem;
-    font-weight: 800;
-    letter-spacing: -0.01em;
-    color: var(--text);
-    padding-bottom: 0.6rem;
-    border-bottom: 2px solid var(--rule);
-  }
-
-  .proc-posts-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 0.75rem;
-  }
-
-  .proc-post-card {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    padding: 1rem 1.1rem;
-    border-radius: var(--radius-md, 14px);
-    border: 1px solid var(--rule);
-    background: var(--surface);
-    text-decoration: none;
-    color: inherit;
-    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
-  }
-
-  .proc-post-card:hover {
-    border-color: var(--accent);
-    background: var(--bg2);
-    box-shadow: var(--shadow-sm);
-  }
-
-  .proc-post-card-cat {
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: var(--accent-dark);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  .proc-post-card-title {
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: var(--text);
-    line-height: 1.45;
-  }
-
-  .proc-post-card-desc {
-    font-size: 0.8rem;
-    color: var(--t3);
-    line-height: 1.55;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
   }
 
   /* ── 카테고리 뷰 헤더 ── */
@@ -830,18 +749,11 @@ for (const key of Object.keys(topicsByItem)) {
       grid-template-columns: repeat(2, 1fr);
     }
 
-    .proc-posts-grid {
-      grid-template-columns: 1fr 1fr;
-    }
   }
 
   @media (max-width: 500px) {
     .proc-pillar-cards {
       grid-template-columns: 1fr 1fr;
-    }
-
-    .proc-posts-grid {
-      grid-template-columns: 1fr;
     }
   }
 </style>
