@@ -8,6 +8,7 @@ import { getPublicSiteSettings } from '../lib/site-settings';
 import { getVisibleFaqItems } from '../lib/faq-items';
 import ContentImage from '../components/ContentImage.astro';
 import { t, type Locale } from '../i18n';
+import { buildFaqJsonLd } from '../lib/structured-data';
 
 const locale: Locale = Astro.currentLocale === 'en' ? 'en' : 'ko';
 
@@ -59,9 +60,15 @@ const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
 const homeFaqItems = await getVisibleFaqItems();
 const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
 const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label]));
+
+// FAQ Schema — Supabase FAQ 우선, 없으면 블로그 FAQ 글 사용
+const faqSchemaItems = homeFaqItems.length > 0
+  ? homeFaqItems.map((item) => ({ question: item.question, answer: item.answer }))
+  : faqPosts.map((p) => ({ question: p.data.title, answer: p.data.description ?? '' }));
+const homeJsonLd = faqSchemaItems.length > 0 ? buildFaqJsonLd(faqSchemaItems) : undefined;
 ---
 
-<Layout>
+<Layout jsonLd={homeJsonLd}>
   <!-- 히어로 섹션 -->
   <section class="hero">
     <div class="hero-inner">

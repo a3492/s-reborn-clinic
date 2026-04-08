@@ -3,11 +3,19 @@ import Layout from '../layouts/Layout.astro';
 import NaverMapCta from '../components/NaverMapCta.astro';
 import { CLINIC_INFO } from '../consts';
 import { t, type Locale } from '../i18n';
+import { buildBreadcrumbJsonLd, mergeJsonLd } from '../lib/structured-data';
 
 const locale: Locale = Astro.currentLocale === 'en' ? 'en' : 'ko';
+
+const aboutJsonLd = mergeJsonLd(
+  buildBreadcrumbJsonLd(Astro.site, [
+    { name: '홈', path: '/' },
+    { name: '클리닉 소개', path: '/about/' },
+  ])
+);
 ---
 
-<Layout title={t(locale, 'about.pageTitle')} description={t(locale, 'about.pageDesc')}>
+<Layout title={t(locale, 'about.pageTitle')} description={t(locale, 'about.pageDesc')} jsonLd={aboutJsonLd}>
   <div class="about-wrap">
     <section class="about-hero">
       <div class="about-hero-badge">{t(locale, 'about.badge')}</div>
