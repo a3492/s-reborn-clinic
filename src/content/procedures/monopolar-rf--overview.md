@@ -8,7 +8,7 @@ procedure_item: "monopolar-rf"
 topic: "overview"
 topic_label: "원리·기초"
 topic_order: 1
-keywords: ["모노폴라 RF 원리", "고주파 리프팅 원리", "RF 콜라겐 재생", "써마지 원리", "피부 탄력 기전"]
+keywords: ["모노폴라 RF 원리", "고주파 리프팅 원리", "RF 콜라겐 재생", "피부 탄력 기전"]
 related: ["monopolar-rf--equipment", "hifu-lifting--overview", "microneedle-rf--overview"]
 draft: false
 updated: 2026-04-07
@@ -49,9 +49,6 @@ RF(Radio Frequency, 고주파)는 전자기파의 일종으로, 피부에 조사
 - **모공**: 진피 수축 효과로 모공 크기 완화 보조
 - **지방 윤곽**: 깊은 층 가열로 셀룰라이트·지방 경계 개선 보조
 
-## 써마지(Thermage)가 모노폴라 RF의 대표 브랜드인 이유
-
-써마지는 2002년 FDA 승인을 받은 최초의 모노폴라 RF 리프팅 장비입니다. 진동 기술(Comfort Pulse Technology)을 통해 통증을 줄이고, 치료 팁에 냉각 스프레이가 내장되어 표피를 보호하면서 진피층에 균일한 에너지를 전달하는 방식으로 설계되어 있습니다. 이후 바이폴라, 마이크로니들 RF 등 다양한 변형 기술이 등장했지만 모노폴라의 깊은 투과력은 여전히 독보적입니다.
 
 ## 치료 대상이 되는 층 요약
 
