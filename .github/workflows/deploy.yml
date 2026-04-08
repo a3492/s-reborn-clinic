@@ -18,7 +18,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
@@ -34,6 +34,9 @@ jobs:
           PUBLIC_CF_ANALYTICS_TOKEN: ${{ secrets.PUBLIC_CF_ANALYTICS_TOKEN }}
           PUBLIC_R2_MEDIA_URL: ${{ secrets.PUBLIC_R2_MEDIA_URL }}
           PUBLIC_SITE_URL: https://s-reborn-clinic.pages.dev
+
+      - name: Copy functions to build output
+        run: cp -r functions dist/client/
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/pages-action@v1
