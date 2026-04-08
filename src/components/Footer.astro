@@ -45,8 +45,7 @@ const displayHoursLine = locale === 'en' ? 'See Naver app for current hours' : '
         <a href={locale === 'en' ? '/en/procedures/' : '/procedures/'} class="site-footer-link">{t(locale, 'footer.linkProcedures')}</a>
         <a href={locale === 'en' ? '/en/blog/' : '/blog/'} class="site-footer-link">{t(locale, 'footer.linkBlog')}</a>
         <a href="/newsletter/" class="site-footer-link">{t(locale, 'footer.linkNewsletter')}</a>
-        <a href="/llms.txt" class="site-footer-link">{t(locale, 'footer.linkLlms')}</a>
-        <a href={locale === 'en' ? '/en/consult/' : '/consult/'} class="site-footer-link">{t(locale, 'footer.linkConsult')}</a>
+<a href={locale === 'en' ? '/en/consult/' : '/consult/'} class="site-footer-link">{t(locale, 'footer.linkConsult')}</a>
         {socialEntries.map(([label, href]) => (
           <a href={href} target="_blank" rel="noreferrer" class="site-footer-link">
             {label}
