@@ -299,6 +299,11 @@ const faqSchema = faqs.length > 0 ? {
     color: var(--t2);
   }
 
+  /* 본문 구분선 숨김 */
+  .proc-article-body :global(hr) {
+    display: none;
+  }
+
   /* 본문 prose */
   .proc-article-body {
     font-size: 0.97rem;

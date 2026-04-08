@@ -466,7 +466,10 @@ a.blog-post-tag:hover {
 	background: rgba(184, 149, 106, 0.1);
 }
 
-.blog-post-prose hr,
+.blog-post-prose hr {
+	display: none;
+}
+
 .blog-post-share-section {
 	border-color: var(--rule);
 }
