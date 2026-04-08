@@ -14,6 +14,15 @@ import remarkGfm from 'remark-gfm';
 export default defineConfig({
 	site: 'https://s-reborn-clinic.pages.dev',
 	markdown: {
+		// gfm: false → remarkGfm을 수동 등록해 singleTilde 옵션을 제어합니다.
+		// singleTilde: false — 단일 물결표(~)를 취소선으로 파싱하지 않습니다.
+		//   배경: 한국어 콘텐츠에서 범위 표기(예: 4~6주, 3~6개월)에 사용하는 ~가
+		//         Markdown GFM 취소선 문법으로 오파싱되어 <del> 태그가 렌더링되던 문제.
+		//   영향: 모든 .md / .mdx 파일에 전역 적용 — 신규 글 포함 자동 적용됩니다.
+		//   주의: 의도적 취소선이 필요하면 ~~텍스트~~ (이중 물결표)를 사용하세요.
+		//
+		// * (별표) 관련: 기존 콘텐츠는 **볼드**/**이탤릭* 오파싱 없음 확인.
+		//   단, 별표를 일반 문자로 쓸 때는 반드시 \* 로 이스케이프하세요.
 		gfm: false,
 		remarkPlugins: [[remarkGfm, { singleTilde: false }]],
 	},
