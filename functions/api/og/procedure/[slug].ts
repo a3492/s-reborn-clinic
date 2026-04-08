@@ -6,7 +6,7 @@
 /// <reference types="@cloudflare/workers-types" />
 
 import satori from 'satori';
-import initWasm, { Resvg } from '@resvg/resvg-wasm';
+import { Resvg, initWasm } from '@resvg/resvg-wasm';
 
 const OG_W = 1200;
 const OG_H = 630;
