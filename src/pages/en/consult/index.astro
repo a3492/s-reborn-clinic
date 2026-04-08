@@ -1,0 +1,270 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import { CLINIC_INFO, KAKAO_CHANNEL_ID } from '../../../consts';
+
+const kakaoChannelUrl = `http://pf.kakao.com/${KAKAO_CHANNEL_ID}`;
+---
+
+<Layout
+  title="Online Consultation"
+  description="S-REBORN Clinic Online Consultation — Contact us conveniently before your visit."
+>
+  <div class="consult-en-page">
+
+    <section class="consult-hero">
+      <div class="consult-hero-badge">Online Consultation</div>
+      <h1 class="consult-hero-title">Ask Us First, Comfortably</h1>
+      <p class="consult-hero-desc">
+        Feeling hesitant about visiting in person? Contact us online first — we're happy to answer any questions before your visit.
+      </p>
+    </section>
+
+    <div class="consult-options">
+
+      <div class="consult-option-card consult-option-primary">
+        <div class="consult-option-icon">📞</div>
+        <h2 class="consult-option-title">Phone Consultation</h2>
+        <p class="consult-option-desc">Call us directly to speak with our staff. We can answer your questions and help you schedule a visit.</p>
+        <a href={`tel:${CLINIC_INFO.phone}`} class="btn btn-primary consult-option-btn">
+          {CLINIC_INFO.phone}
+        </a>
+        <p class="consult-option-note">Available during clinic hours</p>
+      </div>
+
+      <div class="consult-option-card">
+        <div class="consult-option-icon">💬</div>
+        <h2 class="consult-option-title">Kakao Channel</h2>
+        <p class="consult-option-desc">Message us through our official Kakao Channel. Quick responses during business hours.</p>
+        <a href={kakaoChannelUrl} target="_blank" rel="noopener noreferrer" class="btn btn-accent consult-option-btn">
+          Open Kakao Channel →
+        </a>
+        <p class="consult-option-note">Kakao app required</p>
+      </div>
+
+      <div class="consult-option-card">
+        <div class="consult-option-icon">🧭</div>
+        <h2 class="consult-option-title">AI Consultation Wizard</h2>
+        <p class="consult-option-desc">Use our AI-powered consultation wizard (Korean) to explore your skin concerns and receive a personalized recommendation.</p>
+        <a href="/consult/" class="btn consult-option-btn consult-option-btn--outline">
+          Open Wizard (Korean) →
+        </a>
+        <p class="consult-option-note">Multilingual support coming soon</p>
+      </div>
+
+    </div>
+
+    <section class="consult-info">
+      <h2 class="consult-info-title">Clinic Information</h2>
+      <div class="consult-info-grid">
+        <div class="consult-info-item">
+          <strong>Address</strong>
+          <span>
+            {CLINIC_INFO.address}
+            <br/>
+            <small>Mapo-gu, Seoul · 2–3 min walk from Hongdae Station (Exit 8/9)</small>
+          </span>
+        </div>
+        <div class="consult-info-item">
+          <strong>Phone</strong>
+          <span><a href={`tel:${CLINIC_INFO.phone}`}>{CLINIC_INFO.phone}</a></span>
+        </div>
+        <div class="consult-info-item">
+          <strong>Hours</strong>
+          <div>
+            <p>Mon · Tue · Wed · Fri: 10:30 – 19:30</p>
+            <p>Thu (Evening): 13:00 – 21:00</p>
+            <p>Sat: 10:00 – 16:00</p>
+            <p>Sun & Holidays: Closed</p>
+          </div>
+        </div>
+        <div class="consult-info-item">
+          <strong>Official Web</strong>
+          <span>
+            <a href={CLINIC_INFO.website} target="_blank" rel="noopener noreferrer">
+              {CLINIC_INFO.website.replace(/^https?:\/\//, '')}
+            </a>
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <div class="consult-disclaimer">
+      <p>⚕️ All medical procedures and treatments are determined through licensed physician consultation and diagnosis. Online inquiries do not substitute for medical consultation.</p>
+    </div>
+
+  </div>
+</Layout>
+
+<style>
+  .consult-en-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 0 4rem;
+  }
+
+  .consult-hero {
+    text-align: center;
+    padding: 4rem 0 3rem;
+  }
+
+  .consult-hero-badge {
+    display: inline-block;
+    margin-bottom: 1rem;
+    padding: 0.3rem 0.9rem;
+    border-radius: 999px;
+    background: rgba(201, 169, 110, 0.15);
+    border: 1px solid rgba(201, 169, 110, 0.3);
+    color: var(--accent-dark);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .consult-hero-title {
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--text);
+    margin: 0 0 1rem;
+  }
+
+  .consult-hero-desc {
+    font-size: 1.1rem;
+    color: var(--t2);
+    line-height: 1.7;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+
+  .consult-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1.25rem;
+    margin: 2rem 0 3rem;
+  }
+
+  .consult-option-card {
+    padding: 2rem 1.5rem;
+    border: 1px solid var(--rule);
+    border-radius: 20px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+
+  .consult-option-primary {
+    border-color: var(--color-gold);
+    background: linear-gradient(135deg, var(--surface), var(--color-gold-light));
+  }
+
+  .consult-option-icon {
+    font-size: 2rem;
+  }
+
+  .consult-option-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .consult-option-desc {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--t2);
+    line-height: 1.65;
+    flex: 1;
+  }
+
+  .consult-option-btn {
+    align-self: stretch;
+    text-align: center;
+    justify-content: center;
+  }
+
+  .consult-option-btn--outline {
+    background: transparent;
+    border: 1px solid var(--rule);
+    color: var(--t2);
+    padding: 0.6rem 1rem;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+  }
+
+  .consult-option-btn--outline:hover {
+    border-color: var(--accent);
+    color: var(--accent-dark);
+  }
+
+  .consult-option-note {
+    margin: 0;
+    font-size: 0.78rem;
+    color: var(--t3);
+  }
+
+  .consult-info {
+    padding: 2.5rem 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .consult-info-title {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--text);
+    margin: 0 0 1.5rem;
+  }
+
+  .consult-info-grid {
+    display: grid;
+    gap: 0;
+  }
+
+  .consult-info-item {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 0.5rem;
+    padding: 0.9rem 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .consult-info-item strong {
+    color: var(--text);
+    font-size: 0.88rem;
+  }
+
+  .consult-info-item span,
+  .consult-info-item p {
+    color: var(--t2);
+    font-size: 0.9rem;
+    margin: 0;
+    line-height: 1.7;
+  }
+
+  .consult-info-item a {
+    color: var(--accent-dark);
+  }
+
+  .consult-disclaimer {
+    margin-top: 2rem;
+    padding: 1rem 1.25rem;
+    border-radius: 12px;
+    background: var(--bg2);
+    border: 1px solid var(--rule);
+  }
+
+  .consult-disclaimer p {
+    margin: 0;
+    font-size: 0.84rem;
+    color: var(--t2);
+    line-height: 1.6;
+  }
+</style>

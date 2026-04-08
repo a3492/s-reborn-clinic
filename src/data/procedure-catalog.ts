@@ -26,32 +26,47 @@ export type ProcedurePillar = {
 export const PROCEDURE_PILLAR_SUMMARIES: {
   id: ProcedurePillar['id'];
   label: string;
+  labelEn?: string;
   short: string;
+  shortEn?: string;
   description: string;
+  descriptionEn?: string;
 }[] = [
   {
     id: 'ebd',
     label: 'EBD · 에너지 기반',
+    labelEn: 'EBD · Energy-Based',
     short: '고주파 · 초음파 · 레이저',
+    shortEn: 'RF · Ultrasound · Laser',
     description: '피부층에 에너지를 전달해 탄력·색소·혈관·제모 등을 다루는 시술군입니다.',
+    descriptionEn: 'Treatments that deliver energy to skin layers to address laxity, pigmentation, vascular issues, and hair removal.',
   },
   {
     id: 'injection',
     label: '주사 · 액상 시술',
+    labelEn: 'Injectables',
     short: '보톡스 · 필러 · 부스터 · 수액',
+    shortEn: 'Botox · Filler · Booster · IV',
     description: '주입·미세주사·수액 등으로 윤곽·주름·수분·영양을 조절하는 시술군입니다.',
+    descriptionEn: 'Injections and infusions to contour, smooth wrinkles, hydrate, and nourish.',
   },
   {
     id: 'oral',
     label: '경구 약물 치료',
+    labelEn: 'Oral Medications',
     short: '비만 · 탈모 · 여드름 등',
+    shortEn: 'Weight · Hair · Acne',
     description: '처방에 따른 경구약으로 대사·피부·모발 등을 장기 관리하는 치료입니다.',
+    descriptionEn: 'Prescribed oral medications for long-term management of metabolism, skin, and hair.',
   },
   {
     id: 'topical',
     label: '도포 · 외용제',
+    labelEn: 'Topical Treatments',
     short: '연고 · 크림 · 겔 · 패치',
+    shortEn: 'Ointment · Cream · Gel · Patch',
     description: '국소 도포로 염증·색소·장벽·탈모 등을 보조하는 치료입니다.',
+    descriptionEn: 'Topical applications to support inflammation, pigmentation, barrier repair, and hair loss.',
   },
 ];
 

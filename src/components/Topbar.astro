@@ -7,6 +7,27 @@ const locale: Locale = Astro.currentLocale === 'en' ? 'en' : 'ko';
 const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label]));
 const readerLoginReturn = readerLoginHref(`${Astro.url.pathname}${Astro.url.search}`);
 const fallbackBlogBadge = t(locale, 'topbar.fallbackBlogBadge');
+
+// 언어 전환 URL 계산
+const currentPath = Astro.url.pathname;
+function getLangSwitchHref(path: string, currentLocale: Locale): string {
+  if (currentLocale === 'en') {
+    // /en/... → /... (영어 → 한국어)
+    const koPath = path.replace(/^\/en/, '') || '/';
+    return koPath;
+  } else {
+    // /... → /en/... (한국어 → 영어)
+    const normalized = path.replace(/\/$/, '') || '';
+    // 지원되는 영어 페이지 목록
+    const supportedEnPaths = ['', '/about', '/procedures', '/consult', '/blog', '/trending'];
+    const isSupported = supportedEnPaths.some(p => normalized === p || normalized.startsWith(p + '/'));
+    if (isSupported) {
+      return `/en${normalized}/`.replace(/\/\/$/, '/');
+    }
+    return '/en/';
+  }
+}
+const langSwitchHref = getLangSwitchHref(currentPath, locale);
 ---
 
 <div class="topbar">
@@ -60,11 +81,9 @@ const fallbackBlogBadge = t(locale, 'topbar.fallbackBlogBadge');
 
     <div class="topbar-trailing">
       <a
-        href="#"
+        href={langSwitchHref}
         class="topbar-lang-switch"
         title={t(locale, 'topbar.langSwitchTitle')}
-        aria-disabled="true"
-        onclick="return false;"
       >
         {t(locale, 'topbar.langSwitchLabel')}
       </a>
@@ -343,20 +362,29 @@ const fallbackBlogBadge = t(locale, 'topbar.fallbackBlogBadge');
     align-items: center;
     justify-content: center;
     min-height: 44px;
-    padding: 0.35rem 0.55rem;
+    padding: 0.35rem 0.65rem;
     font-size: 0.78rem;
     font-weight: 700;
-    color: var(--t3);
+    color: var(--accent-dark);
     text-decoration: none;
     border-radius: 10px;
-    cursor: not-allowed;
-    opacity: 0.72;
+    border: 1px solid var(--rule);
+    background: var(--surface);
+    cursor: pointer;
     flex-shrink: 0;
     white-space: nowrap;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
   }
 
   .topbar-lang-switch:hover {
-    color: var(--t3);
+    color: var(--accent);
+    border-color: var(--accent);
+    background: rgba(184, 149, 106, 0.08);
+  }
+
+  .topbar-lang-switch:focus-visible {
+    outline: 2px solid var(--accent, #b8956a);
+    outline-offset: 2px;
   }
 
   .topbar-trailing {

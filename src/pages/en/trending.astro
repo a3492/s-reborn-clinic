@@ -1,0 +1,370 @@
+﻿---
+import Layout from '../../layouts/Layout.astro';
+import { CATEGORIES } from '../../consts';
+import { t, type Locale } from '../../i18n';
+
+const locale: Locale = Astro.currentLocale === 'en' ? 'en' : 'ko';
+const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label]));
+---
+
+<Layout
+  title={locale === 'en' ? 'Trending' : '인기글 · 트렌드'}
+  description={locale === 'en' ? "This week's and this month's popular blog posts ranked by views" : '이번 주·이번 달 인기 블로그 글과 조회수 기준 순위'}
+>
+  <div class="trending-page">
+    <header class="trending-header">
+      <h1 class="trending-title">{locale === 'en' ? 'Trending Posts' : '인기글 · 트렌드'}</h1>
+      <p class="trending-lead">{locale === 'en' ? 'Rankings based on views, engagement, and recency. Updated in real-time.' : '조회·반응·댓글과 최신도를 반영한 순위입니다. 실시간으로 갱신됩니다.'}</p>
+    </header>
+
+    <div class="trending-tabs" role="tablist" aria-label={locale === 'en' ? 'Select period' : '기간 선택'}>
+      <button
+        type="button"
+        class="trending-tab is-active"
+        role="tab"
+        aria-selected="true"
+        data-trend-tab="7"
+        id="trend-tab-7"
+      >
+        {locale === 'en' ? 'This Week' : '이번 주'}
+      </button>
+      <button
+        type="button"
+        class="trending-tab"
+        role="tab"
+        aria-selected="false"
+        data-trend-tab="30"
+        id="trend-tab-30"
+      >
+        {locale === 'en' ? 'This Month' : '이번 달'}
+      </button>
+      <button
+        type="button"
+        class="trending-tab"
+        role="tab"
+        aria-selected="false"
+        data-trend-tab="views"
+        id="trend-tab-views"
+      >
+        전체
+      </button>
+    </div>
+
+    <p class="trending-status" data-trending-status aria-live="polite">불러오는 중…</p>
+    <div class="trending-grid" id="trending-grid" data-trending-grid></div>
+  </div>
+</Layout>
+
+<script define:vars={{ categoryLabels }}>
+  import { createClient } from '@supabase/supabase-js';
+  import { postHrefFromDbSlug } from '../../lib/academy';
+  import { fetchTopPostsByViews, fetchTrendingPosts, type TrendingPostRow } from '../../lib/trending-posts';
+
+  const url = import.meta.env.PUBLIC_SUPABASE_URL;
+  const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+  const grid = document.getElementById('trending-grid');
+  const statusEl = document.querySelector('[data-trending-status]');
+  const tabs = document.querySelectorAll('[data-trend-tab]');
+
+  function setStatus(text: string) {
+    if (statusEl) statusEl.textContent = text;
+  }
+
+  function escapeHtml(s: string) {
+    return String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function formatDate(iso: string | null) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return new Intl.DateTimeFormat('ko-KR', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }).format(d);
+  }
+
+  function gaugePercent(rank: number, total: number) {
+    if (total <= 0) return 0;
+    return Math.max(8, Math.round(((total - rank + 1) / total) * 100));
+  }
+
+  function renderRows(rows: TrendingPostRow[]) {
+    if (!grid) return;
+    if (!rows.length) {
+      grid.innerHTML = '<p class="trending-empty">표시할 글이 없습니다.</p>';
+      return;
+    }
+    const n = rows.length;
+    grid.innerHTML = rows
+      .map((row, i) => {
+        const rank = i + 1;
+        const cat = row.category || '';
+        const catLabel = (categoryLabels as Record<string, string>)[cat] || cat || '';
+        const href = postHrefFromDbSlug(row.slug);
+        const thumb = row.thumbnail_url?.trim();
+        const pct = gaugePercent(rank, n);
+        const desc = escapeHtml(row.description || '');
+        const title = escapeHtml(row.title || '');
+        const thumbBlock = thumb
+          ? `<div class="trending-card-thumb"><img src="${escapeHtml(thumb)}" alt="" width="640" height="360" loading="lazy" decoding="async" /></div>`
+          : '<div class="trending-card-thumb trending-card-thumb--empty" aria-hidden="true"></div>';
+        return `<article class="trending-card blog-post-card" data-trending-card>
+  <div class="trending-card-rank" aria-label="${rank}위">${rank}위</div>
+  <a href="${escapeHtml(href)}" class="blog-post-card-main">
+    ${thumbBlock}
+    <div class="blog-post-card-body">
+      <div class="blog-post-card-badges">
+        ${catLabel ? `<span class="blog-post-card-cat">${escapeHtml(catLabel)}</span>` : ''}
+      </div>
+      <h2 class="blog-post-card-title">${title}</h2>
+      <p class="blog-post-card-desc">${desc}</p>
+      <div class="trend-gauge-wrap" aria-hidden="true">
+        <span class="trend-gauge-label">인기도</span>
+        <div class="trend-gauge">
+          <div class="trend-gauge-fill" style="width:${pct}%"></div>
+        </div>
+      </div>
+    </div>
+  </a>
+  <div class="blog-post-card-footer">
+    <time class="blog-post-card-date" datetime="${escapeHtml(row.published_at || '')}">${escapeHtml(formatDate(row.published_at))}</time>
+  </div>
+</article>`;
+      })
+      .join('');
+  }
+
+  let activeMode: '7' | '30' | 'views' = '7';
+
+  async function load() {
+    if (!url || !key) {
+      setStatus('연결 정보가 없어 순위를 불러올 수 없습니다.');
+      renderRows([]);
+      return;
+    }
+    setStatus('불러오는 중…');
+    const supabase = createClient(url, key);
+    let rows: TrendingPostRow[] = [];
+    if (activeMode === 'views') {
+      rows = await fetchTopPostsByViews(supabase, 20);
+    } else {
+      const days = activeMode === '7' ? 7 : 30;
+      rows = await fetchTrendingPosts(supabase, days, 20);
+    }
+    setStatus(rows.length ? `${rows.length}개` : '표시할 글이 없습니다.');
+    renderRows(rows);
+  }
+
+  tabs.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const mode = btn.getAttribute('data-trend-tab');
+      if (mode !== '7' && mode !== '30' && mode !== 'views') return;
+      activeMode = mode;
+      tabs.forEach((b) => {
+        const on = b === btn;
+        b.classList.toggle('is-active', on);
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      void load();
+    });
+  });
+
+  void load();
+</script>
+
+<style>
+  .trending-page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1.5rem 0 3rem;
+  }
+
+  .trending-header {
+    margin-bottom: 1.25rem;
+  }
+
+  .trending-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    margin: 0 0 0.5rem;
+  }
+
+  .trending-lead {
+    margin: 0;
+    font-size: 0.92rem;
+    color: var(--t2);
+    line-height: 1.6;
+    max-width: 36rem;
+  }
+
+  .trending-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .trending-tab {
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 700;
+    padding: 0.45rem 1rem;
+    border-radius: 999px;
+    border: 1px solid var(--rule);
+    background: var(--surface);
+    color: var(--t2);
+    cursor: pointer;
+    transition:
+      color 0.15s,
+      border-color 0.15s,
+      background 0.15s;
+  }
+
+  .trending-tab:hover {
+    color: var(--accent-dark);
+    border-color: var(--accent);
+  }
+
+  .trending-tab:focus-visible {
+    outline: 2px solid var(--accent, #b8956a);
+    outline-offset: 2px;
+  }
+
+  .trending-tab.is-active {
+    color: var(--text);
+    background: rgba(184, 149, 106, 0.14);
+    border-color: var(--accent);
+  }
+
+  .trending-status {
+    font-size: 0.82rem;
+    color: var(--t3);
+    margin: 0 0 1rem;
+    min-height: 1.25em;
+  }
+
+  .trending-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .trending-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--t3);
+    padding: 2rem 0;
+    margin: 0;
+  }
+
+  .trending-card {
+    position: relative;
+  }
+
+  .trending-card-rank {
+    position: absolute;
+    top: 0.65rem;
+    left: 0.65rem;
+    z-index: 2;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    color: var(--text);
+    background: var(--surface);
+    padding: 0.25rem 0.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    box-shadow: 0 2px 8px rgba(28, 24, 20, 0.06);
+  }
+
+  .trending-card .blog-post-card-main {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .trending-card-thumb {
+    height: 180px;
+    overflow: hidden;
+    background: var(--bg2);
+  }
+
+  .trending-card-thumb--empty {
+    min-height: 120px;
+    background: linear-gradient(135deg, var(--bg2), var(--surface));
+  }
+
+  .trending-card-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+
+  .trending-card:hover .trending-card-thumb img {
+    transform: scale(1.03);
+  }
+
+  .trend-gauge-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.35rem;
+  }
+
+  .trend-gauge-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--t3);
+    flex-shrink: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .trend-gauge {
+    flex: 1;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--bg2);
+    border: 1px solid var(--rule);
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  .trend-gauge-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--accent), var(--accent-dark));
+    transition: width 0.35s ease;
+  }
+
+  /* blog 카드 느낌 정렬 */
+  .trending-card.blog-post-card {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--rule);
+    border-radius: 18px;
+    overflow: hidden;
+    background: var(--surface);
+    transition:
+      transform 0.2s,
+      box-shadow 0.2s;
+  }
+
+  .trending-card.blog-post-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px rgba(28, 24, 20, 0.07);
+  }
+</style>

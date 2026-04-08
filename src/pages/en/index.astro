@@ -1,13 +1,13 @@
----
-import Layout from '../layouts/Layout.astro';
+﻿---
+import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
-import { CATEGORIES, CLINIC_INFO } from '../consts';
-import { PROCEDURE_PILLAR_SUMMARIES } from '../data/procedure-catalog';
-import { ACADEMY_PUBLIC_PATH, isAcademyBlogPost, postPermalink } from '../lib/academy';
-import { getPublicSiteSettings } from '../lib/site-settings';
-import { getVisibleFaqItems } from '../lib/faq-items';
-import ContentImage from '../components/ContentImage.astro';
-import { t, type Locale } from '../i18n';
+import { CATEGORIES, CLINIC_INFO } from '../../consts';
+import { PROCEDURE_PILLAR_SUMMARIES } from '../../data/procedure-catalog';
+import { ACADEMY_PUBLIC_PATH, isAcademyBlogPost, postPermalink } from '../../lib/academy';
+import { getPublicSiteSettings } from '../../lib/site-settings';
+import { getVisibleFaqItems } from '../../lib/faq-items';
+import ContentImage from '../../components/ContentImage.astro';
+import { t, type Locale } from '../../i18n';
 
 const locale: Locale = Astro.currentLocale === 'en' ? 'en' : 'ko';
 
@@ -1062,7 +1062,7 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
 
 <script>
   import { createClient } from '@supabase/supabase-js';
-  import { fetchViewCountsMap, formatViewCount } from '../lib/blog-post-views';
+  import { fetchViewCountsMap, formatViewCount } from '../../lib/blog-post-views';
 
   const url = import.meta.env.PUBLIC_SUPABASE_URL;
   const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
@@ -1167,8 +1167,8 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
 
 <script define:vars={{ categoryLabels }}>
   import { createClient } from '@supabase/supabase-js';
-  import { postHrefFromDbSlug } from '../lib/academy';
-  import { fetchTrendingPosts, type TrendingPostRow } from '../lib/trending-posts';
+  import { postHrefFromDbSlug } from '../../lib/academy';
+  import { fetchTrendingPosts, type TrendingPostRow } from '../../lib/trending-posts';
 
   const url = import.meta.env.PUBLIC_SUPABASE_URL;
   const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;

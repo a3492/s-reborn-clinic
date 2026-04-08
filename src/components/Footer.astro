@@ -1,5 +1,6 @@
 ---
 import { CLINIC_INFO, SITE_TITLE } from '../consts';
+import { t, type Locale } from '../i18n';
 
 interface Props {
   siteTitle?: string;
@@ -7,8 +8,12 @@ interface Props {
 }
 
 const { siteTitle = SITE_TITLE, socialLinks = {} } = Astro.props;
+const locale: Locale = Astro.currentLocale === 'en' ? 'en' : 'ko';
 const socialEntries = Object.entries(socialLinks).filter(([, value]) => value);
 const hoursLine = CLINIC_INFO.hours.map((h) => `${h.days} ${h.time}`).join(' · ');
+
+const enHoursLine = '(Mon·Tue·Wed·Fri) 10:30–19:30 · (Thu) 13:00–21:00 · (Sat) 10:00–16:00 · Sun/Holidays: Closed';
+const displayHoursLine = locale === 'en' ? enHoursLine : hoursLine;
 ---
 
 <footer class="site-footer">
@@ -17,33 +22,34 @@ const hoursLine = CLINIC_INFO.hours.map((h) => `${h.days} ${h.time}`).join(' · 
       <div>
         <p class="site-footer-brand">{siteTitle}</p>
         <p class="site-footer-legal">
-          본 사이트의 텍스트·이미지·디자인은 저작권법에 의해 보호됩니다. 출처(링크)를 밝힌 인용·요약은 허용하나,
+          {t(locale, 'footer.legal')}
           <br />
-          <strong>무단 전재·복제·미러(전체 복제) 및 상업적 재이용은 금지</strong>합니다.
+          <strong>{t(locale, 'footer.legalStrong')}</strong>{t(locale, 'footer.legalSuffix')}
         </p>
         <div class="site-footer-info">
           <p>
-            {CLINIC_INFO.name} · 대표원장 {CLINIC_INFO.director}
+            {CLINIC_INFO.name} · {t(locale, 'footer.directorLabel')} {CLINIC_INFO.director}
           </p>
           <p>
-            주소: {CLINIC_INFO.address} {CLINIC_INFO.addressDetail}
+            {t(locale, 'footer.addressLabel')}: {CLINIC_INFO.address} {locale === 'ko' ? CLINIC_INFO.addressDetail : '(Mapo-gu, Seoul · 2–3 min walk from Hongdae Station Exit 8/9)'}
           </p>
           <p>
-            전화: {CLINIC_INFO.phone} | 공식 웹:{' '}
+            {t(locale, 'footer.phoneLabel')}: {CLINIC_INFO.phone} | {t(locale, 'footer.officialWebLabel')}:{' '}
             <a href={CLINIC_INFO.website} target="_blank" rel="noopener noreferrer">
               {CLINIC_INFO.website.replace(/^https?:\/\//, '')}
             </a>
           </p>
-          <p>진료: {hoursLine}</p>
+          <p>{t(locale, 'footer.hoursLabel')}: {displayHoursLine}</p>
         </div>
       </div>
 
       <div class="site-footer-links">
-        <a href="/about/" class="site-footer-link">클리닉 소개</a>
-        <a href="/procedures/" class="site-footer-link">시술 안내</a>
-        <a href="/blog/" class="site-footer-link">블로그</a>
-        <a href="/llms.txt" class="site-footer-link">AI·검색용 요약 (llms.txt)</a>
-        <a href="/consult/" class="site-footer-link">온라인 상담</a>
+        <a href={locale === 'en' ? '/en/about/' : '/about/'} class="site-footer-link">{t(locale, 'footer.linkAbout')}</a>
+        <a href={locale === 'en' ? '/en/procedures/' : '/procedures/'} class="site-footer-link">{t(locale, 'footer.linkProcedures')}</a>
+        <a href={locale === 'en' ? '/en/blog/' : '/blog/'} class="site-footer-link">{t(locale, 'footer.linkBlog')}</a>
+        <a href="/newsletter/" class="site-footer-link">{t(locale, 'footer.linkNewsletter')}</a>
+        <a href="/llms.txt" class="site-footer-link">{t(locale, 'footer.linkLlms')}</a>
+        <a href={locale === 'en' ? '/en/consult/' : '/consult/'} class="site-footer-link">{t(locale, 'footer.linkConsult')}</a>
         {socialEntries.map(([label, href]) => (
           <a href={href} target="_blank" rel="noreferrer" class="site-footer-link">
             {label}
@@ -55,8 +61,8 @@ const hoursLine = CLINIC_INFO.hours.map((h) => `${h.days} ${h.time}`).join(' · 
     <div class="site-footer-bottom">
       <span>© {new Date().getFullYear()} {CLINIC_INFO.name}. All rights reserved.</span>
       <div style="display:flex;gap:1rem;">
-        <a href="/privacy/" class="site-footer-link">개인정보처리방침</a>
-        <a href="/terms/" class="site-footer-link">이용약관</a>
+        <a href="/privacy/" class="site-footer-link">{t(locale, 'footer.linkPrivacy')}</a>
+        <a href="/terms/" class="site-footer-link">{t(locale, 'footer.linkTerms')}</a>
       </div>
     </div>
   </div>

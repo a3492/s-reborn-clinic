@@ -6,14 +6,30 @@ import { t, type Locale } from '../i18n';
 const pathname = Astro.url.pathname;
 const locale: Locale = Astro.currentLocale === 'en' ? 'en' : 'ko';
 
+// 영어 페이지에서는 /en/ 접두사를 사용
+const enPrefix = locale === 'en' ? '/en' : '';
+
 const navLabelKeyByHref = new Map<string, string>([
   ['/', 'nav.home'],
   ['/procedures/', 'nav.procedures'],
   ['/blog/', 'nav.blog'],
+  ['/trending/', 'nav.trending'],
   [`${ACADEMY_PUBLIC_PATH}/`, 'nav.doctorAi'],
   ['/consult/', 'nav.consult'],
   ['/about/', 'nav.about'],
 ]);
+
+// 영어 전용 지원 경로 (Academy는 /en/ 없음)
+const supportedEnPaths = ['/', '/procedures/', '/blog/', '/trending/', '/consult/', '/about/'];
+
+const getLocalizedHref = (href: string): string => {
+  if (locale !== 'en') return href;
+  if (href === `${ACADEMY_PUBLIC_PATH}/`) return href; // Academy는 영어 버전 없음
+  if (supportedEnPaths.includes(href)) {
+    return href === '/' ? '/en/' : `/en${href}`;
+  }
+  return href;
+};
 
 const navLabel = (href: string) => {
   const key = navLabelKeyByHref.get(href);
@@ -23,29 +39,32 @@ const navLabel = (href: string) => {
 
 <header class="site-header">
   <div class="site-header-inner">
-    <a href="/" class="site-logo">
+    <a href={locale === 'en' ? '/en/' : '/'} class="site-logo">
       <div class="site-logo-mark" aria-hidden="true">S</div>
       <span class="site-logo-text">{SITE_TITLE}</span>
     </a>
 
     <nav class="site-nav" aria-label={t(locale, 'header.mainNavAria')}>
-      {NAV_LINKS.map((link) => (
-        <a
-          href={link.href}
-          class:list={[
-            'site-nav-link',
-            {
-              'is-active':
-                pathname === link.href ||
-                (link.href !== '/' &&
-                  (pathname.startsWith(link.href) ||
-                    pathname === link.href.replace(/\/$/, ''))),
-            },
-          ]}
-        >
-          {navLabel(link.href)}
-        </a>
-      ))}
+      {NAV_LINKS.map((link) => {
+        const localizedHref = getLocalizedHref(link.href);
+        return (
+          <a
+            href={localizedHref}
+            class:list={[
+              'site-nav-link',
+              {
+                'is-active':
+                  pathname === localizedHref ||
+                  (localizedHref !== '/' && localizedHref !== '/en/' &&
+                    (pathname.startsWith(localizedHref) ||
+                      pathname === localizedHref.replace(/\/$/, ''))),
+              },
+            ]}
+          >
+            {navLabel(link.href)}
+          </a>
+        );
+      })}
     </nav>
 
     <button
@@ -71,7 +90,7 @@ const navLabel = (href: string) => {
   >
     <nav aria-label={t(locale, 'header.mobileMainNavAria')}>
       {NAV_LINKS.map((link) => (
-        <a href={link.href} class="site-mobile-nav-link">
+        <a href={getLocalizedHref(link.href)} class="site-mobile-nav-link">
           {navLabel(link.href)}
         </a>
       ))}

@@ -1,14 +1,14 @@
----
-import Layout from '../../layouts/Layout.astro';
-import Sidebar from '../../components/Sidebar.astro';
+﻿---
+import Layout from '../../../layouts/Layout.astro';
+import Sidebar from '../../../components/Sidebar.astro';
 import { getCollection } from 'astro:content';
-import { CATEGORIES, SITE_TITLE } from '../../consts';
-import { BLOG_PILLAR_NAV, blogPillarLabel } from '../../data/blog-nav';
-import { isAcademyBlogPost, postPermalink } from '../../lib/academy';
-import { blogTagPageHref } from '../../lib/blog-tag-url';
-import { seriesHubPath } from '../../lib/blog-series';
-import ContentImage from '../../components/ContentImage.astro';
-import { t, type Locale } from '../../i18n';
+import { CATEGORIES, SITE_TITLE } from '../../../consts';
+import { BLOG_PILLAR_NAV, blogPillarLabel } from '../../../data/blog-nav';
+import { isAcademyBlogPost, postPermalink } from '../../../lib/academy';
+import { blogTagPageHref } from '../../../lib/blog-tag-url';
+import { seriesHubPath } from '../../../lib/blog-series';
+import ContentImage from '../../../components/ContentImage.astro';
+import { t, type Locale } from '../../../i18n';
 
 const locale: Locale = Astro.currentLocale === 'en' ? 'en' : 'ko';
 
@@ -625,7 +625,7 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
 
 <script>
   import { createClient } from '@supabase/supabase-js';
-  import { fetchViewCountsMap, formatViewCount } from '../../lib/blog-post-views';
+  import { fetchViewCountsMap, formatViewCount } from '../../../lib/blog-post-views';
 
   const url = import.meta.env.PUBLIC_SUPABASE_URL;
   const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
