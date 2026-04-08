@@ -3,26 +3,72 @@ import Layout from '../layouts/Layout.astro';
 import NaverMapCta from '../components/NaverMapCta.astro';
 import { CLINIC_INFO } from '../consts';
 import { t, type Locale } from '../i18n';
-import { buildBreadcrumbJsonLd, mergeJsonLd } from '../lib/structured-data';
+import { buildBreadcrumbJsonLd, buildFaqJsonLd, mergeJsonLd } from '../lib/structured-data';
+import { getCollection } from 'astro:content';
+import { postPermalink } from '../lib/academy';
 
 const locale: Locale = Astro.currentLocale === 'en' ? 'en' : 'ko';
 
+// clinic-news 글 최신 5개 자동 연동
+const allPosts = await getCollection('blog', ({ data }) => !data.draft);
+const clinicNews = allPosts
+  .filter(p => p.data.category === 'clinic-news')
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+  .slice(0, 5);
+
+// Schema.org — BreadcrumbList + Physician 상세 FAQ
+const faqItems = [
+  { question: '에스리본 클리닉 대표원장은 누구인가요?', answer: '김도위 원장으로, 가정의학과 전문의이자 텐써마·써펙트 공식 키닥터입니다.' },
+  { question: '에스리본 클리닉은 어디에 있나요?', answer: `${CLINIC_INFO.address} ${CLINIC_INFO.addressDetail}` },
+  { question: '진료 예약은 어떻게 하나요?', answer: `전화(${CLINIC_INFO.phone}) 또는 네이버 예약·카카오 채널을 통해 예약하실 수 있습니다.` },
+];
 const aboutJsonLd = mergeJsonLd(
   buildBreadcrumbJsonLd(Astro.site, [
     { name: '홈', path: '/' },
     { name: '클리닉 소개', path: '/about/' },
-  ])
+  ]),
+  buildFaqJsonLd(faqItems),
 );
+
+const credentials = [
+  {
+    icon: '🏆',
+    title: t(locale, 'about.credentialThermage'),
+    desc: t(locale, 'about.credentialThermageDesc'),
+    source: 'https://www.pharmnews.com/news/articleView.html?idxno=240483',
+    sourceLabel: '팜뉴스 보도',
+    year: '2024',
+  },
+  {
+    icon: '🏆',
+    title: t(locale, 'about.credentialSylfirm'),
+    desc: t(locale, 'about.credentialSylfirmDesc'),
+    source: null,
+    sourceLabel: null,
+    year: '2023',
+  },
+  {
+    icon: '🎓',
+    title: t(locale, 'about.credentialEdu'),
+    desc: t(locale, 'about.credentialEduDesc'),
+    source: null,
+    sourceLabel: null,
+    year: '',
+  },
+];
 ---
 
 <Layout title={t(locale, 'about.pageTitle')} description={t(locale, 'about.pageDesc')} jsonLd={aboutJsonLd}>
   <div class="about-wrap">
+
+    <!-- 히어로 -->
     <section class="about-hero">
       <div class="about-hero-badge">{t(locale, 'about.badge')}</div>
       <h1 class="about-hero-title">{t(locale, 'about.title')}</h1>
       <p class="about-hero-subtitle">{t(locale, 'about.subtitle')}</p>
     </section>
 
+    <!-- 진료 철학 -->
     <section class="about-section">
       <div class="about-grid">
         <div class="about-intro">
@@ -50,18 +96,79 @@ const aboutJsonLd = mergeJsonLd(
       </div>
     </section>
 
+    <!-- 의료진 소개 -->
     <section class="about-section about-section-alt">
       <h2>{t(locale, 'about.doctorsTitle')}</h2>
-      <div class="doctor-grid">
-        <div class="doctor-card">
-          <div class="doctor-avatar" aria-hidden="true">👨‍⚕️</div>
+      <div class="doctor-profile">
+        <div class="doctor-avatar-wrap" aria-hidden="true">
+          <div class="doctor-avatar-circle">👨‍⚕️</div>
+        </div>
+        <div class="doctor-info">
           <h3 class="doctor-name">{CLINIC_INFO.director}</h3>
           <p class="doctor-spec">{t(locale, 'about.doctorSpec')}</p>
           <p class="doctor-bio">{t(locale, 'about.doctorBio')}</p>
+          <p class="doctor-philosophy">{t(locale, 'about.doctorPhilosophy')}</p>
+          <div class="doctor-badges">
+            <span class="doctor-badge">텐써마 키닥터</span>
+            <span class="doctor-badge">써펙트 키닥터</span>
+            <span class="doctor-badge">가정의학과 전문의</span>
+          </div>
         </div>
       </div>
     </section>
 
+    <!-- 공식 인증 · 자격 -->
+    <section class="about-section">
+      <h2>{t(locale, 'about.credentialsTitle')}</h2>
+      <div class="credentials-grid">
+        {credentials.map(c => (
+          <div class="credential-card">
+            <div class="credential-header">
+              <span class="credential-icon" aria-hidden="true">{c.icon}</span>
+              {c.year && <span class="credential-year">{c.year}</span>}
+            </div>
+            <h3 class="credential-title">{c.title}</h3>
+            <p class="credential-desc">{c.desc}</p>
+            {c.source && (
+              <a
+                href={c.source}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="credential-source"
+              >
+                📰 {c.sourceLabel}
+              </a>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- 클리닉 소식 (clinic-news 자동 연동) -->
+    {clinicNews.length > 0 && (
+      <section class="about-section">
+        <div class="section-header-row">
+          <h2>{t(locale, 'about.newsTitle')}</h2>
+          <a href="/blog/?category=clinic-news" class="news-more">{t(locale, 'about.newsMore')}</a>
+        </div>
+        <div class="news-list">
+          {clinicNews.map(post => (
+            <a href={postPermalink(post)} class="news-item">
+              <div class="news-item-body">
+                <span class="news-item-date">
+                  {post.data.date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
+                </span>
+                <h3 class="news-item-title">{post.data.title}</h3>
+                <p class="news-item-desc">{post.data.description}</p>
+              </div>
+              <span class="news-item-arrow" aria-hidden="true">→</span>
+            </a>
+          ))}
+        </div>
+      </section>
+    )}
+
+    <!-- 오시는 길 -->
     <section class="about-section" id="location">
       <h2>{t(locale, 'about.locationTitle')}</h2>
       <div class="location-info">
@@ -80,20 +187,7 @@ const aboutJsonLd = mergeJsonLd(
           </div>
           <div class="location-item">
             <strong>{t(locale, 'about.locationHours')}</strong>
-            <div>
-              {locale === 'en' ? (
-                <>
-                  <p>Mon · Tue · Wed · Fri: 10:30 – 19:30</p>
-                  <p>Thu (Evening hours): 13:00 – 21:00</p>
-                  <p>Sat: 10:00 – 16:00</p>
-                  <p>Sun · Holidays: Closed</p>
-                </>
-              ) : (
-                CLINIC_INFO.hours.map(h => (
-                  <p>{h.days}: {h.time}</p>
-                ))
-              )}
-            </div>
+            <span>네이버 앱 참고</span>
           </div>
         </div>
         <div class="location-map">
@@ -112,11 +206,11 @@ const aboutJsonLd = mergeJsonLd(
     padding: 0 0 3rem;
   }
 
+  /* 히어로 */
   .about-hero {
     text-align: center;
     padding: 4rem 0 3rem;
   }
-
   .about-hero-badge {
     display: inline-block;
     margin-bottom: 1rem;
@@ -130,7 +224,6 @@ const aboutJsonLd = mergeJsonLd(
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
-
   .about-hero-title {
     font-size: clamp(2rem, 4vw, 2.8rem);
     font-weight: 800;
@@ -138,18 +231,17 @@ const aboutJsonLd = mergeJsonLd(
     color: var(--text);
     margin: 0 0 0.75rem;
   }
-
   .about-hero-subtitle {
     font-size: 1.1rem;
     color: var(--t2);
     margin: 0;
   }
 
+  /* 섹션 공통 */
   .about-section {
     padding: 3rem 0;
     border-top: 1px solid var(--rule);
   }
-
   .about-section h2 {
     font-size: 1.5rem;
     font-weight: 800;
@@ -157,7 +249,6 @@ const aboutJsonLd = mergeJsonLd(
     margin: 0 0 1.5rem;
     letter-spacing: -0.02em;
   }
-
   .about-section-alt {
     background: var(--bg2);
     border-radius: 20px;
@@ -166,98 +257,146 @@ const aboutJsonLd = mergeJsonLd(
     box-sizing: border-box;
   }
 
+  /* 철학 그리드 */
   .about-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 2rem;
     align-items: start;
   }
-
   .about-intro p {
     color: var(--t2);
     line-height: 1.8;
     margin: 0 0 1rem;
   }
-
-  .about-values {
-    display: grid;
-    gap: 1rem;
-  }
-
+  .about-values { display: grid; gap: 1rem; }
   .value-card {
     padding: 1.25rem;
     border: 1px solid var(--rule);
     border-radius: 16px;
     background: var(--surface);
   }
+  .value-icon { color: var(--accent); font-size: 1.2rem; margin-bottom: 0.5rem; }
+  .value-card h3 { margin: 0 0 0.35rem; font-size: 1rem; font-weight: 700; color: var(--text); }
+  .value-card p { margin: 0; font-size: 0.88rem; color: var(--t2); line-height: 1.6; }
 
-  .value-icon {
-    color: var(--accent);
-    font-size: 1.2rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .value-card h3 {
-    margin: 0 0 0.35rem;
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--text);
-  }
-
-  .value-card p {
-    margin: 0;
-    font-size: 0.88rem;
-    color: var(--t2);
-    line-height: 1.6;
-  }
-
-  .doctor-grid {
+  /* 의료진 프로필 */
+  .doctor-profile {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-template-columns: 140px 1fr;
+    gap: 2rem;
+    align-items: start;
+  }
+  .doctor-avatar-wrap { display: flex; justify-content: center; }
+  .doctor-avatar-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-gold-light), rgba(201,169,110,0.2));
+    border: 2px solid var(--color-gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3.5rem;
+  }
+  .doctor-name { margin: 0 0 0.3rem; font-size: 1.3rem; font-weight: 800; color: var(--text); }
+  .doctor-spec { margin: 0 0 0.75rem; font-size: 0.85rem; color: var(--accent-dark); font-weight: 600; }
+  .doctor-bio { margin: 0 0 0.5rem; font-size: 0.92rem; color: var(--t2); line-height: 1.75; }
+  .doctor-philosophy { margin: 0 0 1rem; font-size: 0.92rem; color: var(--t2); line-height: 1.75; font-style: italic; }
+  .doctor-badges { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .doctor-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(201, 169, 110, 0.12);
+    border: 1px solid rgba(201, 169, 110, 0.35);
+    color: var(--accent-dark);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  /* 인증 그리드 */
+  .credentials-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 1.25rem;
   }
-
-  .doctor-card {
-    padding: 2rem 1.5rem;
-    border: 1px solid var(--color-gold);
-    border-radius: 20px;
-    background: linear-gradient(135deg, var(--surface), var(--color-gold-light));
-    text-align: center;
+  .credential-card {
+    padding: 1.5rem;
+    border: 1px solid var(--rule);
+    border-radius: 16px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
   }
-
-  .doctor-avatar {
-    font-size: 3rem;
-    margin-bottom: 1rem;
+  .credential-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
-
-  .doctor-name {
-    margin: 0 0 0.35rem;
-    font-size: 1.1rem;
+  .credential-icon { font-size: 1.5rem; }
+  .credential-year {
+    font-size: 0.75rem;
     font-weight: 700;
-    color: var(--text);
-  }
-
-  .doctor-spec {
-    margin: 0 0 0.75rem;
-    font-size: 0.82rem;
-    color: var(--accent-dark);
-    font-weight: 600;
-  }
-
-  .doctor-bio {
-    margin: 0;
-    font-size: 0.88rem;
     color: var(--t2);
-    line-height: 1.7;
+    background: var(--bg2);
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
   }
+  .credential-title { margin: 0; font-size: 1rem; font-weight: 700; color: var(--text); }
+  .credential-desc { margin: 0; font-size: 0.85rem; color: var(--t2); line-height: 1.6; flex: 1; }
+  .credential-source {
+    font-size: 0.78rem;
+    color: var(--accent-dark);
+    text-decoration: none;
+    font-weight: 600;
+    margin-top: 0.25rem;
+  }
+  .credential-source:hover { text-decoration: underline; }
 
+  /* 클리닉 소식 */
+  .section-header-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+  }
+  .section-header-row h2 { margin: 0; }
+  .news-more {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--accent-dark);
+    text-decoration: none;
+  }
+  .news-more:hover { text-decoration: underline; }
+  .news-list { display: flex; flex-direction: column; gap: 0; }
+  .news-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--rule);
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.15s;
+  }
+  .news-item:last-child { border-bottom: none; }
+  .news-item:hover .news-item-title { color: var(--accent-dark); }
+  .news-item-body { flex: 1; min-width: 0; }
+  .news-item-date { font-size: 0.75rem; color: var(--t2); display: block; margin-bottom: 0.2rem; }
+  .news-item-title { margin: 0 0 0.2rem; font-size: 0.98rem; font-weight: 700; color: var(--text); }
+  .news-item-desc { margin: 0; font-size: 0.85rem; color: var(--t2); line-height: 1.5;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .news-item-arrow { color: var(--t2); font-size: 1rem; flex-shrink: 0; }
+
+  /* 오시는 길 */
   .location-info {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 2rem;
     align-items: start;
   }
-
   .location-item {
     display: grid;
     grid-template-columns: 80px 1fr;
@@ -265,24 +404,14 @@ const aboutJsonLd = mergeJsonLd(
     padding: 0.75rem 0;
     border-bottom: 1px solid var(--rule);
   }
+  .location-item strong { color: var(--text); font-size: 0.88rem; }
+  .location-item span, .location-item p { color: var(--t2); font-size: 0.9rem; margin: 0; line-height: 1.7; }
 
-  .location-item strong {
-    color: var(--text);
-    font-size: 0.88rem;
-  }
-
-  .location-item span,
-  .location-item p {
-    color: var(--t2);
-    font-size: 0.9rem;
-    margin: 0;
-    line-height: 1.7;
-  }
-
+  /* 반응형 */
   @media (max-width: 768px) {
     .about-grid,
-    .location-info {
-      grid-template-columns: 1fr;
-    }
+    .location-info { grid-template-columns: 1fr; }
+    .doctor-profile { grid-template-columns: 1fr; }
+    .doctor-avatar-wrap { justify-content: flex-start; }
   }
 </style>
