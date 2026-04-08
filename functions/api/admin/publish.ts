@@ -1,4 +1,5 @@
 import { invalidatePublishRelatedCaches } from '../../lib/kv-cache';
+import { buildFrontmatter, buildTargetPath, isoNow } from '../../lib/post-format';
 
 const encoder = new TextEncoder();
 
@@ -7,10 +8,6 @@ function toBase64(input: string) {
   let binary = '';
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary);
-}
-
-function isoNow() {
-  return new Date().toISOString();
 }
 
 async function safeJson(response: Response) {
@@ -29,39 +26,6 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
 
 function requiredEnv(env: Record<string, unknown>) {
   return ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'GITHUB_TOKEN', 'GITHUB_REPO'].filter((key) => !env[key]);
-}
-
-function escapeYamlString(value: unknown) {
-  return String(value ?? '').replaceAll('\\', '\\\\').replaceAll('"', '\\"').replaceAll('\n', '\\n');
-}
-
-function buildFrontmatter(post: any) {
-  const tags = Array.isArray(post.tags) ? `[${post.tags.map((tag: string) => `"${tag}"`).join(', ')}]` : '[]';
-  const parts = [
-    '---',
-    `title: "${escapeYamlString(post.title)}"`,
-    `description: "${escapeYamlString(post.description)}"`,
-    `date: ${post.published_at ?? isoNow()}`,
-    `category: "${escapeYamlString(post.category)}"`,
-    post.subcategory ? `subcategory: "${escapeYamlString(post.subcategory)}"` : '',
-    `tags: ${tags}`,
-    `draft: ${post.status !== 'published'}`,
-    post.thumbnail_url ? `thumbnail: "${escapeYamlString(post.thumbnail_url)}"` : '',
-    post.seo_title ? `seoTitle: "${escapeYamlString(post.seo_title)}"` : '',
-    post.seo_description ? `seoDescription: "${escapeYamlString(post.seo_description)}"` : '',
-    post.canonical_url ? `canonicalURL: "${escapeYamlString(post.canonical_url)}"` : '',
-    '---',
-    '',
-  ].filter(Boolean);
-  return parts.join('\n');
-}
-
-function buildTargetPath(post: any) {
-  const segments = ['src', 'content', 'blog'];
-  segments.push(post.category || 'uncategorized');
-  if (post.subcategory) segments.push(post.subcategory);
-  segments.push(`${post.slug}.md`);
-  return segments.join('/');
 }
 
 /** 발행된 마크다운 경로 → 공개 사이트 글 URL (트레일링 슬래시) */
@@ -175,7 +139,7 @@ async function authorizePublishRequest(request: Request, env: any) {
     return { ok: false as const, status: 401, error: '유효하지 않은 인증입니다.' };
   }
 
-  const profRes = await supabaseFetch(env, `admin_profiles?user_id=eq.${encodeURIComponent(userId)}&select=role`);
+  const profRes = await supabaseFetch(env, `admin_profiles?id=eq.${encodeURIComponent(userId)}&select=role`);
   if (!profRes.ok) {
     return { ok: false as const, status: 403, error: '관리자 프로필을 확인할 수 없습니다.' };
   }

@@ -22,11 +22,13 @@ interface Props {
 
 const { title, description = SITE_DESCRIPTION, image, noindex } = Astro.props;
 const siteSettings = await getPublicSiteSettings();
-const resolvedSiteTitle = siteSettings.siteTitle || SITE_TITLE;
-const resolvedDescription = description || siteSettings.siteDescription || SITE_DESCRIPTION;
+const locale: Locale = Astro.currentLocale === 'en' ? 'en' : 'ko';
+const SITE_TITLE_EN = 'S-Reborn Clinic';
+const SITE_DESCRIPTION_EN = 'S-Reborn Clinic official blog — procedure guides, health info, doctor columns';
+const resolvedSiteTitle = locale === 'en' ? SITE_TITLE_EN : (siteSettings.siteTitle || SITE_TITLE);
+const resolvedDescription = description || (locale === 'en' ? SITE_DESCRIPTION_EN : (siteSettings.siteDescription || SITE_DESCRIPTION));
 const jsonLd = buildOrganizationAndWebSiteJsonLd(Astro.site);
 
-const locale: Locale = Astro.currentLocale === 'en' ? 'en' : 'ko';
 const layoutCopyAttributionName = t(locale, 'layout.copy.attributionName');
 const layoutCopyAttributionUrl = t(locale, 'layout.copy.attributionUrl');
 const layoutCopyNoReprint = t(locale, 'layout.copy.noReprint');

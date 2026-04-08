@@ -46,22 +46,23 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
         data-trend-tab="views"
         id="trend-tab-views"
       >
-        전체
+        {locale === 'en' ? 'All Time' : '전체'}
       </button>
     </div>
 
-    <p class="trending-status" data-trending-status aria-live="polite">불러오는 중…</p>
+    <p class="trending-status" data-trending-status aria-live="polite">{locale === 'en' ? 'Loading…' : '불러오는 중…'}</p>
     <div class="trending-grid" id="trending-grid" data-trending-grid></div>
   </div>
 </Layout>
 
-<script define:vars={{ categoryLabels }}>
+<script define:vars={{ categoryLabels, locale }}>
   import { createClient } from '@supabase/supabase-js';
   import { postHrefFromDbSlug } from '../../lib/academy';
   import { fetchTopPostsByViews, fetchTrendingPosts, type TrendingPostRow } from '../../lib/trending-posts';
 
   const url = import.meta.env.PUBLIC_SUPABASE_URL;
   const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+  const isEn = locale === 'en';
 
   const grid = document.getElementById('trending-grid');
   const statusEl = document.querySelector('[data-trending-status]');
@@ -83,7 +84,7 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
     if (!iso) return '';
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return '';
-    return new Intl.DateTimeFormat('ko-KR', {
+    return new Intl.DateTimeFormat(isEn ? 'en-US' : 'ko-KR', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -95,10 +96,14 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
     return Math.max(8, Math.round(((total - rank + 1) / total) * 100));
   }
 
+  function rankLabel(rank: number) {
+    return isEn ? `#${rank}` : `${rank}위`;
+  }
+
   function renderRows(rows: TrendingPostRow[]) {
     if (!grid) return;
     if (!rows.length) {
-      grid.innerHTML = '<p class="trending-empty">표시할 글이 없습니다.</p>';
+      grid.innerHTML = `<p class="trending-empty">${isEn ? 'No posts to display.' : '표시할 글이 없습니다.'}</p>`;
       return;
     }
     const n = rows.length;
@@ -116,7 +121,7 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
           ? `<div class="trending-card-thumb"><img src="${escapeHtml(thumb)}" alt="" width="640" height="360" loading="lazy" decoding="async" /></div>`
           : '<div class="trending-card-thumb trending-card-thumb--empty" aria-hidden="true"></div>';
         return `<article class="trending-card blog-post-card" data-trending-card>
-  <div class="trending-card-rank" aria-label="${rank}위">${rank}위</div>
+  <div class="trending-card-rank" aria-label="${rankLabel(rank)}">${rankLabel(rank)}</div>
   <a href="${escapeHtml(href)}" class="blog-post-card-main">
     ${thumbBlock}
     <div class="blog-post-card-body">
@@ -126,7 +131,7 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
       <h2 class="blog-post-card-title">${title}</h2>
       <p class="blog-post-card-desc">${desc}</p>
       <div class="trend-gauge-wrap" aria-hidden="true">
-        <span class="trend-gauge-label">인기도</span>
+        <span class="trend-gauge-label">${isEn ? 'Popularity' : '인기도'}</span>
         <div class="trend-gauge">
           <div class="trend-gauge-fill" style="width:${pct}%"></div>
         </div>
@@ -145,11 +150,11 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
 
   async function load() {
     if (!url || !key) {
-      setStatus('연결 정보가 없어 순위를 불러올 수 없습니다.');
+      setStatus(isEn ? 'Unable to load rankings: no connection info.' : '연결 정보가 없어 순위를 불러올 수 없습니다.');
       renderRows([]);
       return;
     }
-    setStatus('불러오는 중…');
+    setStatus(isEn ? 'Loading…' : '불러오는 중…');
     const supabase = createClient(url, key);
     let rows: TrendingPostRow[] = [];
     if (activeMode === 'views') {
@@ -158,7 +163,7 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
       const days = activeMode === '7' ? 7 : 30;
       rows = await fetchTrendingPosts(supabase, days, 20);
     }
-    setStatus(rows.length ? `${rows.length}개` : '표시할 글이 없습니다.');
+    setStatus(rows.length ? (isEn ? `${rows.length} posts` : `${rows.length}개`) : (isEn ? 'No posts to display.' : '표시할 글이 없습니다.'));
     renderRows(rows);
   }
 

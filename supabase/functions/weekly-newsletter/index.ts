@@ -253,7 +253,7 @@ serve(async (req: Request) => {
     for (let i = 0; i < emails.length; i += BATCH) {
       const chunk = emails.slice(i, i + BATCH);
       const batchPayload = chunk.map((to) => {
-        const unsub = `${siteUrl}/api/unsubscribe?email=${encodeURIComponent(to)}`;
+        const unsub = `${siteUrl}/unsubscribe?email=${encodeURIComponent(to)}`;
         return {
           from: fromEmail,
           to: [to],
@@ -284,6 +284,22 @@ serve(async (req: Request) => {
     }
 
     const nowIso = new Date().toISOString();
+    const htmlForArchive = buildNewsletterHtml(
+      siteUrl,
+      articles,
+      `${siteUrl}/unsubscribe`,
+      dateLabel,
+    );
+    const { error: archiveErr } = await supabase.from('newsletter_archives').insert({
+      subject,
+      html_body: htmlForArchive,
+      sent_at: nowIso,
+      recipient_count: emails.length,
+    });
+    if (archiveErr) {
+      console.error('[weekly-newsletter] newsletter_archives insert:', archiveErr.message);
+    }
+
     const { error: upsertErr } = await supabase.from('site_settings').upsert(
       {
         key: 'newsletter',

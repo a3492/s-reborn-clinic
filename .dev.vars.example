@@ -7,6 +7,12 @@ PUBLIC_GA_MEASUREMENT_ID=
 
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
+# 댓글 API에서 OAuth 사용자 식별(선택). 없으면 anon 댓글만.
+SUPABASE_ANON_KEY=
+
+# Turnstile — 공개 키는 Astro 빌드용(.env) / Pages에 PUBLIC_ 로도 설정 가능
+PUBLIC_TURNSTILE_SITE_KEY=
+TURNSTILE_SECRET_KEY=
 
 RESEND_API_KEY=
 FROM_EMAIL=noreply@s-reborn.com

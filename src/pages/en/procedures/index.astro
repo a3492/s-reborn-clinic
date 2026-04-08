@@ -61,8 +61,8 @@ for (const key of Object.keys(topicsByItem)) {
                   data-proc-nav={p.id}
                 >
                   <span class="proc-nav-stack">
-                    <span class="proc-nav-label">{p.label}</span>
-                    <span class="proc-nav-short">{p.short}</span>
+                    <span class="proc-nav-label">{locale === 'en' ? (p.labelEn ?? p.label) : p.label}</span>
+                    <span class="proc-nav-short">{locale === 'en' ? (p.shortEn ?? p.short) : p.short}</span>
                   </span>
                 </button>
               </li>
@@ -101,8 +101,8 @@ for (const key of Object.keys(topicsByItem)) {
                 data-proc-nav={p.id}
                 role="listitem"
               >
-                <span class="proc-pillar-card-label">{p.label}</span>
-                <span class="proc-pillar-card-short">{p.short}</span>
+                <span class="proc-pillar-card-label">{locale === 'en' ? (p.labelEn ?? p.label) : p.label}</span>
+                <span class="proc-pillar-card-short">{locale === 'en' ? (p.shortEn ?? p.short) : p.short}</span>
                 <span class="proc-pillar-card-arrow" aria-hidden="true">→</span>
               </button>
             ))}
@@ -170,7 +170,7 @@ for (const key of Object.keys(topicsByItem)) {
                               {item.note && <span class="proc-item-note">{item.note}</span>}
                             </div>
                             {topics.length > 0 && (
-                              <div class="proc-topic-chips" aria-label={`${item.name} 세부 주제`}>
+                              <div class="proc-topic-chips" aria-label={locale === 'en' ? `${item.name} subtopics` : `${item.name} 세부 주제`}>
                                 {topics.map((t) => (
                                   <a href={`/procedures/${t.id}/`} class="proc-topic-chip">
                                     {t.data.topic_label ?? t.data.title}
@@ -189,10 +189,18 @@ for (const key of Object.keys(topicsByItem)) {
 
             <footer class="proc-footer">
               <p>
-                이 영역의 심화 글·FAQ는 <a href={`/blog/?pillar=${pillar.id}`}>블로그</a>에서 확인하실 수 있습니다.
+                {locale === 'en' ? (
+                  <>In-depth posts & FAQ for this area are in the <a href={`/en/blog/?pillar=${pillar.id}`}>Blog</a>.</>
+                ) : (
+                  <>이 영역의 심화 글·FAQ는 <a href={`/blog/?pillar=${pillar.id}`}>블로그</a>에서 확인하실 수 있습니다.</>
+                )}
               </p>
               <p>
-                위치·연락은 <a href="/about#location">오시는 길</a>, 문의는 <a href="/consult">온라인 상담</a>을 이용해 주세요.
+                {locale === 'en' ? (
+                  <>For location & contact, visit <a href="/en/about#location">Getting Here</a>. For inquiries, use <a href="/en/consult">Online Consultation</a>.</>
+                ) : (
+                  <>위치·연락은 <a href="/about#location">오시는 길</a>, 문의는 <a href="/consult">온라인 상담</a>을 이용해 주세요.</>
+                )}
               </p>
             </footer>
           </div>

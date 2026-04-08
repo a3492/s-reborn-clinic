@@ -174,16 +174,17 @@ const navLabel = (href: string) => {
   const toggle = document.querySelector('[data-mobile-menu-toggle]');
   const nav = document.querySelector('[data-mobile-nav]');
 
+  const isEn = document.documentElement.lang === 'en';
   const setOpen = (open) => {
     if (!nav || !(toggle instanceof HTMLButtonElement)) return;
     if (open) {
       nav.removeAttribute('hidden');
       toggle.setAttribute('aria-expanded', 'true');
-      toggle.setAttribute('aria-label', '메뉴 닫기');
+      toggle.setAttribute('aria-label', isEn ? 'Close menu' : '메뉴 닫기');
     } else {
       nav.setAttribute('hidden', '');
       toggle.setAttribute('aria-expanded', 'false');
-      toggle.setAttribute('aria-label', '메뉴 열기');
+      toggle.setAttribute('aria-label', isEn ? 'Open menu' : '메뉴 열기');
     }
   };
 

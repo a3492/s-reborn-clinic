@@ -24,6 +24,8 @@ const {
 } = Astro.props;
 
 const pathname = Astro.url.pathname;
+const pathNorm = pathname.replace(/\/$/, '') || '/';
+const showAdminMobileFab = pathNorm === '/admin' || pathNorm === '/admin/posts';
 ---
 
 <!doctype html>
@@ -55,6 +57,16 @@ const pathname = Astro.url.pathname;
           <slot />
         </div>
         <CommandPalette />
+        {showAdminMobileFab && (
+          <a
+            href="/admin/posts/new"
+            class="admin-fab"
+            aria-label="새 글 작성"
+            title="새 글"
+          >
+            ✏️
+          </a>
+        )}
       </main>
     </div>
 

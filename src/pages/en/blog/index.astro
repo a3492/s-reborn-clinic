@@ -17,45 +17,47 @@ const allPosts = (await getCollection('blog', ({ data }) => !data.draft))
   .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
 
 const pillarLabels = Object.fromEntries(BLOG_PILLAR_NAV.map((p) => [p.id, p.label]));
-const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label]));
+const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.labelEn ?? c.label]));
+const blogBase = locale === 'en' ? '/en/blog/' : '/blog/';
+const proceduresBase = locale === 'en' ? '/en/procedures/' : '/procedures/';
 
 const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
 ---
 
 <Layout title={t(locale, 'blog.pageTitle')} description={t(locale, 'blog.pageDesc')}>
   <div class:list={['blog-layout', { 'blog-layout--search': blogSearchFocus }]}>
-    <Sidebar blogSearchFocus={blogSearchFocus} tagCloudPosts={allPosts} />
+    <Sidebar blogSearchFocus={blogSearchFocus} tagCloudPosts={allPosts} locale={locale} />
 
     <section class="blog-main" aria-labelledby="blog-page-title">
       <div class="blog-header">
         <h1 class="blog-header-title" id="blog-page-title">{t(locale, 'blog.pageTitle')}</h1>
 
         <p id="blog-meta-search" class="blog-search-meta" hidden>
-          <span class="blog-search-mode-label">키워드 검색 결과만 표시 중입니다.</span>
-          총 <span id="blog-count-search">0</span>개 ·
-          <a href="/blog/" class="js-blog-merge" data-blog-merge={JSON.stringify({ q: null })}>검색 지우기</a>
+          <span class="blog-search-mode-label">{locale === 'en' ? 'Showing keyword search results only.' : '키워드 검색 결과만 표시 중입니다.'}</span>
+          {locale === 'en' ? 'Total' : '총'} <span id="blog-count-search">0</span>{locale === 'en' ? ' results' : '개'} ·
+          <a href={locale === 'en' ? '/en/blog/' : '/blog/'} class="js-blog-merge" data-blog-merge={JSON.stringify({ q: null })}>{locale === 'en' ? 'Clear search' : '검색 지우기'}</a>
           <span class="blog-meta-sep"> · </span>
-          <a href="/blog/">필터·검색 전체 초기화</a>
+          <a href={locale === 'en' ? '/en/blog/' : '/blog/'}>{locale === 'en' ? 'Reset all filters' : '필터·검색 전체 초기화'}</a>
         </p>
         <p id="blog-meta-filter" class="blog-cat-meta" hidden>
           <span id="blog-meta-filter-chips"></span>
           <span id="blog-count-filter" class="blog-filter-count"></span>
-          <a href="/blog/" class="blog-filter-reset">필터 초기화</a>
+          <a href={locale === 'en' ? '/en/blog/' : '/blog/'} class="blog-filter-reset">{locale === 'en' ? 'Reset filters' : '필터 초기화'}</a>
         </p>
       </div>
 
       {
         allPosts.length === 0 ? (
           <div class="blog-empty">
-            <p>아직 공개된 글이 없습니다.</p>
+            <p>{locale === 'en' ? 'No posts published yet.' : '아직 공개된 글이 없습니다.'}</p>
           </div>
         ) : (
           <>
             <div id="blog-no-matches" class="blog-empty" hidden>
-              <p>필터에 맞는 글이 없습니다.</p>
+              <p>{locale === 'en' ? 'No posts match the current filters.' : '필터에 맞는 글이 없습니다.'}</p>
               <p id="blog-no-matches-hint" class="blog-empty-hint" hidden />
-              <a href="/blog/" class="btn btn-outline btn-sm">
-                전체 글 보기
+              <a href={locale === 'en' ? '/en/blog/' : '/blog/'} class="btn btn-outline btn-sm">
+                {locale === 'en' ? 'View all posts' : '전체 글 보기'}
               </a>
             </div>
             <div class="blog-grid" id="blog-grid">
@@ -66,8 +68,8 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
                   data-blog-slug={post.id}
                   data-category={post.data.category ?? ''}
                   data-pillar={post.data.pillar ?? ''}
-                  data-title={post.data.title}
-                  data-description={post.data.description ?? ''}
+                  data-title={post.data.title_en ?? post.data.title}
+                  data-description={post.data.description_en ?? post.data.description ?? ''}
                   data-tags={(post.data.tags ?? []).join(' ')}
                   data-series={post.data.series ?? ''}
                 >
@@ -76,7 +78,7 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
                       <div class="blog-post-card-thumb">
                         <ContentImage
                           src={post.data.thumbnail}
-                          alt={post.data.title}
+                          alt={post.data.title_en ?? post.data.title}
                           width={640}
                           height={360}
                           loading="lazy"
@@ -91,28 +93,28 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
                         )}
                         {post.data.category && (
                           <span class="blog-post-card-cat">
-                            {CATEGORIES.find((c) => c.id === post.data.category)?.label ?? post.data.category}
+                            {CATEGORIES.find((c) => c.id === post.data.category)?.labelEn ?? post.data.category}
                           </span>
                         )}
                         {post.data.series && (
                           <a
                             href={seriesHubPath(post.data.series)}
                             class="blog-post-card-series-badge"
-                            aria-label={`「${post.data.series}」 시리즈 글 목록으로 이동`}
+                            aria-label={`"${post.data.series}" series`}
                           >
-                            시리즈
+                            Series
                           </a>
                         )}
-                        <span class="blog-post-card-views" data-blog-card-views aria-label="조회수">—</span>
+                        <span class="blog-post-card-views" data-blog-card-views aria-label="Views">—</span>
                       </div>
-                      <h2 class="blog-post-card-title">{post.data.title}</h2>
-                      <p class="blog-post-card-desc">{post.data.description}</p>
+                      <h2 class="blog-post-card-title">{post.data.title_en ?? post.data.title}</h2>
+                      <p class="blog-post-card-desc">{post.data.description_en ?? post.data.description}</p>
                     </div>
                   </a>
                   <div class="blog-post-card-footer">
                     <time class="blog-post-card-date" datetime={post.data.date.toISOString()}>
                       {
-                        new Intl.DateTimeFormat('ko-KR', {
+                        new Intl.DateTimeFormat('en-US', {
                           year: 'numeric',
                           month: 'short',
                           day: 'numeric',
@@ -139,10 +141,13 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
   </div>
 </Layout>
 
-<script is:inline define:vars={{ pillarLabels, categoryLabels, siteTitle: SITE_TITLE }}>
+<script is:inline define:vars={{ pillarLabels, categoryLabels, siteTitle: SITE_TITLE, locale, blogBase, proceduresBase }}>
   const PROCEDURES_CATS = ['procedures', 'faq', 'myth', 'before-after', 'patient-story'];
   const LIFESTYLE_CATS = ['health-tips', 'doctor-column', 'clinic-news'];
-  const TRACK_LABELS = { procedures: '시술 정보', lifestyle: '건강·라이프' };
+  const isEn = locale === 'en';
+  const TRACK_LABELS = isEn
+    ? { procedures: 'Procedures', lifestyle: 'Health & Life' }
+    : { procedures: '시술 정보', lifestyle: '건강·라이프' };
 
   function readBlogState() {
     const p = new URLSearchParams(location.search);
@@ -158,6 +163,14 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
     const pl = state.pillar ? pillarLabels[state.pillar] : '';
     const cl = state.category ? categoryLabels[state.category] : '';
     const qt = state.q.trim();
+    if (isEn) {
+      if (qt) return `"${qt}" search results`;
+      if (state.pillar && state.category && pl && cl) return `${pl} · ${cl}`;
+      if (state.pillar && pl) return `${pl} — posts`;
+      if (state.category && cl) return cl;
+      if (state.track && TRACK_LABELS[state.track]) return TRACK_LABELS[state.track];
+      return 'Blog';
+    }
     if (qt) return `"${qt}" 검색 결과`;
     if (state.pillar && state.category && pl && cl) return `${pl} · ${cl}`;
     if (state.pillar && pl) return `${pl} — 심화·글 모음`;
@@ -173,7 +186,7 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
       else p.set(key, String(v));
     }
     const s = p.toString();
-    return s ? `/blog/?${s}` : '/blog/';
+    return s ? `${blogBase}?${s}` : blogBase;
   }
 
   function applyMergeLinks() {
@@ -291,7 +304,7 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
           parts.push(`<span class="blog-filter-chip">${categoryLabels[state.category]}</span>`);
         }
         chips.innerHTML = parts.join(' ');
-        countFilter.textContent = `${n}개`;
+        countFilter.textContent = isEn ? `${n} posts` : `${n}개`;
       }
     }
 
@@ -301,12 +314,16 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
       grid.classList.toggle('is-grid-empty', empty);
       if (noHint) {
         if (empty && ql) {
-          noHint.innerHTML = `이 검색어에 맞는 글이 없습니다. 다른 키워드를 써 보시거나 <a href="/blog/" class="js-blog-merge" data-blog-merge='${JSON.stringify({ q: null })}'>검색 지우기</a> 후 목록을 둘러보세요.`;
+          noHint.innerHTML = isEn
+            ? `No posts match this keyword. Try a different search or <a href="${blogBase}" class="js-blog-merge" data-blog-merge='${JSON.stringify({ q: null })}'>clear search</a>.`
+            : `이 검색어에 맞는 글이 없습니다. 다른 키워드를 써 보시거나 <a href="${blogBase}" class="js-blog-merge" data-blog-merge='${JSON.stringify({ q: null })}'>검색 지우기</a> 후 목록을 둘러보세요.`;
           noHint.hidden = false;
           applyMergeLinks();
         } else if (empty && state.pillar && pillarLabels[state.pillar]) {
           const id = state.pillar;
-          noHint.innerHTML = `이 영역의 심화 글·FAQ는 순차적으로 올릴 예정입니다. <a href="/procedures/#${id}">${pillarLabels[state.pillar]} 시술 안내 보기</a>`;
+          noHint.innerHTML = isEn
+            ? `In-depth posts for this area are being added. <a href="${proceduresBase}#${id}">View ${pillarLabels[state.pillar]} procedures</a>`
+            : `이 영역의 심화 글·FAQ는 순차적으로 올릴 예정입니다. <a href="${proceduresBase}#${id}">${pillarLabels[state.pillar]} 시술 안내 보기</a>`;
           noHint.hidden = false;
         } else {
           noHint.innerHTML = '';
@@ -647,7 +664,7 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
       const badge = card.querySelector('[data-blog-card-views]');
       if (!slug || !badge) return;
       const n = map.get(slug) ?? 0;
-      badge.textContent = `조회 ${formatViewCount(n)}`;
+      badge.textContent = `${formatViewCount(n)} views`;
     });
   }
 

@@ -1,3 +1,5 @@
+import { verifyTurnstile } from '../lib/turnstile';
+
 async function safeJson(response: Response) {
   const text = await response.text();
   if (!text) return null;
@@ -72,11 +74,22 @@ export const onRequestPost = async (context: { request: Request; env: Record<str
     return jsonResponse({ error: 'Server misconfigured.' }, 500);
   }
 
+  const ip = request.headers.get('CF-Connecting-IP') ?? undefined;
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
-  const slug = String(body?.slug ?? '').trim().slice(0, 512);
-  const reportType = String(body?.report_type ?? '').trim();
-  const description = String(body?.description ?? '').trim().slice(0, 4000);
-  const reporterEmailRaw = String(body?.reporter_email ?? '').trim().slice(0, 320);
+  if (!body || typeof body !== 'object') {
+    return jsonResponse({ error: '요청 본문이 필요합니다.' }, 400);
+  }
+
+  const tsToken = String(body['cf-turnstile-response'] ?? '');
+  const tsOk = await verifyTurnstile(tsToken, String(env.TURNSTILE_SECRET_KEY ?? ''), ip);
+  if (!tsOk) {
+    return jsonResponse({ error: '보안 검증 실패' }, 403);
+  }
+
+  const slug = String(body.slug ?? '').trim().slice(0, 512);
+  const reportType = String(body.report_type ?? '').trim();
+  const description = String(body.description ?? '').trim().slice(0, 4000);
+  const reporterEmailRaw = String(body.reporter_email ?? '').trim().slice(0, 320);
 
   if (!slug || slug.length > 400 || !SLUG_RE.test(slug)) {
     return jsonResponse({ error: '유효하지 않은 글 경로입니다.' }, 400);

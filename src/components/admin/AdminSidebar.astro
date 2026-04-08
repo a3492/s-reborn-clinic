@@ -25,6 +25,7 @@ const sections: NavSection[] = [
       { href: '/admin/notifications', label: '알림 센터' },
       { href: '/admin/posts', label: '글 관리' },
       { href: '/admin/templates', label: '글 템플릿' },
+      { href: '/admin/glossary', label: '용어 사전' },
       { href: '/admin/calendar', label: '발행 캘린더' },
       { href: '/admin/consultations', label: 'AI 상담 위자드' },
       { href: '/admin/consults', label: '상담 요청 (구)' },
@@ -35,6 +36,7 @@ const sections: NavSection[] = [
     label: 'Assets & Config',
     items: [
       { href: '/admin/media', label: '미디어' },
+      { href: '/admin/audit', label: '감사 로그', requiresOwner: true },
       { href: '/admin/settings', label: '설정', requiresOwner: true },
       { href: '/admin/pipeline', label: 'Pipeline', requiresOwner: true },
     ],
@@ -42,12 +44,19 @@ const sections: NavSection[] = [
 ];
 ---
 
-<button class="admin-sidebar-toggle" data-admin-sidebar-toggle aria-label="메뉴 열기/닫기">
+<button
+  type="button"
+  class="admin-sidebar-toggle"
+  data-admin-sidebar-toggle
+  aria-label="메뉴 열기/닫기"
+  aria-expanded="false"
+  aria-controls="admin-sidebar-nav"
+>
   <span></span><span></span><span></span>
 </button>
 <div class="admin-sidebar-backdrop" data-admin-sidebar-backdrop></div>
 
-<aside class="admin-sidebar" data-admin-sidebar>
+<aside class="admin-sidebar" data-admin-sidebar id="admin-sidebar-nav">
   <a href="/admin" class="admin-brand">
     <span class="admin-brand-kicker">Admin</span>
     <span class="admin-brand-title">에스리본 클리닉</span>
@@ -94,10 +103,12 @@ const sections: NavSection[] = [
 
   const open = () => {
     body.classList.add('sidebar-open');
+    sidebar?.classList.add('open');
     toggle?.setAttribute('aria-expanded', 'true');
   };
   const close = () => {
     body.classList.remove('sidebar-open');
+    sidebar?.classList.remove('open');
     toggle?.setAttribute('aria-expanded', 'false');
   };
 
@@ -108,7 +119,7 @@ const sections: NavSection[] = [
 
   sidebar?.querySelectorAll('.admin-nav-link').forEach((link) => {
     link.addEventListener('click', () => {
-      if (window.innerWidth <= 1080) close();
+      if (window.matchMedia('(max-width: 768px)').matches) close();
     });
   });
 </script>

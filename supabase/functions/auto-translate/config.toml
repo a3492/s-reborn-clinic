@@ -1,0 +1,3 @@
+# service_role JWT로 호출 — 관리자 어드민에서만 트리거
+[functions.auto-translate]
+verify_jwt = true

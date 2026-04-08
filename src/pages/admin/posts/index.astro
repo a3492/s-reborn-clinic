@@ -3,6 +3,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { CATEGORIES } from '../../../consts';
 
 const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
+const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label]));
 ---
 
 <AdminLayout
@@ -79,8 +80,9 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
 
     <p class="admin-inline-note" data-admin-posts-message hidden></p>
 
+    <div class="admin-posts-list-root">
     <div class="admin-table-wrap">
-      <table class="admin-table">
+      <table class="admin-table admin-posts-table-desktop">
         <thead>
           <tr>
             <th class="admin-th-check">
@@ -120,6 +122,8 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
           </tr>
         </tbody>
       </table>
+    </div>
+    <div class="admin-mobile-cards" data-admin-posts-mobile></div>
     </div>
     <p class="admin-inline-note" data-admin-toggle-message hidden></p>
   </div>
@@ -254,9 +258,93 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
       font-size: 0.95rem;
       vertical-align: middle;
     }
+
+    .admin-mobile-cards {
+      display: none;
+    }
+
+    @media (max-width: 768px) {
+      .admin-posts-list-root .admin-posts-table-desktop {
+        display: none;
+      }
+
+      .admin-mobile-cards {
+        display: block;
+      }
+
+      .admin-mobile-card {
+        border: 1px solid var(--rule);
+        border-radius: 14px;
+        background: var(--admin-surface, var(--surface));
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+      }
+
+      .admin-mobile-card:last-child {
+        margin-bottom: 0;
+      }
+
+      .admin-mobile-card-title {
+        margin: 0 0 0.5rem;
+        font-size: 0.95rem;
+        font-weight: 700;
+        line-height: 1.35;
+        color: var(--text);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .admin-mobile-card-title a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .admin-mobile-card-title a:hover {
+        text-decoration: underline;
+      }
+
+      .admin-mobile-card-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        align-items: center;
+        margin-bottom: 0.45rem;
+      }
+
+      .admin-mobile-card-cat {
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 0.2rem 0.5rem;
+        border-radius: 999px;
+        background: var(--admin-surface-2, var(--bg2));
+        color: var(--admin-text-2);
+        border: 1px solid var(--admin-border);
+      }
+
+      .admin-mobile-card-date {
+        margin: 0 0 0.75rem;
+        font-size: 0.8rem;
+        color: var(--admin-text-3);
+      }
+
+      .admin-mobile-card-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .admin-mobile-card-empty {
+        margin: 0;
+        padding: 1.25rem 0;
+        text-align: center;
+        color: var(--admin-text-3);
+        font-size: 0.9rem;
+      }
+    }
   </style>
 
-  <script>
+  <script define:vars={{ categoryLabels }}>
     import { createClient } from '@supabase/supabase-js';
     import { fetchReactionTotalsBySlugs } from '../../../lib/blog-post-reactions';
     import { fetchViewCountsMap } from '../../../lib/blog-post-views';
@@ -512,11 +600,54 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
       });
     };
 
+    const mobileRoot = document.querySelector('[data-admin-posts-mobile]');
+
+    const categoryLabel = (id) => {
+      if (!id) return '';
+      const map = /** @type {Record<string, string>} */ (categoryLabels);
+      return map[id] ?? id;
+    };
+
+    const renderMobileCards = (rows, latestJobs) => {
+      if (!mobileRoot) return;
+      if (!rows.length) {
+        mobileRoot.innerHTML = '<p class="admin-mobile-card-empty">조건에 맞는 글이 없습니다.</p>';
+        return;
+      }
+
+      mobileRoot.innerHTML = rows
+        .map((row) => {
+          const latestJob = latestJobs.get(row.id);
+          const jobLine = latestJob
+            ? `${latestJob.status} · ${formatDate(latestJob.created_at)}`
+            : '배포 이력 없음';
+          const cat = categoryLabel(row.category);
+          const editHref = `/admin/posts/edit?slug=${encodeURIComponent(row.slug)}`;
+          const isPublished = row.status === 'published';
+          const toggleLabel = isPublished ? '비공개' : '발행';
+          const toggleClass = isPublished ? 'admin-btn admin-btn-sm danger' : 'admin-btn admin-btn-sm primary';
+          return `<article class="admin-mobile-card" data-post-slug="${escapeHtml(row.slug)}" data-post-status="${escapeHtml(row.status)}">
+  <h3 class="admin-mobile-card-title"><a href="${escapeHtml(editHref)}">${escapeHtml(row.title)}</a></h3>
+  <div class="admin-mobile-card-badges">
+    <span class="admin-mobile-card-cat">${escapeHtml(cat || '-')}</span>
+    <span class="admin-status ${escapeHtml(row.status)}">${escapeHtml(row.status)}</span>
+  </div>
+  <p class="admin-mobile-card-date">발행 ${formatDate(row.published_at)} · 최근 작업 ${escapeHtml(jobLine)}</p>
+  <div class="admin-mobile-card-actions">
+    <a class="admin-btn admin-btn-sm" href="${escapeHtml(editHref)}">편집</a>
+    <button type="button" class="${escapeHtml(toggleClass)}" data-toggle-slug="${escapeHtml(row.slug)}" data-toggle-status="${escapeHtml(row.status)}">${escapeHtml(toggleLabel)}</button>
+  </div>
+</article>`;
+        })
+        .join('');
+    };
+
     const renderRows = (rows, latestJobs, reactionTotals, viewCounts, openReportCounts) => {
       if (!tbody) return;
       lastRows = rows;
       if (!rows.length) {
         tbody.innerHTML = '<tr><td colspan="11">조건에 맞는 글이 없습니다.</td></tr>';
+        renderMobileCards([], latestJobs);
         syncSelectAllState();
         updateBulkUi();
         return;
@@ -584,6 +715,7 @@ const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
         })
         .join('');
 
+      renderMobileCards(rows, latestJobs);
       syncSelectAllState();
       updateBulkUi();
     };

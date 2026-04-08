@@ -9,6 +9,10 @@ const blog = defineCollection({
 		.object({
 			title: z.string(),
 			description: z.string(),
+			/** English translation of the title — injected by translate-posts script */
+			title_en: z.string().optional(),
+			/** English translation of the description — injected by translate-posts script */
+			description_en: z.string().optional(),
 			date: z.coerce.date(),
 			/** 시술 안내 4축과 매칭 — 심화·FAQ 등 영역별 필터용 (선택) */
 			pillar: z.enum(['ebd', 'injection', 'oral', 'topical']).optional(),

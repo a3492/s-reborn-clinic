@@ -608,8 +608,11 @@ const langSwitchHref = getLangSwitchHref(currentPath, locale);
       var btn = document.querySelector('[data-theme-toggle]');
       if (!btn) return;
       var dark = current() === 'dark';
+      var isEn = document.documentElement.lang === 'en';
       btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
-      btn.setAttribute('aria-label', dark ? '라이트 모드로 전환' : '다크 모드로 전환');
+      btn.setAttribute('aria-label', dark
+        ? (isEn ? 'Switch to light mode' : '라이트 모드로 전환')
+        : (isEn ? 'Switch to dark mode' : '다크 모드로 전환'));
     }
     document.querySelector('[data-theme-toggle]')?.addEventListener('click', function () {
       apply(current() === 'dark' ? 'light' : 'dark');
@@ -638,12 +641,13 @@ const langSwitchHref = getLangSwitchHref(currentPath, locale);
 
   function displayName(u: User) {
     const m = u.user_metadata || {};
+    const isEn = document.documentElement.lang === 'en';
     return (
       (m.full_name as string) ||
       (m.name as string) ||
       (m.preferred_username as string) ||
       u.email?.split('@')[0] ||
-      '사용자'
+      (isEn ? 'User' : '사용자')
     );
   }
 
@@ -672,7 +676,7 @@ const langSwitchHref = getLangSwitchHref(currentPath, locale);
     const url = pickAvatarUrl(user);
     if (avatar && url) {
       avatar.src = url;
-      avatar.alt = `${nm} 프로필`;
+      avatar.alt = document.documentElement.lang === 'en' ? `${nm} profile` : `${nm} 프로필`;
       avatar.removeAttribute('hidden');
       avatarFb?.setAttribute('hidden', '');
     } else {

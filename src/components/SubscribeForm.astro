@@ -2,9 +2,12 @@
 interface Props {
   source?: string;
   heading?: string;
+  /** 미전달 시 `PUBLIC_TURNSTILE_SITE_KEY` */
+  turnstileSiteKey?: string;
 }
 
-const { source = 'blog', heading = '새 글 알림 받기' } = Astro.props;
+const { source = 'blog', heading = '새 글 알림 받기', turnstileSiteKey: turnstileSiteKeyProp } = Astro.props;
+const turnstileSiteKey = (turnstileSiteKeyProp ?? import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '').trim();
 ---
 
 <section class="subscribe-form-card" aria-labelledby="subscribe-form-heading">
@@ -25,11 +28,33 @@ const { source = 'blog', heading = '새 글 알림 받기' } = Astro.props;
       />
       <button type="submit" class="subscribe-form-btn">구독하기</button>
     </div>
+    {turnstileSiteKey && (
+      <div class="subscribe-form-turnstile">
+        <div
+          class="cf-turnstile"
+          data-sitekey={turnstileSiteKey}
+          data-theme="auto"
+          data-callback="onTurnstileSubscribe"
+        />
+      </div>
+    )}
     <p class="subscribe-form-msg" data-subscribe-msg role="status" aria-live="polite"></p>
   </form>
 </section>
 
 <script>
+  declare global {
+    interface Window {
+      __srebornTs?: { c: string; r: string; s: string };
+      onTurnstileSubscribe?: (t: string) => void;
+    }
+  }
+
+  window.__srebornTs = window.__srebornTs || { c: '', r: '', s: '' };
+  window.onTurnstileSubscribe = function (t: string) {
+    window.__srebornTs!.s = t;
+  };
+
   document.querySelectorAll<HTMLFormElement>('[data-subscribe-form]').forEach((form) => {
     const msg = form.querySelector('[data-subscribe-msg]');
     const source = form.dataset.source || 'blog';
@@ -46,10 +71,11 @@ const { source = 'blog', heading = '새 글 알림 받기' } = Astro.props;
       const btn = form.querySelector<HTMLButtonElement>('button[type="submit"]');
       if (btn) btn.disabled = true;
       try {
+        const tsToken = window.__srebornTs?.s ?? '';
         const res = await fetch('/api/subscribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, source }),
+          body: JSON.stringify({ email, source, 'cf-turnstile-response': tsToken }),
         });
         const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
         if (msg) {
@@ -59,6 +85,10 @@ const { source = 'blog', heading = '새 글 알림 받기' } = Astro.props;
         }
         if (res.ok && data.ok) {
           globalThis.gtag?.('event', 'subscribe', { source });
+          if (window.__srebornTs) window.__srebornTs.s = '';
+          const tsEl = form.querySelector('.cf-turnstile');
+          const turnstileApi = (window as unknown as { turnstile?: { reset?: (el: Element) => void } }).turnstile;
+          if (tsEl && turnstileApi?.reset) turnstileApi.reset(tsEl);
         }
       } catch {
         if (msg) msg.textContent = '네트워크 오류가 발생했습니다.';
@@ -130,6 +160,12 @@ const { source = 'blog', heading = '새 글 알림 받기' } = Astro.props;
   .subscribe-form-btn:disabled {
     opacity: 0.65;
     cursor: wait;
+  }
+
+  .subscribe-form-turnstile {
+    margin: 0.65rem 0 0;
+    display: flex;
+    justify-content: flex-start;
   }
 
   .subscribe-form-msg {

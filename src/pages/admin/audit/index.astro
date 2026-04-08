@@ -1,0 +1,590 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+
+const ACTION_OPTIONS: { value: string; label: string }[] = [
+  { value: '', label: '전체 액션' },
+  { value: 'post_published', label: '글 발행' },
+  { value: 'post_publish_failed', label: '발행 실패' },
+  { value: 'post_updated', label: '글 수정' },
+  { value: 'post_created', label: '글 생성' },
+  { value: 'settings_updated', label: '설정 변경' },
+  { value: 'media_asset_created', label: '미디어 등록' },
+  { value: 'media_asset_archived', label: '미디어 아카이브' },
+  { value: 'media_asset_restored', label: '미디어 복구' },
+];
+
+const DATE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'all', label: '전체' },
+  { value: 'today', label: '오늘' },
+  { value: 'week', label: '이번 주' },
+  { value: 'month', label: '이번 달' },
+];
+---
+
+<AdminLayout
+  title="감사 로그"
+  pageTitle="감사 로그"
+  pageDescription="발행·수정·설정·미디어 변경 이력을 조회합니다. 로그는 삭제할 수 없습니다."
+  status="Audit"
+  requiredRole="owner"
+>
+  <div class="admin-grid">
+    <section class="admin-card pad-lg span-12">
+      <div class="admin-actions-row" style="margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+        <div>
+          <h2 class="admin-section-title" style="margin: 0;">필터</h2>
+          <p class="admin-section-desc" style="margin: 0.35rem 0 0;">
+            최근 100건까지 불러온 뒤 조건에 맞게 표시합니다.
+          </p>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+          <label class="admin-label" style="margin: 0; display: flex; align-items: center; gap: 0.35rem;">
+            <span style="font-size: 0.8rem; color: var(--admin-t2, #6b7280);">액션</span>
+            <select class="admin-input" style="min-width: 9rem; padding: 0.35rem 0.5rem;" data-audit-filter-action>
+              {ACTION_OPTIONS.map((o) => (
+                <option value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </label>
+          <label class="admin-label" style="margin: 0; display: flex; align-items: center; gap: 0.35rem;">
+            <span style="font-size: 0.8rem; color: var(--admin-t2, #6b7280);">기간</span>
+            <select class="admin-input" style="min-width: 7rem; padding: 0.35rem 0.5rem;" data-audit-filter-date>
+              {DATE_OPTIONS.map((o) => (
+                <option value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </label>
+          <label class="admin-label" style="margin: 0; display: flex; align-items: center; gap: 0.35rem;">
+            <span style="font-size: 0.8rem; color: var(--admin-t2, #6b7280);">실행자</span>
+            <select class="admin-input" style="min-width: 11rem; padding: 0.35rem 0.5rem;" data-audit-filter-actor>
+              <option value="">전체</option>
+            </select>
+          </label>
+          <button type="button" class="admin-btn admin-btn-sm primary" data-audit-apply>적용</button>
+          <button type="button" class="admin-btn admin-btn-sm" data-audit-csv>CSV 다운로드</button>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 1rem;">
+        <span style="font-size: 0.85rem; color: var(--admin-t2, #6b7280);">보기</span>
+        <div class="admin-segment" data-audit-view-toggle>
+          <button type="button" class="admin-btn admin-btn-sm is-active" data-audit-view="table">표</button>
+          <button type="button" class="admin-btn admin-btn-sm" data-audit-view="timeline">타임라인</button>
+        </div>
+      </div>
+
+      <p class="admin-inline-note" data-audit-msg hidden></p>
+
+      <div data-audit-table-wrap>
+        <div class="admin-table-wrap" style="overflow-x: auto;">
+          <table class="admin-table" style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+            <thead>
+              <tr>
+                <th style="text-align: left; padding: 0.5rem; white-space: nowrap;">시각</th>
+                <th style="text-align: left; padding: 0.5rem;">액션</th>
+                <th style="text-align: left; padding: 0.5rem;">대상</th>
+                <th style="text-align: left; padding: 0.5rem;">실행자</th>
+                <th style="text-align: left; padding: 0.5rem;">상세</th>
+              </tr>
+            </thead>
+            <tbody data-audit-tbody>
+              <tr>
+                <td colspan="5" style="padding: 1rem;">세션 확인 후 목록을 불러옵니다.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div data-audit-timeline-wrap hidden>
+        <ul class="audit-timeline" data-audit-timeline></ul>
+      </div>
+    </section>
+  </div>
+
+  <style>
+    .admin-segment {
+      display: inline-flex;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--admin-hairline, #e5e7eb);
+    }
+    .admin-segment .admin-btn {
+      border-radius: 0;
+      border: none;
+      margin: 0;
+    }
+    .admin-segment .admin-btn.is-active {
+      background: var(--admin-accent, #1d4ed8);
+      color: #fff;
+    }
+    .audit-timeline {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      border-left: 2px solid var(--admin-hairline, #e5e7eb);
+      margin-left: 0.5rem;
+    }
+    .audit-timeline li {
+      position: relative;
+      padding: 0.65rem 0 0.65rem 1.25rem;
+      margin: 0;
+    }
+    .audit-timeline li::before {
+      content: '';
+      position: absolute;
+      left: -5px;
+      top: 0.85rem;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--admin-accent, #1d4ed8);
+    }
+    .audit-timeline time {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--admin-t2, #6b7280);
+    }
+    .audit-timeline .audit-tl-action {
+      font-weight: 600;
+      margin: 0.15rem 0;
+    }
+    .audit-json-pre {
+      margin: 0.35rem 0 0;
+      padding: 0.5rem;
+      font-size: 0.75rem;
+      max-height: 12rem;
+      overflow: auto;
+      background: var(--admin-surface-2, #f9fafb);
+      border-radius: 6px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    summary.audit-json-summary {
+      cursor: pointer;
+      font-size: 0.8rem;
+      color: var(--admin-t2, #6b7280);
+      user-select: none;
+    }
+  </style>
+
+  <script>
+    import type { SupabaseClient } from '@supabase/supabase-js';
+
+    type AuditRow = {
+      id: string;
+      action: string;
+      resource_type: string;
+      resource_id: string | null;
+      actor_id: string | null;
+      after_json: Record<string, unknown> | null;
+      created_at: string;
+    };
+
+    type ProfileRow = { id: string; email: string | null; display_name: string | null };
+
+    const ACTION_LABELS: Record<string, string> = {
+      post_published: '글 발행',
+      post_publish_failed: '발행 실패',
+      post_updated: '글 수정',
+      post_created: '글 생성',
+      settings_updated: '설정 변경',
+      media_asset_created: '미디어 등록',
+      media_asset_archived: '미디어 아카이브',
+      media_asset_restored: '미디어 복구',
+    };
+
+    const csvEscape = (v: unknown) => {
+      const s = String(v ?? '');
+      if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+
+    const seoulYmd = (d: Date) =>
+      new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(d);
+
+    const seoulWeekdayMon0 = (d: Date) => {
+      const map: Record<string, number> = { Sun: 6, Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5 };
+      const w = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Seoul', weekday: 'short' }).format(d);
+      return map[w] ?? 0;
+    };
+
+    const addDaysYmd = (ymd: string, delta: number) => {
+      const [y, m, d] = ymd.split('-').map(Number);
+      const base = new Date(Date.UTC(y, m - 1, d));
+      base.setUTCDate(base.getUTCDate() + delta);
+      const y2 = base.getUTCFullYear();
+      const m2 = String(base.getUTCMonth() + 1).padStart(2, '0');
+      const d2 = String(base.getUTCDate()).padStart(2, '0');
+      return `${y2}-${m2}-${d2}`;
+    };
+
+    const rangeStartIso = (range: string): string | null => {
+      const now = new Date();
+      if (range === 'all') return null;
+      if (range === 'today') {
+        const ymd = seoulYmd(now);
+        return `${ymd}T00:00:00.000+09:00`;
+      }
+      if (range === 'week') {
+        const today = seoulYmd(now);
+        const mon0 = seoulWeekdayMon0(now);
+        const monday = addDaysYmd(today, -mon0);
+        return `${monday}T00:00:00.000+09:00`;
+      }
+      if (range === 'month') {
+        const ymd = seoulYmd(now);
+        const [y, m] = ymd.split('-');
+        return `${y}-${m}-01T00:00:00.000+09:00`;
+      }
+      return null;
+    };
+
+    const formatRelativeKo = (iso: string) => {
+      const t = new Date(iso).getTime();
+      const now = Date.now();
+      const sec = Math.floor((now - t) / 1000);
+      if (sec < 10) return '방금 전';
+      if (sec < 60) return `${sec}초 전`;
+      const min = Math.floor(sec / 60);
+      if (min < 60) return `${min}분 전`;
+      const hr = Math.floor(min / 60);
+      if (hr < 24) return `${hr}시간 전`;
+      const day = Math.floor(hr / 24);
+      if (day === 1) return '어제';
+      if (day < 7) return `${day}일 전`;
+      return new Intl.DateTimeFormat('ko-KR', {
+        timeZone: 'Asia/Seoul',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(new Date(iso));
+    };
+
+    const slugFromAfter = (after: Record<string, unknown> | null): string => {
+      if (!after || typeof after !== 'object') return '';
+      const s = after.slug;
+      return typeof s === 'string' ? s.trim() : '';
+    };
+
+    const targetLabelAndHref = (
+      row: AuditRow,
+      slugMap: Map<string, string>,
+    ): { label: string; href: string | null } => {
+      const slug =
+        slugFromAfter(row.after_json as Record<string, unknown> | null) ||
+        (row.resource_type === 'post' && row.resource_id ? slugMap.get(row.resource_id) || '' : '');
+
+      if (row.resource_type === 'post' && slug) {
+        return { label: slug, href: `/admin/posts/edit/?slug=${encodeURIComponent(slug)}` };
+      }
+      if (row.resource_type === 'media_asset') {
+        const fn = row.after_json && typeof row.after_json.file_name === 'string' ? row.after_json.file_name : '미디어';
+        return { label: fn, href: '/admin/media/' };
+      }
+      if (row.resource_type === 'site_settings') {
+        return { label: '사이트 설정', href: '/admin/settings/' };
+      }
+      return { label: row.resource_type || '—', href: null };
+    };
+
+    const actorLabel = (actorMap: Map<string, string>, actorId: string | null) => {
+      if (!actorId) return '시스템';
+      return actorMap.get(actorId) || '알 수 없음';
+    };
+
+    let cachedRows: AuditRow[] = [];
+    let cachedFiltered: AuditRow[] = [];
+    let actorMapGlobal = new Map<string, string>();
+    let slugMapGlobal = new Map<string, string>();
+    let currentView: 'table' | 'timeline' = 'table';
+
+    const tbody = document.querySelector('[data-audit-tbody]');
+    const timelineEl = document.querySelector('[data-audit-timeline]');
+    const tableWrap = document.querySelector('[data-audit-table-wrap]');
+    const timelineWrap = document.querySelector('[data-audit-timeline-wrap]');
+    const msg = document.querySelector('[data-audit-msg]');
+    const selAction = document.querySelector('[data-audit-filter-action]') as HTMLSelectElement | null;
+    const selDate = document.querySelector('[data-audit-filter-date]') as HTMLSelectElement | null;
+    const selActor = document.querySelector('[data-audit-filter-actor]') as HTMLSelectElement | null;
+
+    const setMsg = (text: string, kind: 'error' | 'info' | '') => {
+      if (!msg) return;
+      if (!text) {
+        msg.hidden = true;
+        msg.textContent = '';
+        msg.removeAttribute('data-state');
+        return;
+      }
+      msg.hidden = false;
+      msg.textContent = text;
+      if (kind) msg.dataset.state = kind;
+      else msg.removeAttribute('data-state');
+    };
+
+    const fillActorSelect = (profiles: ProfileRow[]) => {
+      if (!selActor) return;
+      const keep = selActor.value;
+      while (selActor.options.length > 1) selActor.remove(1);
+      for (const p of profiles) {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        const em = (p.email || '').trim() || p.id;
+        opt.textContent = p.display_name ? `${p.display_name} (${em})` : em;
+        selActor.appendChild(opt);
+      }
+      if (keep && [...selActor.options].some((o) => o.value === keep)) selActor.value = keep;
+    };
+
+    async function buildSlugMap(supabase: SupabaseClient, rows: AuditRow[]) {
+      const ids = new Set<string>();
+      for (const r of rows) {
+        if (r.resource_type !== 'post' || !r.resource_id) continue;
+        if (slugFromAfter(r.after_json as Record<string, unknown> | null)) continue;
+        ids.add(r.resource_id);
+      }
+      if (!ids.size) return new Map<string, string>();
+      const { data, error } = await supabase.from('posts').select('id, slug').in('id', [...ids]);
+      if (error || !data) return new Map<string, string>();
+      const m = new Map<string, string>();
+      for (const p of data as { id: string; slug: string }[]) {
+        if (p.id && p.slug) m.set(p.id, p.slug);
+      }
+      return m;
+    }
+
+    const applyFilters = (): AuditRow[] => {
+      const action = selAction?.value?.trim() || '';
+      const range = selDate?.value || 'all';
+      const actor = selActor?.value?.trim() || '';
+      const startIso = rangeStartIso(range);
+
+      let list = [...cachedRows];
+      if (startIso) {
+        const t0 = new Date(startIso).getTime();
+        list = list.filter((r) => new Date(r.created_at).getTime() >= t0);
+      }
+      if (action) list = list.filter((r) => r.action === action);
+      if (actor) list = list.filter((r) => r.actor_id === actor);
+      return list;
+    };
+
+    const renderDetailsCell = (row: AuditRow): HTMLTableCellElement => {
+      const td = document.createElement('td');
+      td.style.padding = '0.5rem';
+      td.style.verticalAlign = 'top';
+      const after = row.after_json;
+      if (after == null || (typeof after === 'object' && Object.keys(after).length === 0)) {
+        td.textContent = '—';
+        return td;
+      }
+      const details = document.createElement('details');
+      const summary = document.createElement('summary');
+      summary.className = 'audit-json-summary';
+      summary.textContent = 'after_json 보기';
+      const pre = document.createElement('pre');
+      pre.className = 'audit-json-pre';
+      pre.textContent = JSON.stringify(after, null, 2);
+      details.appendChild(summary);
+      details.appendChild(pre);
+      td.appendChild(details);
+      return td;
+    };
+
+    const renderTable = (rows: AuditRow[]) => {
+      if (!tbody) return;
+      tbody.textContent = '';
+      if (!rows.length) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 5;
+        td.style.padding = '1rem';
+        td.textContent = '조건에 맞는 로그가 없습니다.';
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+      }
+      for (const row of rows) {
+        const tr = document.createElement('tr');
+        const { label, href } = targetLabelAndHref(row, slugMapGlobal);
+        const act = ACTION_LABELS[row.action] || row.action;
+        const actor = actorLabel(actorMapGlobal, row.actor_id);
+
+        const tdTime = document.createElement('td');
+        tdTime.style.padding = '0.5rem';
+        tdTime.style.whiteSpace = 'nowrap';
+        tdTime.textContent = formatRelativeKo(row.created_at);
+
+        const tdAction = document.createElement('td');
+        tdAction.style.padding = '0.5rem';
+        tdAction.textContent = act;
+
+        const tdTarget = document.createElement('td');
+        tdTarget.style.padding = '0.5rem';
+        if (href) {
+          const a = document.createElement('a');
+          a.className = 'admin-table-link';
+          a.href = href;
+          a.textContent = label;
+          tdTarget.appendChild(a);
+        } else {
+          tdTarget.textContent = label;
+        }
+
+        const tdActor = document.createElement('td');
+        tdActor.style.padding = '0.5rem';
+        tdActor.textContent = actor;
+
+        tr.appendChild(tdTime);
+        tr.appendChild(tdAction);
+        tr.appendChild(tdTarget);
+        tr.appendChild(tdActor);
+        tr.appendChild(renderDetailsCell(row));
+        tbody.appendChild(tr);
+      }
+    };
+
+    const renderTimeline = (rows: AuditRow[]) => {
+      if (!timelineEl) return;
+      timelineEl.textContent = '';
+      if (!rows.length) {
+        const li = document.createElement('li');
+        li.textContent = '조건에 맞는 로그가 없습니다.';
+        timelineEl.appendChild(li);
+        return;
+      }
+      for (const row of rows) {
+        const li = document.createElement('li');
+        const time = document.createElement('time');
+        time.dateTime = row.created_at;
+        time.textContent = formatRelativeKo(row.created_at);
+
+        const spanAct = document.createElement('span');
+        spanAct.className = 'audit-tl-action';
+        spanAct.textContent = ACTION_LABELS[row.action] || row.action;
+
+        const { label, href } = targetLabelAndHref(row, slugMapGlobal);
+        const line = document.createElement('div');
+        if (href) {
+          const a = document.createElement('a');
+          a.className = 'admin-table-link';
+          a.href = href;
+          a.textContent = label;
+          line.appendChild(a);
+        } else {
+          line.textContent = label;
+        }
+
+        const sub = document.createElement('div');
+        sub.style.fontSize = '0.8rem';
+        sub.style.color = 'var(--admin-t2, #6b7280)';
+        sub.textContent = actorLabel(actorMapGlobal, row.actor_id);
+
+        li.appendChild(time);
+        li.appendChild(spanAct);
+        li.appendChild(line);
+        li.appendChild(sub);
+        timelineEl.appendChild(li);
+      }
+    };
+
+    const syncView = () => {
+      if (currentView === 'table') {
+        tableWrap?.removeAttribute('hidden');
+        timelineWrap?.setAttribute('hidden', '');
+        renderTable(cachedFiltered);
+      } else {
+        tableWrap?.setAttribute('hidden', '');
+        timelineWrap?.removeAttribute('hidden');
+        renderTimeline(cachedFiltered);
+      }
+    };
+
+    const runFilterAndRender = () => {
+      cachedFiltered = applyFilters();
+      syncView();
+    };
+
+    const downloadCsv = () => {
+      const rows = cachedFiltered;
+      const header = ['시각', '액션', 'slug', '실행자'];
+      const lines = [
+        header.map(csvEscape).join(','),
+        ...rows.map((l) => {
+          const slug =
+            slugFromAfter(l.after_json as Record<string, unknown> | null) ||
+            (l.resource_type === 'post' && l.resource_id ? slugMapGlobal.get(l.resource_id) || '' : '');
+          const act = ACTION_LABELS[l.action] || l.action;
+          const actor = actorLabel(actorMapGlobal, l.actor_id);
+          return [l.created_at, act, slug, actor].map(csvEscape).join(',');
+        }),
+      ];
+      const csv = '\uFEFF' + lines.join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `audit_logs_${seoulYmd(new Date())}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    };
+
+    document.addEventListener('admin:session-ready', async () => {
+      const supabase = (window as Window & { __adminSupabase?: SupabaseClient }).__adminSupabase;
+      if (!supabase) return;
+
+      setMsg('불러오는 중…', 'info');
+
+      const { data: profiles, error: pErr } = await supabase
+        .from('admin_profiles')
+        .select('id, email, display_name')
+        .order('email', { ascending: true });
+      if (pErr) {
+        setMsg(`실행자 목록 조회 실패: ${pErr.message}`, 'error');
+      } else {
+        fillActorSelect((profiles ?? []) as ProfileRow[]);
+        actorMapGlobal = new Map(
+          (profiles as ProfileRow[]).map((p) => {
+            const em = (p.email || '').trim();
+            const dn = (p.display_name || '').trim();
+            return [p.id, em || dn || '이메일 없음'];
+          }),
+        );
+      }
+
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) {
+        setMsg(`감사 로그를 불러오지 못했습니다: ${error.message}`, 'error');
+        cachedRows = [];
+        cachedFiltered = [];
+        renderTable([]);
+        return;
+      }
+
+      cachedRows = (data ?? []) as AuditRow[];
+      slugMapGlobal = await buildSlugMap(supabase, cachedRows);
+      setMsg('', '');
+      runFilterAndRender();
+    });
+
+    document.querySelector('[data-audit-apply]')?.addEventListener('click', () => runFilterAndRender());
+    document.querySelector('[data-audit-csv]')?.addEventListener('click', () => downloadCsv());
+
+    document.querySelector('[data-audit-view-toggle]')?.addEventListener('click', (e) => {
+      const t = (e.target as HTMLElement).closest('[data-audit-view]');
+      if (!t) return;
+      const v = t.getAttribute('data-audit-view');
+      if (v !== 'table' && v !== 'timeline') return;
+      currentView = v;
+      document.querySelectorAll('[data-audit-view]').forEach((b) => {
+        b.classList.toggle('is-active', b.getAttribute('data-audit-view') === v);
+      });
+      syncView();
+    });
+  </script>
+</AdminLayout>

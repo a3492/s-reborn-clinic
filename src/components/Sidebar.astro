@@ -4,15 +4,18 @@ import { CATEGORIES } from '../consts';
 import { ACADEMY_PUBLIC_PATH } from '../lib/academy-constants';
 import { BLOG_PILLAR_NAV } from '../data/blog-nav';
 import TagCloud from './TagCloud.astro';
+import type { Locale } from '../i18n';
 
 interface Props {
-  /** 블로그 목록에서 키워드 검색 중일 때 사이드 메뉴 전체 숨김 */
   blogSearchFocus?: boolean;
-  /** 태그 클라우드용 클리닉 블로그 글 목록 */
   tagCloudPosts?: CollectionEntry<'blog'>[];
+  locale?: Locale;
 }
 
-const { blogSearchFocus = false, tagCloudPosts = [] } = Astro.props;
+const { blogSearchFocus = false, tagCloudPosts = [], locale = 'ko' } = Astro.props;
+const isEn = locale === 'en';
+const blogBase = isEn ? '/en/blog/' : '/blog/';
+const proceduresBase = isEn ? '/en/procedures/' : '/procedures/';
 
 const showTagCloud =
   tagCloudPosts.length > 0 && tagCloudPosts.some((p) => (p.data.tags?.length ?? 0) > 0);
@@ -29,47 +32,45 @@ const lifestyleCats = CATEGORIES.filter((c) => LIFESTYLE_CATS.includes(c.id));
   id="blog-sidebar"
   hidden={blogSearchFocus}
   aria-hidden={blogSearchFocus ? 'true' : undefined}
-  aria-label="블로그 필터·글 유형·태그"
+  aria-label={isEn ? 'Blog filters · content type · tags' : '블로그 필터·글 유형·태그'}
 >
-  <!-- ── 트랙 탭 (전체 / 시술 정보 / 건강·라이프) ── -->
   <div class="sidebar-track-tabs">
     <a
       class="sidebar-track-tab js-blog-merge"
       data-blog-track=""
       data-blog-merge={JSON.stringify({ track: null, pillar: null, category: null })}
-      href="/blog/"
-    >전체</a>
+      href={blogBase}
+    >{isEn ? 'All' : '전체'}</a>
     <a
       class="sidebar-track-tab js-blog-merge"
       data-blog-track="procedures"
       data-blog-merge={JSON.stringify({ track: 'procedures', pillar: null, category: null })}
-      href="/blog/"
-    >시술 정보</a>
+      href={blogBase}
+    >{isEn ? 'Procedures' : '시술 정보'}</a>
     <a
       class="sidebar-track-tab js-blog-merge"
       data-blog-track="lifestyle"
       data-blog-merge={JSON.stringify({ track: 'lifestyle', pillar: null, category: null })}
-      href="/blog/"
-    >건강·라이프</a>
+      href={blogBase}
+    >{isEn ? 'Health & Life' : '건강·라이프'}</a>
   </div>
 
-  <!-- ── 시술 정보 트랙 섹션 ── -->
   <div class="sidebar-section" data-sidebar-track="procedures">
     <div class="sidebar-widget">
-      <h2 class="sidebar-title">시술 영역</h2>
+      <h2 class="sidebar-title">{isEn ? 'Treatment Area' : '시술 영역'}</h2>
       <ul class="sidebar-pillar-list">
         <li>
           <a
-            href="/blog/"
+            href={blogBase}
             class="sidebar-cat-link js-blog-merge"
             data-blog-pillar=""
             data-blog-merge={JSON.stringify({ pillar: null })}
-          ><span>영역 전체</span></a>
+          ><span>{isEn ? 'All Areas' : '영역 전체'}</span></a>
         </li>
         {BLOG_PILLAR_NAV.map((p) => (
           <li>
             <a
-              href="/blog/"
+              href={blogBase}
               class="sidebar-cat-link js-blog-merge"
               data-blog-pillar={p.id}
               data-blog-merge={JSON.stringify({ pillar: p.id })}
@@ -78,57 +79,56 @@ const lifestyleCats = CATEGORIES.filter((c) => LIFESTYLE_CATS.includes(c.id));
           </li>
         ))}
       </ul>
-      <a class="sidebar-procedures-link" href="/procedures/">시술 안내 →</a>
+      <a class="sidebar-procedures-link" href={proceduresBase}>{isEn ? 'Procedures guide →' : '시술 안내 →'}</a>
     </div>
 
     <div class="sidebar-widget">
-      <h2 class="sidebar-title">글 유형</h2>
+      <h2 class="sidebar-title">{isEn ? 'Post Type' : '글 유형'}</h2>
       <ul class="sidebar-cat-list">
         <li>
           <a
-            href="/blog/"
+            href={blogBase}
             class="sidebar-cat-link js-blog-merge"
             data-blog-cat=""
             data-blog-merge={JSON.stringify({ category: null })}
-          ><span>영역 전체</span></a>
+          ><span>{isEn ? 'All Types' : '영역 전체'}</span></a>
         </li>
         {proceduresCats.map((cat) => (
           <li>
             <a
-              href="/blog/"
+              href={blogBase}
               class="sidebar-cat-link js-blog-merge"
               data-blog-cat={cat.id}
               data-blog-merge={JSON.stringify({ category: cat.id })}
               title={cat.description}
-            ><span>{cat.label}</span></a>
+            ><span>{isEn ? (cat.labelEn ?? cat.label) : cat.label}</span></a>
           </li>
         ))}
       </ul>
     </div>
   </div>
 
-  <!-- ── 건강·라이프 트랙 섹션 ── -->
   <div class="sidebar-section" data-sidebar-track="lifestyle">
     <div class="sidebar-widget">
-      <h2 class="sidebar-title">글 유형</h2>
+      <h2 class="sidebar-title">{isEn ? 'Post Type' : '글 유형'}</h2>
       <ul class="sidebar-cat-list">
         <li>
           <a
-            href="/blog/"
+            href={blogBase}
             class="sidebar-cat-link js-blog-merge"
             data-blog-cat=""
             data-blog-merge={JSON.stringify({ category: null })}
-          ><span>영역 전체</span></a>
+          ><span>{isEn ? 'All Types' : '영역 전체'}</span></a>
         </li>
         {lifestyleCats.map((cat) => (
           <li>
             <a
-              href="/blog/"
+              href={blogBase}
               class="sidebar-cat-link js-blog-merge"
               data-blog-cat={cat.id}
               data-blog-merge={JSON.stringify({ category: cat.id })}
               title={cat.description}
-            ><span>{cat.label}</span></a>
+            ><span>{isEn ? (cat.labelEn ?? cat.label) : cat.label}</span></a>
           </li>
         ))}
       </ul>
@@ -138,16 +138,15 @@ const lifestyleCats = CATEGORIES.filter((c) => LIFESTYLE_CATS.includes(c.id));
   {
     showTagCloud && (
       <div class="sidebar-widget sidebar-tag-cloud">
-        <TagCloud variant="cloud" posts={tagCloudPosts} title="태그" />
+        <TagCloud variant="cloud" posts={tagCloudPosts} title={isEn ? 'Tags' : '태그'} />
       </div>
     )
   }
 
-  <!-- ── Doctor AI Academy 링크 ── -->
   <div class="sidebar-widget sidebar-academy">
     <h2 class="sidebar-title">Doctor AI Academy</h2>
-    <p class="sidebar-lead">의료진용 AI 시리즈 (별도 경로)</p>
-    <a class="sidebar-procedures-link" href={`${ACADEMY_PUBLIC_PATH}/`}>Academy 허브로 이동 →</a>
+    <p class="sidebar-lead">{isEn ? 'AI series for medical professionals' : '의료진용 AI 시리즈 (별도 경로)'}</p>
+    <a class="sidebar-procedures-link" href={`${ACADEMY_PUBLIC_PATH}/`}>{isEn ? 'Go to Academy hub →' : 'Academy 허브로 이동 →'}</a>
   </div>
 </aside>
 

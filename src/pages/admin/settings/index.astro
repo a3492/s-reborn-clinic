@@ -220,6 +220,24 @@ const featuredPickerJson = JSON.stringify(recentClinicPostsForFeatured).replace(
   </section>
 
   <section class="admin-card pad-lg" style="margin-top: 1.25rem;">
+    <div class="admin-actions-row">
+      <div>
+        <h2 class="admin-section-title">콘텐츠 백업</h2>
+        <p class="admin-section-desc">
+          Supabase의 <strong>발행됨(published)</strong> 글만 마크다운으로 묶어 ZIP을 받습니다. 초안·보관 글은 포함되지 않습니다. 글 수에 따라 <strong>약 10~30초</strong> 걸릴 수 있고, 완성된 ZIP을 한 번에 받습니다(스트리밍 없음).
+        </p>
+      </div>
+    </div>
+    <p class="admin-help" style="margin: 0.75rem 0 0.5rem;">
+      이 브라우저에서 마지막으로 보낸 시각: <span data-content-export-last>—</span>
+    </p>
+    <div class="admin-actions-row" style="align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+      <button type="button" class="admin-btn primary" data-content-export-btn>전체 콘텐츠보내기 (ZIP)</button>
+    </div>
+    <p class="admin-inline-note" data-content-export-msg hidden></p>
+  </section>
+
+  <section class="admin-card pad-lg" style="margin-top: 1.25rem;">
     <h2 class="admin-section-title">운영자 관리</h2>
     <p class="admin-section-desc">
       <code>admin_profiles</code>에 등록된 관리자입니다. 역할 변경과 프로필 삭제는 owner만 할 수 있습니다.
@@ -272,6 +290,10 @@ const featuredPickerJson = JSON.stringify(recentClinicPostsForFeatured).replace(
     const reportLastSent = document.querySelector('[data-report-last-sent]');
     const reportSendBtn = document.querySelector('[data-report-send]');
     const reportMessage = document.querySelector('[data-report-message]');
+    const contentExportBtn = document.querySelector('[data-content-export-btn]');
+    const contentExportLast = document.querySelector('[data-content-export-last]');
+    const contentExportMsg = document.querySelector('[data-content-export-msg]');
+    const CONTENT_EXPORT_LS = 'sreborn_content_export_last_at';
     const disclaimersPanelList = document.querySelector('[data-admin-disclaimers-list]');
     const disclaimersMessage = document.querySelector('[data-admin-disclaimers-message]');
     const disclaimersRefreshBtn = document.querySelector('[data-admin-disclaimers-refresh]');
@@ -690,6 +712,33 @@ const featuredPickerJson = JSON.stringify(recentClinicPostsForFeatured).replace(
       reportMessage.dataset.state = state;
     };
 
+    const setContentExportMessage = (text, state = 'info') => {
+      if (!contentExportMsg) return;
+      if (!text) {
+        contentExportMsg.hidden = true;
+        contentExportMsg.textContent = '';
+        contentExportMsg.removeAttribute('data-state');
+        return;
+      }
+      contentExportMsg.hidden = false;
+      contentExportMsg.textContent = text;
+      contentExportMsg.dataset.state = state;
+    };
+
+    const syncContentExportLast = () => {
+      if (!contentExportLast) return;
+      try {
+        const raw = localStorage.getItem(CONTENT_EXPORT_LS);
+        if (!raw) {
+          contentExportLast.textContent = '기록 없음';
+          return;
+        }
+        contentExportLast.textContent = formatDate(raw);
+      } catch {
+        contentExportLast.textContent = '기록 없음';
+      }
+    };
+
     const loadWeeklyReportPanel = async (sb) => {
       if (!sb) return;
       const uid = document.body.dataset.adminUserId || '';
@@ -810,6 +859,7 @@ const featuredPickerJson = JSON.stringify(recentClinicPostsForFeatured).replace(
         await loadOperators(supabase);
         await loadNewsletterPanel(supabase);
         await loadWeeklyReportPanel(supabase);
+        syncContentExportLast();
         await loadDisclaimers(supabase);
 
         disclaimersRefreshBtn?.addEventListener('click', () => loadDisclaimers(supabase));
@@ -924,6 +974,62 @@ const featuredPickerJson = JSON.stringify(recentClinicPostsForFeatured).replace(
             setNewsletterMessage(e instanceof Error ? e.message : '요청 실패', 'error');
           } finally {
             if (newsletterSendBtn instanceof HTMLButtonElement) newsletterSendBtn.disabled = false;
+          }
+        });
+
+        contentExportBtn?.addEventListener('click', async () => {
+          if (getCurrentRole() !== 'owner') {
+            setContentExportMessage('ZIP 백업은 owner만 사용할 수 있습니다.', 'error');
+            return;
+          }
+          if (!supabase) return;
+          setContentExportMessage('ZIP을 만드는 중입니다. 글 수에 따라 10~30초 정도 걸릴 수 있습니다…', 'info');
+          if (contentExportBtn instanceof HTMLButtonElement) contentExportBtn.disabled = true;
+          try {
+            const {
+              data: { session },
+            } = await supabase.auth.getSession();
+            if (!session?.access_token) {
+              setContentExportMessage('세션이 없습니다. 다시 로그인해 주세요.', 'error');
+              return;
+            }
+            const res = await fetch('/api/admin/export', {
+              headers: {
+                'X-Auth-Token': session.access_token,
+              },
+            });
+            if (!res.ok) {
+              const payload = await res.json().catch(() => ({}));
+              setContentExportMessage(
+                typeof payload?.error === 'string' ? payload.error : `다운로드 실패 (${res.status})`,
+                'error',
+              );
+              return;
+            }
+            const blob = await res.blob();
+            const cd = res.headers.get('Content-Disposition') || '';
+            const m = cd.match(/filename="([^"]+)"/i);
+            const name = m?.[1] || `s-reborn-blog-${new Date().toISOString().slice(0, 10)}.zip`;
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = name;
+            a.rel = 'noopener';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+            try {
+              localStorage.setItem(CONTENT_EXPORT_LS, new Date().toISOString());
+            } catch {
+              /* ignore */
+            }
+            syncContentExportLast();
+            setContentExportMessage('다운로드를 시작했습니다.', 'success');
+          } catch (e) {
+            setContentExportMessage(e instanceof Error ? e.message : '요청 실패', 'error');
+          } finally {
+            if (contentExportBtn instanceof HTMLButtonElement) contentExportBtn.disabled = false;
           }
         });
 

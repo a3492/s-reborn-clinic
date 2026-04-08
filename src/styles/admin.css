@@ -214,6 +214,7 @@ body.admin-shell {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 0.35rem;
   padding: 0.4rem 0.65rem;
   border: 1px solid var(--admin-border);
   border-radius: 10px;
@@ -225,6 +226,12 @@ body.admin-shell {
   letter-spacing: 0.02em;
   cursor: pointer;
   transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.admin-cp-open-icon {
+  flex-shrink: 0;
+  display: none;
+  color: var(--admin-text-2);
 }
 
 .admin-cp-open-btn:hover {
@@ -410,7 +417,7 @@ body.admin-shell {
   align-items: center;
   justify-content: center;
   gap: 0.45rem;
-  min-height: 42px;
+  min-height: 44px;
   padding: 0 1rem;
   border-radius: 12px;
   border: 1px solid var(--admin-border);
@@ -644,10 +651,13 @@ body.admin-shell {
   position: fixed;
   top: 1rem;
   left: 1rem;
-  z-index: 200;
-  width: 40px;
-  height: 40px;
-  padding: 8px;
+  z-index: 210;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px;
+  box-sizing: border-box;
   border: 1px solid var(--admin-border);
   border-radius: 10px;
   background: var(--admin-surface);
@@ -681,8 +691,8 @@ body.sidebar-open .admin-sidebar-toggle span:nth-child(3) {
   display: none;
   position: fixed;
   inset: 0;
-  z-index: 99;
-  background: rgba(28, 25, 23, 0.4);
+  z-index: 150;
+  background: rgba(28, 25, 23, 0.5);
   backdrop-filter: blur(2px);
 }
 
@@ -690,30 +700,15 @@ body.sidebar-open .admin-sidebar-backdrop {
   display: block;
 }
 
+/* iOS 입력 시 자동 줌 방지 */
+html.admin-shell .admin-input,
+html.admin-shell .admin-textarea,
+html.admin-shell .admin-select,
+html.admin-shell .admin-select-sm {
+  font-size: max(16px, 1rem);
+}
+
 @media (max-width: 1080px) {
-  .admin-app { grid-template-columns: 1fr; }
-  .admin-sidebar-toggle { display: flex; }
-
-  .admin-sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 100;
-    height: 100vh;
-    width: 280px;
-    transform: translateX(-100%);
-    transition: transform 0.25s ease;
-    border-right: 1px solid var(--admin-border);
-    overflow-y: auto;
-  }
-
-  body.sidebar-open .admin-sidebar {
-    transform: translateX(0);
-  }
-
-  .admin-main {
-    padding-top: 4rem;
-  }
   .span-12,
   .span-8,
   .span-7,
@@ -726,6 +721,112 @@ body.sidebar-open .admin-sidebar-backdrop {
   }
   .admin-split { grid-template-columns: 1fr; }
   .admin-media-preview { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .admin-app {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-sidebar-toggle {
+    display: flex;
+  }
+
+  .admin-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: min(280px, 88vw);
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    z-index: 200;
+    border-right: 1px solid var(--admin-border);
+    overflow-y: auto;
+    box-sizing: border-box;
+  }
+
+  .admin-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .admin-main {
+    margin-left: 0;
+    padding-top: 4.25rem;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+    min-height: 44px;
+    box-sizing: border-box;
+  }
+
+  .admin-th-sort {
+    min-height: 44px;
+    align-items: center;
+  }
+
+  .admin-chip {
+    min-height: 44px;
+  }
+
+  .admin-cp-open-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .admin-notif-bell {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .admin-cp-open-icon {
+    display: block;
+  }
+
+  .admin-cp-open-btn .admin-cp-open-kbd {
+    display: none;
+  }
+}
+
+/* 대시보드·글 목록 모바일 FAB */
+.admin-fab {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .admin-fab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 100;
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    min-height: 56px;
+    border-radius: 50%;
+    background: var(--admin-accent);
+    color: #fffdfb;
+    font-size: 1.35rem;
+    line-height: 1;
+    text-decoration: none;
+    box-shadow: 0 8px 24px rgba(28, 25, 23, 0.2);
+    border: none;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .admin-fab:focus-visible {
+    outline: 2px solid var(--admin-accent-strong);
+    outline-offset: 3px;
+  }
 }
 
 /* 알림 벨 (헤더) */
@@ -1341,7 +1442,7 @@ a.admin-notif-item:hover {
 }
 
 .admin-btn.admin-btn-sm {
-  min-height: 34px;
+  min-height: 44px;
   padding: 0 0.75rem;
   border-radius: 10px;
   font-size: 0.78rem;

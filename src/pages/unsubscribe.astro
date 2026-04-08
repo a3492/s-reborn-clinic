@@ -1,0 +1,151 @@
+---
+export const prerender = false;
+import Layout from '../layouts/Layout.astro';
+
+const raw = Astro.url.searchParams.get('email')?.trim() ?? '';
+const email = raw.toLowerCase();
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const hasValidEmail = Boolean(email && EMAIL_RE.test(email));
+---
+
+<Layout
+  title="구독 취소"
+  description="LAB·뉴스레터 이메일 알림 구독을 해지합니다."
+>
+  <div class="unsubscribe-page">
+    <h1 class="unsubscribe-title">구독 취소</h1>
+
+    {
+      !hasValidEmail ? (
+        <p class="unsubscribe-text">
+          유효한 이메일 주소가 URL에 포함되어 있지 않습니다. 받으신 메일에 있는 구독 취소 링크를 사용해 주세요.
+        </p>
+      ) : (
+        <>
+          <p class="unsubscribe-text">
+            아래 주소의 LAB·뉴스레터 알림 구독을 해지합니다.
+          </p>
+          <p class="unsubscribe-email" data-unsub-email={email}>
+            {email}
+          </p>
+          <button type="button" class="unsubscribe-btn" id="unsubscribe-confirm">
+            구독 취소
+          </button>
+          <p class="unsubscribe-status" id="unsubscribe-status" hidden />
+        </>
+      )
+    }
+  </div>
+</Layout>
+
+{
+  hasValidEmail ? (
+    <script is:inline>
+      (function () {
+        var btn = document.getElementById('unsubscribe-confirm');
+        var statusEl = document.getElementById('unsubscribe-status');
+        var emailEl = document.querySelector('[data-unsub-email]');
+        if (!btn || !statusEl || !emailEl) return;
+        var email = emailEl.getAttribute('data-unsub-email') || '';
+        btn.addEventListener('click', async function () {
+          statusEl.hidden = true;
+          btn.disabled = true;
+          try {
+            var res = await fetch('/api/unsubscribe', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: email }),
+            });
+            var data = await res.json().catch(function () {
+              return {};
+            });
+            if (res.ok && data.ok) {
+              statusEl.textContent =
+                '구독이 취소되었습니다. 언제든 다시 구독할 수 있습니다.';
+              statusEl.className = 'unsubscribe-status unsubscribe-status--ok';
+              statusEl.hidden = false;
+              btn.style.display = 'none';
+            } else {
+              statusEl.textContent =
+                (data && data.error) || '처리에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+              statusEl.className = 'unsubscribe-status unsubscribe-status--err';
+              statusEl.hidden = false;
+              btn.disabled = false;
+            }
+          } catch (e) {
+            statusEl.textContent = '네트워크 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+            statusEl.className = 'unsubscribe-status unsubscribe-status--err';
+            statusEl.hidden = false;
+            btn.disabled = false;
+          }
+        });
+      })();
+    </script>
+  ) : null
+}
+
+<style>
+  .unsubscribe-page {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 3rem;
+  }
+
+  .unsubscribe-title {
+    margin: 0 0 1rem;
+    font-size: 1.5rem;
+    font-weight: 800;
+  }
+
+  .unsubscribe-text {
+    margin: 0 0 1rem;
+    color: var(--t2);
+    line-height: 1.6;
+    font-size: 0.95rem;
+  }
+
+  .unsubscribe-email {
+    margin: 0 0 1.25rem;
+    padding: 0.75rem 1rem;
+    background: var(--surface-2, #f4f4f5);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    word-break: break-all;
+    font-weight: 600;
+  }
+
+  .unsubscribe-btn {
+    display: inline-block;
+    padding: 0.65rem 1.25rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #fff;
+    background: #1a1a2e;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  .unsubscribe-btn:hover:not(:disabled) {
+    opacity: 0.92;
+  }
+
+  .unsubscribe-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .unsubscribe-status {
+    margin-top: 1.25rem;
+    line-height: 1.55;
+    font-size: 0.95rem;
+  }
+
+  .unsubscribe-status--ok {
+    color: #0d6832;
+  }
+
+  .unsubscribe-status--err {
+    color: #b42318;
+  }
+</style>

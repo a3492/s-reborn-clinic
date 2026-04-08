@@ -1,3 +1,5 @@
+import { verifyTurnstile } from '../lib/turnstile';
+
 async function safeJson(response: Response) {
   const text = await response.text();
   if (!text) return null;
@@ -70,9 +72,20 @@ export const onRequestPost = async (context: { request: Request; env: Record<str
     return jsonResponse({ error: 'Server misconfigured.' }, 500);
   }
 
+  const ip = request.headers.get('CF-Connecting-IP') ?? undefined;
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
-  const rawEmail = String(body?.email ?? '').trim();
-  const source = String(body?.source ?? 'lab').trim().slice(0, 64) || 'lab';
+  if (!body || typeof body !== 'object') {
+    return jsonResponse({ error: '요청 본문이 필요합니다.' }, 400);
+  }
+
+  const tsToken = String(body['cf-turnstile-response'] ?? '');
+  const tsOk = await verifyTurnstile(tsToken, String(env.TURNSTILE_SECRET_KEY ?? ''), ip);
+  if (!tsOk) {
+    return jsonResponse({ error: '보안 검증 실패' }, 403);
+  }
+
+  const rawEmail = String(body.email ?? '').trim();
+  const source = String(body.source ?? 'lab').trim().slice(0, 64) || 'lab';
   const email = rawEmail.toLowerCase();
 
   if (!email || !EMAIL_RE.test(email)) {

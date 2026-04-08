@@ -1,0 +1,307 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout
+  title="용어 사전"
+  pageTitle="용어 사전"
+  pageDescription="블로그 본문에서 마우스오버 시 설명이 뜨는 용어를 관리합니다."
+  status="Glossary"
+  requiredRole="editor"
+>
+  <div class="admin-panel-stack">
+    <section class="admin-card pad-lg">
+      <div class="admin-actions-row">
+        <div>
+          <h2 class="admin-section-title">용어 추가·수정</h2>
+          <p class="admin-section-desc">
+            용어(term)는 고유합니다. 동의어는 쉼표로 구분해 별칭에 넣으면 같은 설명으로 첫 등장만 강조됩니다.
+          </p>
+        </div>
+      </div>
+
+      <form class="admin-form-grid" data-glossary-form>
+        <input type="hidden" name="edit_id" value="" data-glossary-edit-id />
+        <div class="admin-field">
+          <label class="admin-label" for="glossary-term">용어 (term) <span aria-hidden="true">*</span></label>
+          <input id="glossary-term" name="term" class="admin-input" type="text" required maxlength="200" placeholder="LLM" />
+        </div>
+        <div class="admin-field">
+          <label class="admin-label" for="glossary-category">분류</label>
+          <input
+            id="glossary-category"
+            name="category"
+            class="admin-input"
+            type="text"
+            maxlength="64"
+            placeholder="ai · medical · legal"
+          />
+        </div>
+        <div class="admin-field full">
+          <label class="admin-label" for="glossary-definition">설명 <span aria-hidden="true">*</span></label>
+          <textarea
+            id="glossary-definition"
+            name="definition"
+            class="admin-textarea"
+            style="min-height: 100px;"
+            required
+            maxlength="2000"
+            placeholder="툴팁에 표시할 평문 설명"
+          />
+        </div>
+        <div class="admin-field full">
+          <label class="admin-label" for="glossary-aliases">별칭 (쉼표 구분)</label>
+          <input
+            id="glossary-aliases"
+            name="aliases"
+            class="admin-input"
+            type="text"
+            placeholder="환각, Hallucination"
+          />
+        </div>
+        <div class="admin-field">
+          <label class="admin-label" style="display: flex; align-items: center; gap: 0.5rem;">
+            <input type="checkbox" name="is_active" checked data-glossary-active />
+            공개 (비활성 시 블로그에서 조회되지 않음)
+          </label>
+        </div>
+        <div class="admin-actions-inline" style="flex-wrap: wrap;">
+          <button type="submit" class="admin-btn primary" data-glossary-submit>추가</button>
+          <button type="button" class="admin-btn" data-glossary-cancel hidden>편집 취소</button>
+        </div>
+      </form>
+
+      <p class="admin-inline-note" data-glossary-msg hidden></p>
+    </section>
+
+    <section class="admin-card pad-lg">
+      <div class="admin-actions-row">
+        <div>
+          <h2 class="admin-section-title">목록</h2>
+          <p class="admin-section-desc">term · 분류 · 공개 여부 · 수정 · 삭제</p>
+        </div>
+        <button type="button" class="admin-btn" data-glossary-reload>새로고침</button>
+      </div>
+
+      <div class="admin-table-wrap" style="overflow-x: auto;">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>용어</th>
+              <th>분류</th>
+              <th>별칭</th>
+              <th style="width: 5rem;">공개</th>
+              <th style="width: 10rem;">동작</th>
+            </tr>
+          </thead>
+          <tbody data-glossary-tbody>
+            <tr>
+              <td colspan="5">로그인 후 불러옵니다.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+    const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+    const tbody = document.querySelector('[data-glossary-tbody]');
+    const msg = document.querySelector('[data-glossary-msg]');
+    const form = document.querySelector('[data-glossary-form]');
+    const editIdInput = document.querySelector('[data-glossary-edit-id]');
+    const submitBtn = document.querySelector('[data-glossary-submit]');
+    const cancelBtn = document.querySelector('[data-glossary-cancel]');
+    const reloadBtn = document.querySelector('[data-glossary-reload]');
+    const activeCb = document.querySelector('[data-glossary-active]');
+
+    let supabase = null;
+    let cachedRows = [];
+
+    const setMessage = (text, state = 'info') => {
+      if (!msg) return;
+      if (!text) {
+        msg.hidden = true;
+        msg.textContent = '';
+        msg.removeAttribute('data-state');
+        return;
+      }
+      msg.hidden = false;
+      msg.textContent = text;
+      msg.dataset.state = state;
+    };
+
+    const escapeHtml = (value) =>
+      String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+    const aliasesToString = (raw) => {
+      if (Array.isArray(raw)) return raw.map((x) => String(x ?? '').trim()).filter(Boolean).join(', ');
+      if (raw && typeof raw === 'object') return '';
+      return '';
+    };
+
+    const parseAliasesInput = (s) =>
+      JSON.stringify(
+        String(s || '')
+          .split(',')
+          .map((x) => x.trim())
+          .filter(Boolean),
+      );
+
+    const resetForm = () => {
+      if (!form || !editIdInput || !submitBtn || !cancelBtn) return;
+      form.reset();
+      editIdInput.value = '';
+      if (activeCb) activeCb.checked = true;
+      submitBtn.textContent = '추가';
+      cancelBtn.hidden = true;
+    };
+
+    const renderTable = () => {
+      if (!tbody) return;
+      if (!cachedRows.length) {
+        tbody.innerHTML = '<tr><td colspan="5">등록된 용어가 없습니다.</td></tr>';
+        return;
+      }
+      const sorted = [...cachedRows].sort((a, b) => String(a.term).localeCompare(String(b.term), 'ko'));
+      tbody.innerHTML = sorted
+        .map(
+          (row) => `
+        <tr data-glossary-row-id="${escapeHtml(row.id)}">
+          <td><strong>${escapeHtml(row.term)}</strong></td>
+          <td class="admin-cell-subtle">${escapeHtml(row.category || '—')}</td>
+          <td class="admin-cell-subtle">${escapeHtml(aliasesToString(row.aliases)) || '—'}</td>
+          <td>${row.is_active ? '예' : '아니오'}</td>
+          <td style="display:flex;flex-wrap:wrap;gap:0.35rem;">
+            <button type="button" class="admin-btn admin-btn-sm" data-glossary-edit="${escapeHtml(row.id)}">편집</button>
+            <button type="button" class="admin-btn admin-btn-sm" data-glossary-delete="${escapeHtml(row.id)}">삭제</button>
+          </td>
+        </tr>`,
+        )
+        .join('');
+    };
+
+    const loadList = async () => {
+      if (!supabase || !tbody) return;
+      tbody.innerHTML = '<tr><td colspan="5">불러오는 중…</td></tr>';
+      const { data, error } = await supabase
+        .from('glossary')
+        .select('id, term, definition, category, aliases, is_active')
+        .order('term', { ascending: true });
+
+      if (error) {
+        tbody.innerHTML = `<tr><td colspan="5">${escapeHtml(error.message)}</td></tr>`;
+        setMessage(error.message, 'error');
+        return;
+      }
+      cachedRows = data || [];
+      renderTable();
+      setMessage('');
+    };
+
+    if (!supabaseUrl || !supabaseKey) {
+      setMessage('Supabase 환경 변수가 없습니다.', 'error');
+    } else {
+      document.addEventListener('admin:session-ready', async () => {
+        supabase = window.__adminSupabase;
+        await loadList();
+
+        reloadBtn?.addEventListener('click', () => loadList());
+
+        cancelBtn?.addEventListener('click', () => {
+          resetForm();
+          setMessage('편집을 취소했습니다.', 'info');
+        });
+
+        form?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          if (!supabase || !form) return;
+
+          const term = String(form.elements.term?.value || '').trim();
+          const definition = String(form.elements.definition?.value || '').trim();
+          const category = String(form.elements.category?.value || '').trim() || null;
+          const aliasesJson = parseAliasesInput(String(form.elements.aliases?.value || ''));
+          const is_active = Boolean(activeCb?.checked);
+          const editId = String(editIdInput?.value || '').trim();
+
+          if (!term || !definition) {
+            setMessage('용어와 설명은 필수입니다.', 'error');
+            return;
+          }
+
+          if (editId) {
+            const { error } = await supabase
+              .from('glossary')
+              .update({ term, definition, category, aliases: JSON.parse(aliasesJson), is_active })
+              .eq('id', editId);
+            if (error) {
+              setMessage(error.message, 'error');
+              return;
+            }
+            setMessage('용어를 수정했습니다.', 'success');
+          } else {
+            const { error } = await supabase.from('glossary').insert({
+              term,
+              definition,
+              category,
+              aliases: JSON.parse(aliasesJson),
+              is_active,
+            });
+            if (error) {
+              setMessage(error.message, 'error');
+              return;
+            }
+            setMessage('용어를 추가했습니다.', 'success');
+          }
+
+          resetForm();
+          await loadList();
+        });
+
+        tbody?.addEventListener('click', async (event) => {
+          const target = event.target;
+          if (!(target instanceof HTMLElement)) return;
+
+          const editBtn = target.closest('[data-glossary-edit]');
+          if (editBtn && tbody.contains(editBtn)) {
+            const id = editBtn.getAttribute('data-glossary-edit');
+            const row = cachedRows.find((r) => r.id === id);
+            if (!row || !form || !editIdInput || !submitBtn || !cancelBtn) return;
+            editIdInput.value = row.id;
+            form.elements.term.value = row.term;
+            form.elements.definition.value = row.definition;
+            form.elements.category.value = row.category || '';
+            form.elements.aliases.value = aliasesToString(row.aliases);
+            if (activeCb) activeCb.checked = Boolean(row.is_active);
+            submitBtn.textContent = '저장';
+            cancelBtn.hidden = false;
+            form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            setMessage('항목을 수정 중입니다.', 'info');
+            return;
+          }
+
+          const delBtn = target.closest('[data-glossary-delete]');
+          if (delBtn && tbody.contains(delBtn)) {
+            const id = delBtn.getAttribute('data-glossary-delete');
+            if (!id || !confirm('이 용어를 삭제할까요?')) return;
+            const { error } = await supabase.from('glossary').delete().eq('id', id);
+            if (error) {
+              setMessage(error.message, 'error');
+              return;
+            }
+            if (editIdInput?.value === id) resetForm();
+            setMessage('삭제했습니다.', 'success');
+            await loadList();
+          }
+        });
+      });
+    }
+  </script>
+</AdminLayout>

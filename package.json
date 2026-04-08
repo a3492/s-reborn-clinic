@@ -9,7 +9,9 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "translate": "npx tsx scripts/translate-posts.ts",
+    "translate:force": "npx tsx scripts/translate-posts.ts --force"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^13.1.7",
@@ -28,6 +30,8 @@
     "web-vitals": "^5.2.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260405.1"
+    "@anthropic-ai/sdk": "^0.86.1",
+    "@cloudflare/workers-types": "^4.20260405.1",
+    "tsx": "^4.21.0"
   }
 }

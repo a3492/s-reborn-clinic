@@ -30,12 +30,12 @@ let featuredPost = adminFeaturedMatch ?? (clinicPosts.length > 0 ? clinicPosts[0
 const FEATURED_RANDOM_POOL_MAX = 30;
 const featuredRandomPool = clinicPosts.slice(0, FEATURED_RANDOM_POOL_MAX).map((p) => ({
   id: p.id,
-  title: p.data.title,
-  description: p.data.description,
+  title: p.data.title_en ?? p.data.title,
+  description: p.data.description_en ?? p.data.description,
   thumbnail: p.data.thumbnail?.trim() || '',
   categoryLabel:
     p.data.category != null
-      ? CATEGORIES.find((c) => c.id === p.data.category)?.label ?? p.data.category
+      ? CATEGORIES.find((c) => c.id === p.data.category)?.labelEn ?? p.data.category
       : '',
   href: postPermalink(p),
 }));
@@ -116,13 +116,13 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
               hidden={!featuredPost.data.category}
             >
               {featuredPost.data.category
-                ? CATEGORIES.find((c) => c.id === featuredPost.data.category)?.label ?? featuredPost.data.category
+                ? CATEGORIES.find((c) => c.id === featuredPost.data.category)?.labelEn ?? featuredPost.data.category
                 : ''}
             </span>
             <span class="featured-hero-views" data-home-view-badge aria-label={locale === 'en' ? 'Views' : '조회수'}>{locale === 'en' ? 'Views —' : '조회 —'}</span>
           </div>
-          <h3 class="featured-hero-title" data-featured-title>{featuredPost.data.title}</h3>
-          <p class="featured-hero-desc" data-featured-desc>{featuredPost.data.description}</p>
+          <h3 class="featured-hero-title" data-featured-title>{featuredPost.data.title_en ?? featuredPost.data.title}</h3>
+          <p class="featured-hero-desc" data-featured-desc>{featuredPost.data.description_en ?? featuredPost.data.description}</p>
           <span class="featured-hero-cta">{locale === 'en' ? 'Read more →' : '자세히 읽기 →'}</span>
         </div>
       </a>
@@ -207,13 +207,13 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
               <div class="post-card-meta">
                 {post.data.category && (
                   <span class="post-card-cat">
-                    {CATEGORIES.find(c => c.id === post.data.category)?.label ?? post.data.category}
+                    {CATEGORIES.find(c => c.id === post.data.category)?.labelEn ?? post.data.category}
                   </span>
                 )}
-                <span class="post-card-views" data-home-view-badge aria-label={locale === 'en' ? 'Views' : '조회수'}>{locale === 'en' ? 'Views —' : '조회 —'}</span>
+                <span class="post-card-views" data-home-view-badge aria-label="Views">Views —</span>
               </div>
-              <h3 class="post-card-title">{post.data.title}</h3>
-              <p class="post-card-desc">{post.data.description}</p>
+              <h3 class="post-card-title">{post.data.title_en ?? post.data.title}</h3>
+              <p class="post-card-desc">{post.data.description_en ?? post.data.description}</p>
             </div>
           </a>
         ))}
@@ -231,9 +231,9 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
       <div class="column-list">
         {doctorColumn.map(post => (
           <a href={postPermalink(post)} class="column-card">
-            <div class="column-card-kicker">{locale === 'en' ? "Doctor's Column" : '원장 칼럼'}</div>
-            <h3 class="column-card-title">{post.data.title}</h3>
-            <p class="column-card-desc">{post.data.description}</p>
+            <div class="column-card-kicker">Doctor's Column</div>
+            <h3 class="column-card-title">{post.data.title_en ?? post.data.title}</h3>
+            <p class="column-card-desc">{post.data.description_en ?? post.data.description}</p>
           </a>
         ))}
       </div>
@@ -263,8 +263,8 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
             <a href={postPermalink(post)} class="faq-item">
               <span class="faq-q">Q</span>
               <div>
-                <p class="faq-title">{post.data.title}</p>
-                <p class="faq-desc">{post.data.description}</p>
+                <p class="faq-title">{post.data.title_en ?? post.data.title}</p>
+                <p class="faq-desc">{post.data.description_en ?? post.data.description}</p>
               </div>
             </a>
           ))
@@ -285,8 +285,8 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
           <a href={postPermalink(post)} class="myth-item">
             <span class="myth-mark" aria-hidden="true">M</span>
             <div>
-              <p class="myth-title">{post.data.title}</p>
-              <p class="myth-desc">{post.data.description}</p>
+              <p class="myth-title">{post.data.title_en ?? post.data.title}</p>
+              <p class="myth-desc">{post.data.description_en ?? post.data.description}</p>
             </div>
           </a>
         ))}
@@ -1135,12 +1135,13 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
     if (!slugs.length) return;
     const supabase = createClient(url, key);
     const map = await fetchViewCountsMap(supabase, slugs);
+    const isEn = document.documentElement.lang === 'en';
     document.querySelectorAll('[data-home-view-badge]').forEach((badge) => {
       const root = badge.closest('[data-home-slug]');
       const slug = root instanceof HTMLElement ? root.dataset.homeSlug?.trim() ?? '' : '';
       if (!slug) return;
       const n = map.get(slug) ?? 0;
-      badge.textContent = `조회 ${formatViewCount(n)}`;
+      badge.textContent = isEn ? `${formatViewCount(n)} views` : `조회 ${formatViewCount(n)}`;
     });
   }
 
@@ -1190,23 +1191,25 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
 
   async function loadHomeTrending() {
     if (!rowEl) return;
+    const isEn = document.documentElement.lang === 'en';
     if (!url || !key) {
       if (statusEl) statusEl.textContent = '';
       rowEl.innerHTML = '';
       return;
     }
-    if (statusEl) statusEl.textContent = '불러오는 중…';
+    if (statusEl) statusEl.textContent = isEn ? 'Loading…' : '불러오는 중…';
     const supabase = createClient(url, key);
     const rows = await fetchTrendingPosts(supabase, 7, 3);
     if (statusEl) statusEl.textContent = '';
     if (!rows.length) {
-      rowEl.innerHTML = '<p class="trending-home-empty">이번 주 순위에 올라온 글이 없습니다.</p>';
+      rowEl.innerHTML = `<p class="trending-home-empty">${isEn ? 'No trending posts this week.' : '이번 주 순위에 올라온 글이 없습니다.'}</p>`;
       return;
     }
     const n = rows.length;
     rowEl.innerHTML = (rows as TrendingPostRow[])
       .map((row, i) => {
         const rank = i + 1;
+        const rankLabel = isEn ? `#${rank}` : `${rank}위`;
         const href = postHrefFromDbSlug(row.slug);
         const cat = row.category || '';
         const catLabel = (categoryLabels as Record<string, string>)[cat] || cat || '';
@@ -1216,7 +1219,7 @@ const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
           ? `<div class="post-card-thumb"><img src="${escapeHtml(thumb)}" alt="" loading="lazy" /></div>`
           : '';
         return `<a href="${escapeHtml(href)}" class="post-card trending-home-card">
-  <span class="trending-home-rank" aria-label="${rank}위">${rank}위</span>
+  <span class="trending-home-rank" aria-label="${rankLabel}">${rankLabel}</span>
   ${thumbBlock}
   <div class="post-card-body">
     <div class="post-card-meta">
