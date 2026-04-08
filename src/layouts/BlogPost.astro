@@ -18,7 +18,7 @@ import Poll from '../components/Poll.astro';
 import WebVitalsCollector from '../components/WebVitalsCollector.astro';
 import { CATEGORIES, SITE_TITLE } from '../consts';
 import { ACADEMY_CONTENT_ID_PREFIX, ACADEMY_PUBLIC_PATH } from '../lib/academy-constants';
-import { buildArticlePageGraph } from '../lib/structured-data';
+import { buildArticlePageGraph, buildFaqJsonLd, buildBreadcrumbJsonLd, mergeJsonLd } from '../lib/structured-data';
 import { isAcademyBlogPost, postPermalink } from '../lib/academy';
 import { blogTagPageHref } from '../lib/blog-tag-url';
 import { entryIsAcademyBlogId, sortSeriesPosts, seriesHubPath } from '../lib/blog-series';
@@ -135,7 +135,25 @@ const articleJsonLd = buildArticlePageGraph(Astro.site, {
 	category,
 });
 
+// FAQ 카테고리 글 → FAQPage + BreadcrumbList 추가
+const faqJsonLd = category === 'faq' && description
+	? buildFaqJsonLd([{ question: title, answer: description }])
+	: null;
+
+const breadcrumbJsonLd = buildBreadcrumbJsonLd(Astro.site, [
+	{ name: '홈', path: '/' },
+	{ name: '블로그', path: '/blog/' },
+	...(category ? [{ name: category, path: `/blog/?category=${category}` }] : []),
+	{ name: title, path: Astro.url.pathname },
+]);
+
+const finalJsonLd = faqJsonLd
+	? mergeJsonLd(articleJsonLd, faqJsonLd, breadcrumbJsonLd)
+	: mergeJsonLd(articleJsonLd, breadcrumbJsonLd);
+
 const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
+
+const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
 ---
 
@@ -147,7 +165,7 @@ const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
       image={ogImageForMeta}
       siteTitle={SITE_TITLE}
       ogType="article"
-      jsonLd={articleJsonLd}
+      jsonLd={finalJsonLd}
       rssCategoryId={category ?? null}
       rssCategoryLabel={category ? categoryLabelRecord[category] ?? category : null}
     />
@@ -156,6 +174,18 @@ const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
     <meta name="theme-color" content="#1a1a2e" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <AnalyticsScripts contentId={slug} />
+    <script is:inline>
+      window.__srebornTs = { c: '', r: '', s: '' };
+      window.onTurnstileBlogComment = function (t) {
+        window.__srebornTs.c = t;
+      };
+      window.onTurnstileBlogReport = function (t) {
+        window.__srebornTs.r = t;
+      };
+      window.onTurnstileSubscribe = function (t) {
+        window.__srebornTs.s = t;
+      };
+    </script>
     <script is:inline>
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js');
@@ -353,7 +383,9 @@ const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
                 </nav>
               )}
 
-              <slot />
+              <div class="blog-post-md-body" data-glossary-root>
+                <slot />
+              </div>
 
               <section
                 class="blog-post-related"
@@ -433,6 +465,16 @@ const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
                     ></textarea>
                     <span class="blog-post-comments-char" data-comments-char>0 / 500</span>
                   </label>
+                  {turnstileSiteKey && (
+                    <div class="blog-post-comments-turnstile">
+                      <div
+                        class="cf-turnstile"
+                        data-sitekey={turnstileSiteKey}
+                        data-theme="auto"
+                        data-callback="onTurnstileBlogComment"
+                      />
+                    </div>
+                  )}
                   <button type="submit" class="blog-post-comments-submit">댓글 등록</button>
                 </form>
               </section>
@@ -519,7 +561,7 @@ const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
                 <p id="share-feedback" class="blog-post-share-feedback" aria-live="polite"></p>
               </div>
 
-              <SubscribeForm source={onAcademyArticle ? 'academy' : 'blog'} />
+              <SubscribeForm source={onAcademyArticle ? 'academy' : 'blog'} turnstileSiteKey={turnstileSiteKey} />
 
               <p class="blog-post-report-line">
                 <button
@@ -593,6 +635,16 @@ const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
                       />
                     </label>
                     <p class="post-report-form-msg" data-post-report-msg hidden></p>
+                    {turnstileSiteKey && (
+                      <div class="post-report-turnstile">
+                        <div
+                          class="cf-turnstile"
+                          data-sitekey={turnstileSiteKey}
+                          data-theme="auto"
+                          data-callback="onTurnstileBlogReport"
+                        />
+                      </div>
+                    )}
                     <div class="post-report-modal-actions">
                       <button type="button" class="post-report-btn post-report-btn-secondary" data-post-report-close>
                         취소
@@ -661,6 +713,27 @@ const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
         } else {
           numEl.textContent = formatViewCount(count);
         }
+      })();
+    </script>
+
+    <script>
+      import { createClient } from '@supabase/supabase-js';
+      import { applyGlossaryToRoot, type GlossaryRow } from '../lib/blog-glossary-mark';
+
+      const glossaryUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+      const glossaryKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+      void (async () => {
+        if (!glossaryUrl || !glossaryKey) return;
+        const root = document.querySelector('[data-glossary-root]');
+        if (!(root instanceof HTMLElement)) return;
+        const supabase = createClient(glossaryUrl, glossaryKey);
+        const { data, error } = await supabase
+          .from('glossary')
+          .select('id, term, definition, aliases')
+          .eq('is_active', true);
+        if (error || !data?.length) return;
+        applyGlossaryToRoot(root, data as GlossaryRow[]);
       })();
     </script>
 
@@ -853,6 +926,12 @@ const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
 
     <script>
       import { createClient } from '@supabase/supabase-js';
+
+      declare global {
+        interface Window {
+          __srebornTs?: { c: string; r: string; s: string };
+        }
+      }
 
       type CommentRow = {
         id: string;
@@ -1085,23 +1164,32 @@ const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
             }
           }
 
-          const insertPayload: Record<string, unknown> = {
+          const tsToken =
+            typeof window !== 'undefined' && window.__srebornTs ? String(window.__srebornTs.c || '') : '';
+
+          const { data: sessionData } = await supabase.auth.getSession();
+          const accessToken = sessionData.session?.access_token;
+          const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+          if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+
+          const payload: Record<string, unknown> = {
             slug: postSlug,
             author_name,
             body,
             parent_id,
+            'cf-turnstile-response': tsToken,
           };
-          if (author_emailRaw) insertPayload.author_email = author_emailRaw;
+          if (author_emailRaw) payload.author_email = author_emailRaw;
 
-          const { data: authUserData } = await supabase.auth.getUser();
-          if (authUserData.user?.id) {
-            insertPayload.user_id = authUserData.user.id;
-          }
+          const res = await fetch('/api/comments', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(payload),
+          });
+          const data = (await res.json().catch(() => ({}))) as { error?: string };
 
-          const { error: insErr } = await supabase.from('comments').insert(insertPayload);
-
-          if (insErr) {
-            showFormMsg(insErr.message || '등록에 실패했습니다.', true);
+          if (!res.ok) {
+            showFormMsg(data.error || '등록에 실패했습니다.', true);
             return;
           }
 
@@ -1111,6 +1199,10 @@ const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
           if (bodyTa instanceof HTMLTextAreaElement && charEl) {
             charEl.textContent = '0 / 500';
           }
+          if (typeof window !== 'undefined' && window.__srebornTs) window.__srebornTs.c = '';
+          const tsEl = form.querySelector('.cf-turnstile');
+          const turnstileApi = (window as unknown as { turnstile?: { reset?: (el: Element) => void } }).turnstile;
+          if (tsEl && turnstileApi?.reset) turnstileApi.reset(tsEl);
         });
       })();
     </script>
@@ -1275,10 +1367,18 @@ const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
           submitBtn.disabled = true;
           submitBtn.textContent = '전송 중…';
           try {
+            const tsToken =
+              typeof window !== 'undefined' && window.__srebornTs ? String(window.__srebornTs.r || '') : '';
             const res = await fetch('/api/report', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ slug, report_type, description, reporter_email }),
+              body: JSON.stringify({
+                slug,
+                report_type,
+                description,
+                reporter_email,
+                'cf-turnstile-response': tsToken,
+              }),
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) {
@@ -1287,6 +1387,10 @@ const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
             }
             showMsg('소중한 피드백 감사합니다.', false);
             form.reset();
+            if (typeof window !== 'undefined' && window.__srebornTs) window.__srebornTs.r = '';
+            const tsEl = form.querySelector('.cf-turnstile');
+            const turnstileApi = (window as unknown as { turnstile?: { reset?: (el: Element) => void } }).turnstile;
+            if (tsEl && turnstileApi?.reset) turnstileApi.reset(tsEl);
             window.setTimeout(() => setOpen(false), 1200);
           } catch {
             showMsg('네트워크 오류가 발생했습니다.', true);
@@ -1988,6 +2092,13 @@ const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
 
   .blog-post-comments-submit:hover:not(:disabled) {
     filter: brightness(1.05);
+  }
+
+  .blog-post-comments-turnstile,
+  .post-report-turnstile {
+    margin: 0.65rem 0;
+    display: flex;
+    justify-content: flex-start;
   }
 
   .blog-post-comments-form-msg {
@@ -2717,5 +2828,40 @@ const disclaimerBody = await getActiveDisclaimerBodyForCategory(category);
   .blog-highlight-share-btn:focus-visible {
     outline: 2px solid var(--accent, #b8956a);
     outline-offset: 2px;
+  }
+
+  /* 용어 사전 툴팁 — 본문 abbr만 (집중모달·하이라이트 팝업보다 낮고, 일반 카드보다 위) */
+  .blog-post-md-body :global(abbr[data-glossary]) {
+    text-decoration: underline dotted var(--accent-dark, #8c6d45);
+    cursor: help;
+    position: relative;
+    text-underline-offset: 0.12em;
+  }
+
+  .blog-post-md-body :global(abbr[data-glossary]:hover::after),
+  .blog-post-md-body :global(abbr[data-glossary]:focus-visible::after) {
+    content: attr(title);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface, #fff);
+    border: 1px solid var(--rule, #e5e7eb);
+    border-radius: 6px;
+    padding: 0.375rem 0.625rem;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    white-space: normal;
+    max-width: min(280px, 70vw);
+    width: max-content;
+    z-index: 10040;
+    pointer-events: none;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    color: var(--text, #1a1a2e);
+  }
+
+  :global(html[data-theme='dark']) .blog-post-md-body :global(abbr[data-glossary]:hover::after),
+  :global(html[data-theme='dark']) .blog-post-md-body :global(abbr[data-glossary]:focus-visible::after) {
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
   }
 </style>

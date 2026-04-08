@@ -3,8 +3,13 @@ import Layout from '../../layouts/Layout.astro';
 import { PROCEDURE_CATALOG, PROCEDURE_PILLAR_SUMMARIES } from '../../data/procedure-catalog';
 import { getCollection } from 'astro:content';
 import { t, type Locale } from '../../i18n';
+import { buildBreadcrumbJsonLd } from '../../lib/structured-data';
 
 const locale: Locale = Astro.currentLocale === 'en' ? 'en' : 'ko';
+const proceduresJsonLd = buildBreadcrumbJsonLd(Astro.site, [
+  { name: '홈', path: '/' },
+  { name: '시술 안내', path: '/procedures/' },
+]);
 
 // 토픽 아티클 전체 로드 — procedure_item 기준으로 그룹화
 const allProcedures = await getCollection('procedures', ({ data }) => !data.draft);
@@ -28,6 +33,7 @@ for (const key of Object.keys(topicsByItem)) {
 <Layout
   title={t(locale, 'procedures.pageTitle')}
   description={t(locale, 'procedures.pageDesc')}
+  jsonLd={proceduresJsonLd}
 >
   <div class="proc-layout">
 
