@@ -217,8 +217,20 @@ const faqSchema = faqs.length > 0 ? {
     width: 100%;
     max-width: 100%;
     margin: 0 auto;
-    padding: 0 0.5rem;
+    padding: 0 2rem;
     box-sizing: border-box;
+  }
+
+  @media (min-width: 1200px) {
+    .proc-page-inner {
+      padding: 0 3rem;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .proc-page-inner {
+      padding: 0 1rem;
+    }
   }
 
   /* 브레드크럼 */
