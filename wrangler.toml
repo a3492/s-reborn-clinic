@@ -2,6 +2,7 @@
 # KV 네임스페이스 생성: npx wrangler kv namespace create SITE_CACHE
 name = "s-reborn-clinic"
 compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
 # 로컬 `astro build` 시 wrangler가 Pages로 인식하면 ASSETS 바인딩이 예약어와 충돌합니다.
 # Pages 배포 시에는 Cloudflare 대시보드 출력 디렉터리를 지정하거나, 이 줄을 다시 넣으세요.
 # pages_build_output_dir = "dist/client"
