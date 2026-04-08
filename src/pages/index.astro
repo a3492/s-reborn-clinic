@@ -41,6 +41,12 @@ const featuredRandomPoolJson =
     ? JSON.stringify(featuredRandomPool).replace(/</g, '\\u003c')
     : '';
 
+// 관리자 미지정 시 빌드 타임에도 랜덤 픽 (매 배포마다 다른 글)
+if (!isFeaturedLocked && featuredRandomPool.length > 1) {
+  const buildTimeIdx = Math.floor(Math.random() * featuredRandomPool.length);
+  featuredPost = clinicPosts.find((p) => p.id === featuredRandomPool[buildTimeIdx].id) ?? featuredPost;
+}
+
 const latestPosts = clinicPosts
   .filter((p) => !featuredPost || p.id !== featuredPost.id)
   .slice(0, 20);
@@ -49,6 +55,7 @@ const doctorColumn = allPosts.filter(p => p.data.category === 'doctor-column').s
 const faqPosts = allPosts.filter(p => p.data.category === 'faq').slice(0, 4);
 const homeFaqItems = await getVisibleFaqItems();
 const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
+const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label]));
 ---
 
 <Layout>
@@ -118,6 +125,16 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
       </a>
     </section>
   )}
+
+  <!-- 이번 주 인기글 (Supabase RPC, 클라이언트 실시간) -->
+  <section class="section trending-home-section" aria-labelledby="home-trending-title">
+    <div class="section-header">
+      <h2 class="section-title" id="home-trending-title">이번 주 인기글</h2>
+      <a href="/trending/" class="section-more">더 보기 →</a>
+    </div>
+    <div class="trending-home-row" id="home-trending-row" data-home-trending-row></div>
+    <p class="trending-home-status" data-home-trending-status aria-live="polite"></p>
+  </section>
 
   <!-- 신뢰 지표 바 -->
   <section class="trust-bar">
@@ -974,6 +991,70 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
   html[data-theme="dark"] .post-card:hover {
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
   }
+
+  .trending-home-section .trending-home-status {
+    margin: 0.75rem 0 0;
+    font-size: 0.82rem;
+    color: var(--t3);
+    min-height: 1.2em;
+  }
+
+  .trending-home-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem;
+    align-items: stretch;
+  }
+
+  @media (max-width: 900px) {
+    .trending-home-row {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .trending-home-card {
+    position: relative;
+  }
+
+  .trending-home-rank {
+    position: absolute;
+    top: 0.55rem;
+    left: 0.55rem;
+    z-index: 2;
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: var(--text);
+    background: var(--surface);
+    padding: 0.2rem 0.45rem;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    box-shadow: 0 2px 8px rgba(28, 24, 20, 0.06);
+  }
+
+  .trending-home-gauge {
+    margin-top: 0.5rem;
+    height: 5px;
+    border-radius: 999px;
+    background: var(--bg2);
+    border: 1px solid var(--rule);
+    overflow: hidden;
+  }
+
+  .trending-home-gauge-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--accent), var(--accent-dark));
+    transition: width 0.35s ease;
+  }
+
+  .trending-home-empty {
+    margin: 0;
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--t3);
+    font-size: 0.9rem;
+    padding: 1.5rem 0;
+  }
 </style>
 
 <script>
@@ -993,7 +1074,7 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
     } catch {
       return;
     }
-    if (!Array.isArray(pool) || pool.length < 2) return;
+    if (!Array.isArray(pool) || pool.length < 1) return;
     const pick = pool[Math.floor(Math.random() * pool.length)];
     root.setAttribute('href', pick.href);
     root.dataset.homeSlug = pick.id;
@@ -1079,4 +1160,73 @@ const mythPosts = allPosts.filter(p => p.data.category === 'myth').slice(0, 4);
   applyRandomFeaturedFromPool();
   shuffleLatestGrid();
   fillHomeViewBadges();
+</script>
+
+<script define:vars={{ categoryLabels }}>
+  import { createClient } from '@supabase/supabase-js';
+  import { postHrefFromDbSlug } from '../lib/academy';
+  import { fetchTrendingPosts, type TrendingPostRow } from '../lib/trending-posts';
+
+  const url = import.meta.env.PUBLIC_SUPABASE_URL;
+  const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+  const rowEl = document.getElementById('home-trending-row');
+  const statusEl = document.querySelector('[data-home-trending-status]');
+
+  function escapeHtml(s: string) {
+    return String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function gaugePercent(rank: number, total: number) {
+    if (total <= 0) return 0;
+    return Math.max(10, Math.round(((total - rank + 1) / total) * 100));
+  }
+
+  async function loadHomeTrending() {
+    if (!rowEl) return;
+    if (!url || !key) {
+      if (statusEl) statusEl.textContent = '';
+      rowEl.innerHTML = '';
+      return;
+    }
+    if (statusEl) statusEl.textContent = '불러오는 중…';
+    const supabase = createClient(url, key);
+    const rows = await fetchTrendingPosts(supabase, 7, 3);
+    if (statusEl) statusEl.textContent = '';
+    if (!rows.length) {
+      rowEl.innerHTML = '<p class="trending-home-empty">이번 주 순위에 올라온 글이 없습니다.</p>';
+      return;
+    }
+    const n = rows.length;
+    rowEl.innerHTML = (rows as TrendingPostRow[])
+      .map((row, i) => {
+        const rank = i + 1;
+        const href = postHrefFromDbSlug(row.slug);
+        const cat = row.category || '';
+        const catLabel = (categoryLabels as Record<string, string>)[cat] || cat || '';
+        const thumb = row.thumbnail_url?.trim();
+        const pct = gaugePercent(rank, n);
+        const thumbBlock = thumb
+          ? `<div class="post-card-thumb"><img src="${escapeHtml(thumb)}" alt="" loading="lazy" /></div>`
+          : '';
+        return `<a href="${escapeHtml(href)}" class="post-card trending-home-card">
+  <span class="trending-home-rank" aria-label="${rank}위">${rank}위</span>
+  ${thumbBlock}
+  <div class="post-card-body">
+    <div class="post-card-meta">
+      ${catLabel ? `<span class="post-card-cat">${escapeHtml(catLabel)}</span>` : '<span class="post-card-cat" hidden></span>'}
+    </div>
+    <h3 class="post-card-title">${escapeHtml(row.title || '')}</h3>
+    <p class="post-card-desc">${escapeHtml(row.description || '')}</p>
+    <div class="trending-home-gauge" aria-hidden="true"><div class="trending-home-gauge-fill" style="width:${pct}%"></div></div>
+  </div>
+</a>`;
+      })
+      .join('');
+  }
+
+  void loadHomeTrending();
 </script>
