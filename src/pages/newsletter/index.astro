@@ -1,0 +1,240 @@
+---
+export const prerender = true;
+import Layout from '../../layouts/Layout.astro';
+import { sanitizeNewsletterForSrcdoc } from '../../lib/sanitizeNewsletterHtml';
+
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL as string | undefined;
+const anonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string | undefined;
+
+type Row = {
+  id: string;
+  subject: string;
+  sent_at: string;
+  recipient_count: number;
+};
+
+let rows: Row[] = [];
+let previewHtml = '';
+
+if (supabaseUrl && anonKey) {
+  const headers = {
+    apikey: anonKey,
+    Authorization: `Bearer ${anonKey}`,
+  };
+  const listRes = await fetch(
+    `${supabaseUrl}/rest/v1/newsletter_archives?select=id,subject,sent_at,recipient_count&order=sent_at.desc&limit=50`,
+    { headers },
+  );
+  if (listRes.ok) {
+    rows = (await listRes.json()) as Row[];
+  }
+  if (rows[0]?.id) {
+    const oneRes = await fetch(
+      `${supabaseUrl}/rest/v1/newsletter_archives?id=eq.${encodeURIComponent(rows[0].id)}&select=html_body`,
+      { headers },
+    );
+    if (oneRes.ok) {
+      const one = (await oneRes.json()) as { html_body?: string }[];
+      previewHtml = sanitizeNewsletterForSrcdoc(String(one[0]?.html_body ?? ''));
+    }
+  }
+}
+
+const formatDate = (iso: string) => {
+  try {
+    return new Date(iso).toLocaleString('ko-KR', {
+      timeZone: 'Asia/Seoul',
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  } catch {
+    return iso;
+  }
+};
+---
+
+<Layout
+  title="뉴스레터 아카이브"
+  description="발송된 S-Reborn AI Blog 주간 뉴스레터를 다시 읽을 수 있습니다."
+>
+  <div class="newsletter-archive-page">
+    <h1 class="newsletter-archive-title">뉴스레터 아카이브</h1>
+    <p class="newsletter-archive-lead">
+      지난 주간 뉴스레터를 날짜순으로 보관합니다. 항목을 누르면 전체 내용을 볼 수 있습니다.
+    </p>
+
+    {
+      rows.length === 0 ? (
+        <p class="newsletter-archive-empty">아직 공개된 뉴스레터가 없습니다.</p>
+      ) : (
+        <>
+          {previewHtml ? (
+            <section class="newsletter-archive-preview" aria-labelledby="preview-heading">
+              <h2 id="preview-heading" class="newsletter-archive-preview-title">
+                최근 발송 — {rows[0].subject}
+              </h2>
+              <p class="newsletter-archive-meta">
+                {formatDate(rows[0].sent_at)}
+                {typeof rows[0].recipient_count === 'number' ? (
+                  <span class="newsletter-archive-recipients">
+                    {' '}
+                    · 발송 시점 구독자 약 {rows[0].recipient_count.toLocaleString('ko-KR')}명
+                  </span>
+                ) : null}
+              </p>
+              <div class="newsletter-archive-iframe-wrap">
+                <iframe
+                  class="newsletter-archive-iframe"
+                  data-newsletter-preview-iframe
+                  srcdoc={previewHtml}
+                  sandbox="allow-same-origin"
+                  title="최근 뉴스레터 미리보기"
+                />
+              </div>
+              <p class="newsletter-archive-preview-link">
+                <a href={`/newsletter/${rows[0].id}/`}>이 뉴스레터만 크게 보기 →</a>
+              </p>
+            </section>
+          ) : null}
+
+          <ul class="newsletter-archive-list">
+            {rows.map((r) => (
+              <li>
+                <a href={`/newsletter/${r.id}/`} class="newsletter-archive-item">
+                  <span class="newsletter-archive-item-subject">{r.subject}</span>
+                  <span class="newsletter-archive-item-meta">
+                    {formatDate(r.sent_at)}
+                    {typeof r.recipient_count === 'number' ? (
+                      <span> · 약 {r.recipient_count.toLocaleString('ko-KR')}명</span>
+                    ) : null}
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </>
+      )
+    }
+  </div>
+</Layout>
+
+<script is:inline>
+  document.querySelectorAll('[data-newsletter-preview-iframe]').forEach(function (el) {
+    el.addEventListener('load', function () {
+      try {
+        var doc = this.contentDocument;
+        if (doc && doc.body) this.style.height = doc.body.scrollHeight + 'px';
+      } catch (e) {}
+    });
+  });
+</script>
+
+<style>
+  .newsletter-archive-page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 3rem;
+  }
+
+  .newsletter-archive-title {
+    margin: 0 0 0.75rem;
+    font-size: 1.75rem;
+    font-weight: 800;
+  }
+
+  .newsletter-archive-lead {
+    margin: 0 0 1.5rem;
+    color: var(--t2);
+    line-height: 1.6;
+    font-size: 0.95rem;
+  }
+
+  .newsletter-archive-empty {
+    color: var(--t2);
+    margin: 2rem 0;
+  }
+
+  .newsletter-archive-preview {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--hairline, #e8e8e8);
+  }
+
+  .newsletter-archive-preview-title {
+    margin: 0 0 0.35rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  .newsletter-archive-meta {
+    margin: 0 0 0.75rem;
+    font-size: 0.85rem;
+    color: var(--t2);
+  }
+
+  .newsletter-archive-recipients {
+    color: var(--t2);
+  }
+
+  .newsletter-archive-iframe-wrap {
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--hairline, #e0e0e0);
+    background: #fff;
+  }
+
+  .newsletter-archive-iframe {
+    display: block;
+    width: 100%;
+    min-height: 200px;
+    border: none;
+  }
+
+  .newsletter-archive-preview-link {
+    margin: 0.75rem 0 0;
+    font-size: 0.9rem;
+  }
+
+  .newsletter-archive-preview-link a {
+    color: var(--accent, #8c6d45);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .newsletter-archive-preview-link a:hover {
+    text-decoration: underline;
+  }
+
+  .newsletter-archive-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .newsletter-archive-list li {
+    border-bottom: 1px solid var(--hairline, #eee);
+  }
+
+  .newsletter-archive-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 1rem 0;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .newsletter-archive-item:hover .newsletter-archive-item-subject {
+    color: var(--accent, #8c6d45);
+  }
+
+  .newsletter-archive-item-subject {
+    font-weight: 600;
+    font-size: 0.98rem;
+  }
+
+  .newsletter-archive-item-meta {
+    font-size: 0.82rem;
+    color: var(--t2);
+  }
+</style>

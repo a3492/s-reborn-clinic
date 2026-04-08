@@ -10,10 +10,7 @@ interface Props {
 const { siteTitle = SITE_TITLE, socialLinks = {} } = Astro.props;
 const locale: Locale = Astro.currentLocale === 'en' ? 'en' : 'ko';
 const socialEntries = Object.entries(socialLinks).filter(([, value]) => value);
-const hoursLine = CLINIC_INFO.hours.map((h) => `${h.days} ${h.time}`).join(' · ');
-
-const enHoursLine = '(Mon·Tue·Wed·Fri) 10:30–19:30 · (Thu) 13:00–21:00 · (Sat) 10:00–16:00 · Sun/Holidays: Closed';
-const displayHoursLine = locale === 'en' ? enHoursLine : hoursLine;
+const displayHoursLine = locale === 'en' ? 'See Naver app for current hours' : '진료시간은 네이버 앱 참고';
 ---
 
 <footer class="site-footer">

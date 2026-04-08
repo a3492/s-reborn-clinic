@@ -1,0 +1,140 @@
+---
+export const prerender = false;
+import Layout from '../../layouts/Layout.astro';
+import SubscribeForm from '../../components/SubscribeForm.astro';
+import { sanitizeNewsletterForSrcdoc } from '../../lib/sanitizeNewsletterHtml';
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const { id } = Astro.params;
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL as string | undefined;
+const anonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string | undefined;
+
+let subject = '';
+let sanitizedHtml = '';
+let sentAtLabel = '';
+let notFound = true;
+
+if (id && UUID_RE.test(id) && supabaseUrl && anonKey) {
+  const res = await fetch(
+    `${supabaseUrl}/rest/v1/newsletter_archives?id=eq.${encodeURIComponent(id)}&select=subject,html_body,sent_at`,
+    {
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
+      },
+    },
+  );
+  if (res.ok) {
+    const rows = (await res.json()) as { subject?: string; html_body?: string; sent_at?: string }[];
+    const row = rows[0];
+    if (row) {
+      notFound = false;
+      subject = String(row.subject ?? '');
+      sanitizedHtml = sanitizeNewsletterForSrcdoc(String(row.html_body ?? ''));
+      try {
+        sentAtLabel = new Date(String(row.sent_at)).toLocaleString('ko-KR', {
+          timeZone: 'Asia/Seoul',
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        });
+      } catch {
+        sentAtLabel = String(row.sent_at ?? '');
+      }
+    }
+  }
+}
+
+if (notFound) {
+  return Astro.redirect('/newsletter/', 302);
+}
+---
+
+<Layout title={subject || '뉴스레터'} description={subject}>
+  <article class="newsletter-detail">
+    <header class="newsletter-detail-header">
+      <h1 class="newsletter-detail-title">{subject}</h1>
+      {sentAtLabel ? <p class="newsletter-detail-date">{sentAtLabel}</p> : null}
+    </header>
+    <div class="newsletter-detail-iframe-wrap">
+      <iframe
+        class="newsletter-detail-iframe"
+        data-newsletter-detail-iframe
+        srcdoc={sanitizedHtml}
+        sandbox="allow-same-origin"
+        title="뉴스레터"
+      />
+    </div>
+    <p class="newsletter-detail-back">
+      <a href="/newsletter/">← 아카이브 목록</a>
+    </p>
+    <SubscribeForm source="newsletter" heading="뉴스레터 구독" />
+  </article>
+</Layout>
+
+<script is:inline>
+  document.querySelectorAll('[data-newsletter-detail-iframe]').forEach(function (el) {
+    el.addEventListener('load', function () {
+      try {
+        var doc = this.contentDocument;
+        if (doc && doc.body) this.style.height = doc.body.scrollHeight + 'px';
+      } catch (e) {}
+    });
+  });
+</script>
+
+<style>
+  .newsletter-detail {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 3rem;
+  }
+
+  .newsletter-detail-header {
+    margin-bottom: 1rem;
+  }
+
+  .newsletter-detail-title {
+    margin: 0 0 0.35rem;
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.25;
+  }
+
+  .newsletter-detail-date {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--t2);
+  }
+
+  .newsletter-detail-iframe-wrap {
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--hairline, #e0e0e0);
+    background: #fff;
+    margin-bottom: 1.5rem;
+  }
+
+  .newsletter-detail-iframe {
+    display: block;
+    width: 100%;
+    min-height: 240px;
+    border: none;
+  }
+
+  .newsletter-detail-back {
+    margin: 0 0 2rem;
+    font-size: 0.9rem;
+  }
+
+  .newsletter-detail-back a {
+    color: var(--accent, #8c6d45);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .newsletter-detail-back a:hover {
+    text-decoration: underline;
+  }
+</style>
