@@ -35,14 +35,8 @@ jobs:
           PUBLIC_R2_MEDIA_URL: ${{ secrets.PUBLIC_R2_MEDIA_URL }}
           PUBLIC_SITE_URL: https://s-reborn-clinic.pages.dev
 
-      - name: Copy functions to build output
-        run: cp -r functions dist/client/
-
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: s-reborn-clinic
-          directory: dist/client
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+        run: npx wrangler pages deploy dist/client --project-name=s-reborn-clinic
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

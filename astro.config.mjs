@@ -8,6 +8,8 @@ import { defineConfig } from 'astro/config';
 
 // https://astro.build/config
 // PWA: public/manifest.json, public/sw.js — Layout.astro·BlogPost.astro에서 등록.
+// NOTE: hybrid = 대부분 정적 프리렌더 + 일부 SSR (prerender=false 페이지).
+//       Cloudflare adapter가 SSR 페이지를 Workers로 처리.
 export default defineConfig({
 	site: 'https://s-reborn-clinic.pages.dev',
 	i18n: {
@@ -31,9 +33,9 @@ export default defineConfig({
 			changefreq: 'weekly',
 			priority: 0.7,
 			customPages: [
-				'https://s-reborn-blog.pages.dev/',
-				'https://s-reborn-blog.pages.dev/blog/',
-				'https://s-reborn-blog.pages.dev/about/',
+				'https://s-reborn-clinic.pages.dev/',
+				'https://s-reborn-clinic.pages.dev/blog/',
+				'https://s-reborn-clinic.pages.dev/about/',
 			],
 			serialize: (item) => {
 				try {
