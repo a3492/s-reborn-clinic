@@ -5,6 +5,7 @@ import cloudflare from '@astrojs/cloudflare';
 import mdx from '@astrojs/mdx';
 import sitemap from '@astrojs/sitemap';
 import { defineConfig } from 'astro/config';
+import remarkGfm from 'remark-gfm';
 
 // https://astro.build/config
 // PWA: public/manifest.json, public/sw.js — Layout.astro·BlogPost.astro에서 등록.
@@ -12,6 +13,10 @@ import { defineConfig } from 'astro/config';
 //       Cloudflare adapter가 SSR 페이지를 Workers로 처리.
 export default defineConfig({
 	site: 'https://s-reborn-clinic.pages.dev',
+	markdown: {
+		gfm: false,
+		remarkPlugins: [[remarkGfm, { singleTilde: false }]],
+	},
 	i18n: {
 		defaultLocale: 'ko',
 		locales: ['ko', 'en'],
