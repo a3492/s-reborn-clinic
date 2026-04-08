@@ -1245,9 +1245,7 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
           return t;
         }
       }
-      const path = resolveContentSlugPath();
-      if (!path) return '';
-      return `${siteBase}/api/og/${encodeURIComponent(path)}/`;
+      return `${siteBase}/clinic-og-default.png`;
     };
 
     const focusField = (name) => {
@@ -1337,13 +1335,13 @@ const slug = Astro.url.searchParams.get('slug') ?? '';
       const hasOgImage = Boolean(ogImageUrl);
 
       let imageSizeOk = true;
-      let imageSizeDetail = '동적 OG 또는 외부 이미지';
+      let imageSizeDetail = '기본 OG 또는 외부 이미지';
       if (!hasOgImage) {
         imageSizeOk = false;
         imageSizeDetail = '이미지 URL 없음';
-      } else if (ogImageUrl.includes('/api/og/')) {
+      } else if (ogImageUrl.includes('/clinic-og-default.png')) {
         imageSizeOk = true;
-        imageSizeDetail = '동적 OG(1200×630)';
+        imageSizeDetail = '기본 OG(1200×630)';
       } else if (publicR2MediaBase && ogImageUrl.startsWith(publicR2MediaBase)) {
         try {
           const u = new URL(ogImageUrl);

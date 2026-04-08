@@ -124,7 +124,7 @@ const absoluteThumbnail = thumbTrim
 		: new URL(thumbTrim, Astro.url).href
 	: null;
 const ogImageForMeta =
-	absoluteThumbnail ?? new URL(`/api/og/${encodeURIComponent(slug)}/`, Astro.site).href;
+	absoluteThumbnail ?? new URL('/clinic-og-default.png', Astro.site).href;
 
 const articleJsonLd = buildArticlePageGraph(Astro.site, {
 	title,

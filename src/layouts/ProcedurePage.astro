@@ -24,8 +24,8 @@ const resolvedSiteTitle = siteSettings.siteTitle || SITE_TITLE;
 
 const pageTitle = seo_title || title;
 
-// 동적 OG 이미지 URL
-const ogImageUrl = `/api/og/procedure/${slug}?title=${encodeURIComponent(pageTitle)}&category=${encodeURIComponent(category)}&pillar=${pillar}`;
+// OG 함수 복구 전까지는 공용 기본 이미지를 사용합니다.
+const ogImageUrl = '/clinic-og-default.png';
 
 // 관련 시술 데이터 로드
 const allProcedures = await getCollection('procedures', ({ data }) => !data.draft);
