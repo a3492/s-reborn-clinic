@@ -25,10 +25,10 @@ const displayHoursLine = locale === 'en' ? 'See Naver app for current hours' : '
         </p>
         <div class="site-footer-info">
           <p>
-            {CLINIC_INFO.name} · {t(locale, 'footer.directorLabel')} {CLINIC_INFO.director}
+            {locale === 'en' ? CLINIC_INFO.nameEn : CLINIC_INFO.name} · {t(locale, 'footer.directorLabel')} {locale === 'en' ? CLINIC_INFO.directorEn : CLINIC_INFO.director}
           </p>
           <p>
-            {t(locale, 'footer.addressLabel')}: {CLINIC_INFO.address} {locale === 'ko' ? CLINIC_INFO.addressDetail : '(Mapo-gu, Seoul · 2–3 min walk from Hongdae Station Exit 8/9)'}
+            {t(locale, 'footer.addressLabel')}: {locale === 'en' ? CLINIC_INFO.addressEn : CLINIC_INFO.address} {locale === 'ko' ? CLINIC_INFO.addressDetail : CLINIC_INFO.addressDetailEn}
           </p>
           <p>
             {t(locale, 'footer.phoneLabel')}: {CLINIC_INFO.phone} | {t(locale, 'footer.officialWebLabel')}:{' '}
@@ -55,7 +55,7 @@ const displayHoursLine = locale === 'en' ? 'See Naver app for current hours' : '
     </div>
 
     <div class="site-footer-bottom">
-      <span>© {new Date().getFullYear()} {CLINIC_INFO.name}. All rights reserved.</span>
+      <span>© {new Date().getFullYear()} {locale === 'en' ? CLINIC_INFO.nameEn : CLINIC_INFO.name}. All rights reserved.</span>
       <div style="display:flex;gap:1rem;">
         <a href="/privacy/" class="site-footer-link">{t(locale, 'footer.linkPrivacy')}</a>
         <a href="/terms/" class="site-footer-link">{t(locale, 'footer.linkTerms')}</a>

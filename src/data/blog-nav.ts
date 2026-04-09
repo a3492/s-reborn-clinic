@@ -9,7 +9,9 @@ export type BlogPillarId = (typeof PROCEDURE_PILLAR_SUMMARIES)[number]['id'];
 export const BLOG_PILLAR_NAV = PROCEDURE_PILLAR_SUMMARIES.map((p) => ({
   id: p.id,
   label: p.label,
+  labelEn: p.labelEn,
   short: p.short,
+  shortEn: p.shortEn,
   /** 시술 안내 정적 페이지 앵커 */
   proceduresHref: `/procedures#${p.id}`,
 }));
@@ -28,9 +30,11 @@ export const BLOG_TYPE_SHORTCUTS = CATEGORIES.filter((c) => c.id !== 'doctor-ai'
   description: c.description,
 }));
 
-export function blogPillarLabel(id: string | undefined): string | undefined {
+export function blogPillarLabel(id: string | undefined, locale?: string): string | undefined {
   if (!id) return undefined;
-  return BLOG_PILLAR_NAV.find((p) => p.id === id)?.label;
+  const p = BLOG_PILLAR_NAV.find((p) => p.id === id);
+  if (!p) return undefined;
+  return locale === 'en' ? (p.labelEn ?? p.label) : p.label;
 }
 
 /** 사이드바·내비 — FAQ/MYTH는 영문 약자 + 한글 힌트 */

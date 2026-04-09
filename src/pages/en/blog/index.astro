@@ -16,7 +16,7 @@ const allPosts = (await getCollection('blog', ({ data }) => !data.draft))
   .filter((p) => !isAcademyBlogPost(p))
   .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
 
-const pillarLabels = Object.fromEntries(BLOG_PILLAR_NAV.map((p) => [p.id, p.label]));
+const pillarLabels = Object.fromEntries(BLOG_PILLAR_NAV.map((p) => [p.id, locale === 'en' ? (p.labelEn ?? p.label) : p.label]));
 const categoryLabels = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.labelEn ?? c.label]));
 const blogBase = locale === 'en' ? '/en/blog/' : '/blog/';
 const proceduresBase = locale === 'en' ? '/en/procedures/' : '/procedures/';
@@ -89,7 +89,7 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
                     <div class="blog-post-card-body">
                       <div class="blog-post-card-badges">
                         {post.data.pillar && (
-                          <span class="blog-post-card-pillar">{blogPillarLabel(post.data.pillar)}</span>
+                          <span class="blog-post-card-pillar">{blogPillarLabel(post.data.pillar, locale)}</span>
                         )}
                         {post.data.category && (
                           <span class="blog-post-card-cat">

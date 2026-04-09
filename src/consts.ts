@@ -9,10 +9,14 @@ export const KAKAO_CHANNEL_ID = '_MNGNb';
 
 export const CLINIC_INFO = {
   name: '에스리본의원',
+  nameEn: 'S-Reborn Clinic',
   director: '김도위 대표원장',
+  directorEn: 'Dr. Kim Do-wi, Chief Physician',
   phone: '1833-5881',
   address: '서울특별시 마포구 양화로 162, 좋은사람들빌딩 8층',
+  addressEn: '162 Yanghwa-ro, Mapo-gu, Seoul · Joeun Saramdeul Bldg. 8F',
   addressDetail: '(동교동, 홍대입구역 8·9번 출구 도보 2~3분)',
+  addressDetailEn: '(2–3 min walk from Hongdae Station Exit 8/9)',
   website: 'https://www.s-reborn.com',
   kakaoChannel: 'http://pf.kakao.com/_MNGNb',
   hours: [
