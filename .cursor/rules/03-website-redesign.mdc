@@ -1,0 +1,305 @@
+---
+description: 웹사이트 대대적 수정(리뉴얼) 시 적용되는 전체 팀 통합 프롬프트 — 컴포넌트·레이아웃·홈페이지 등 대규모 변경 작업에 사용
+globs: ["src/components/**", "src/layouts/**", "src/pages/index.astro", "src/pages/*.astro"]
+alwaysApply: false
+---
+
+# 웹사이트 리뉴얼 통합 프롬프트 — 16개 역할 전체 가동
+
+> 이 규칙은 대규모 UI 수정, 홈페이지 리뉴얼, 새 섹션 추가 시 활성화된다.
+> 디자인 하네스(6개) + GEO/AEO 하네스(10개)를 동시에 가동한다.
+
+---
+
+## Phase 0 — 작업 착수 전 필수 확인
+
+Cursor에게 작업을 시작하기 전, 아래를 먼저 답하라:
+
+```
+[전략]    Q1. 이 리뉴얼의 핵심 목적은? (예: 예약 전환율 향상 / 신뢰도 개선 / 모바일 최적화)
+[UX]      Q2. 현재 가장 큰 UX 문제점은? (예: CTA 위치 불명확 / 모바일 가독성 부족)
+[AEO-INTEL] Q3. 현재 AI 엔진에서 클리닉가 인용되지 않는 주요 이유는?
+[전략]    Q4. 작업 범위: 전체 페이지 / 특정 섹션 / 컴포넌트 단위?
+[QA]      Q5. 현재 알려진 버그나 접근성 문제가 있는가?
+```
+
+---
+
+## Phase 1 — 정보 아키텍처 & 레이아웃
+
+### [UX] 사이트 전체 페이지 구조 원칙
+
+```
+홈(/) → 신뢰 형성 → 핵심 시술 소개 → 후기 → 예약 CTA
+시술 페이지(/procedures/*) → 원리 → 효과 → 대상 → FAQ → 예약
+블로그(/blog/*) → 정보 → 관련 시술 → 예약 CTA
+원장 소개(/about) → E-E-A-T 허브 — AI 인용 권위의 핵심 페이지
+```
+
+### [UX] 헤더 컴포넌트 규칙 (Header.astro)
+
+```astro
+---
+// 헤더는 항상 sticky, 높이 68px 고정
+// 모바일: 햄버거 메뉴, 로고 + 예약 버튼만 노출
+// 데스크탑: 전체 네비게이션 + 예약 버튼
+---
+<header style="">  <!-- ❌ 인라인 스타일 절대 금지 -->
+<header class="site-header">  <!-- ✅ CSS 클래스 사용 -->
+```
+
+```css
+.site-header {
+  position: sticky;
+  top: 0;
+  height: var(--header-height);    /* 68px */
+  background: var(--surface);
+  border-bottom: 1px solid var(--rule);
+  z-index: 100;
+}
+```
+
+### [UX] 히어로 섹션 원칙
+
+```
+- 헤딩(H1): 여성 고통점 직접 언급 (예: "피부 탄력, 자연스럽게 되찾고 싶으신가요?")
+- 서브텍스트: 클리닉 차별점 1문장
+- CTA: 주 버튼 1개 + 보조 버튼 1개 (최대 2개)
+- 배경: --color-soft-white 또는 --color-cream (과한 그래픽 금지)
+- 이미지: 실제적인 한국 여성 모델, 밝고 자연스러운 조명
+```
+
+### [AEO-ENTITY] 홈페이지 필수 Schema
+
+```html
+<!-- 홈페이지 <head>에 삽입 -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "MedicalOrganization",
+      "name": "에스리본 클리닉",
+      "url": "https://s-reborn-clinic.pages.dev",
+      "logo": "https://s-reborn-clinic.pages.dev/logo.webp",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "서울",
+        "addressCountry": "KR"
+      },
+      "medicalSpecialty": "Dermatology"
+    },
+    {
+      "@type": "Physician",
+      "name": "김도위",
+      "worksFor": { "@type": "MedicalOrganization", "name": "에스리본 클리닉" },
+      "medicalSpecialty": "Dermatology",
+      "description": "Thermage·Sylfirm X 키닥터 인증의, 에너지 기반 비침습 시술 전문"
+    }
+  ]
+}
+</script>
+```
+
+---
+
+## Phase 2 — 컴포넌트별 디자인 규칙
+
+### 카드 컴포넌트 (블로그 카드, 시술 카드)
+
+```css
+/* 표준 카드 패턴 */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius-md);       /* 14px */
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-lg);              /* 1.5rem */
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* 카드 내 이미지 */
+.card-image {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  border-radius: var(--radius-sm);       /* 8px */
+}
+
+/* 카드 내 태그/배지 */
+.card-tag {
+  background: var(--color-pink-light);
+  color: var(--color-rose);
+  border-radius: var(--radius-full);
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+```
+
+### 섹션 레이아웃 패턴
+
+```astro
+<!-- 표준 섹션 구조 -->
+<section class="section">
+  <div class="section-inner">
+    <h2 class="section-title">섹션 제목</h2>
+    <p class="section-desc">설명 텍스트</p>
+    <div class="section-content">
+      <!-- 콘텐츠 -->
+    </div>
+  </div>
+</section>
+```
+
+```css
+.section {
+  padding: var(--space-3xl) var(--page-inline);  /* 4rem 가로 */
+}
+.section:nth-child(even) {
+  background: var(--color-cream);    /* 교번 배경 */
+}
+.section-inner {
+  max-width: var(--max-width);       /* 1200px */
+  margin: 0 auto;
+}
+.section-title {
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: var(--color-charcoal);
+  text-align: center;
+  margin-bottom: var(--space-sm);
+}
+.section-desc {
+  color: var(--color-brown-mid);
+  text-align: center;
+  margin-bottom: var(--space-2xl);
+}
+```
+
+### [비주얼] 신뢰 배지 & 수상 섹션
+
+```astro
+<!-- 신뢰 요소: 자격증/인증 배지 -->
+<div class="trust-badges">
+  <div class="trust-badge">
+    <img src="/badges/thermage-key-doctor.webp" alt="써마지 키닥터 인증 김도위 원장" />
+    <span>Thermage 키닥터</span>
+  </div>
+  <div class="trust-badge">
+    <img src="/badges/sylfirm-key-doctor.webp" alt="시럼파이 키닥터 인증 에스리본 클리닉" />
+    <span>Sylfirm X 키닥터</span>
+  </div>
+</div>
+```
+
+```css
+.trust-badges {
+  display: flex;
+  gap: var(--space-lg);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.trust-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: var(--color-gold-light);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-brown-dark);
+}
+```
+
+---
+
+## Phase 3 — 반응형 & 성능
+
+### [UX] 브레이크포인트 체계
+
+```css
+/* 모바일 우선 — 기본이 375px */
+.component { ... }
+
+/* 태블릿 */
+@media (min-width: 768px) { ... }
+
+/* 데스크탑 */
+@media (min-width: 1024px) { ... }
+
+/* 와이드 */
+@media (min-width: 1200px) { ... }
+```
+
+### [비주얼] 이미지 최적화 패턴 (Astro)
+
+```astro
+---
+import { Image } from 'astro:assets';
+---
+<!-- WebP 자동 변환, lazy loading, 사이즈 명시 -->
+<Image
+  src={heroImg}
+  alt="에스리본 클리닉 비침습 리프팅 시술 상담 장면"
+  width={1200}
+  height={600}
+  format="webp"
+  quality={80}
+  loading="eager"   <!-- 히어로: eager | 나머지: lazy -->
+/>
+```
+
+### [AEO-MULTI] 페이지 레벨 멀티모달 체크
+
+```
+□ 모든 이미지: alt 텍스트 한국어 + 의학적 맥락
+□ 파일명: kebab-case + 시술명/의미
+□ OG 이미지(og:image): 1200×630px, 클리닉명 포함
+□ 동영상 있을 경우: 한국어 자막(VTT) 필수
+```
+
+---
+
+## Phase 4 — 리뉴얼 최종 QA
+
+### [QA] 전체 사이트 체크리스트
+
+```
+□ 홈페이지 H1이 정확히 1개인가?
+□ 모든 이미지 alt 텍스트 있는가?
+□ 인라인 style="" 없는가? (전체 검색: grep -r 'style="' src/)
+□ HEX 직접 사용 없는가? (grep -r '#[0-9A-Fa-f]\{3,6\}' src/styles/)
+□ 모든 <a>에 의미 있는 텍스트 있는가?
+□ 모든 <button>에 텍스트 또는 aria-label 있는가?
+□ 375px 모바일 가로 스크롤 없는가?
+□ 768px 태블릿 레이아웃 정상인가?
+□ 1200px 데스크탑 레이아웃 정상인가?
+□ npm run build 오류 없는가?
+□ 404 페이지 있는가?
+```
+
+### [AEO-ENTITY] 스키마 검증
+
+```
+□ 홈페이지: MedicalOrganization + Physician Schema 있는가?
+□ 원장 소개 페이지: Physician Schema 상세 기재 있는가?
+□ 시술 페이지: MedicalProcedure Schema 있는가?
+□ 블로그 글: Article + FAQPage + MedicalProcedure Schema 있는가?
+□ Google Rich Results Test 전체 페이지 통과 확인
+```
+
+### [AEO-MONITOR] 리뉴얼 후 모니터링
+
+```
+리뉴얼 완료 후 7일 이내:
+□ ChatGPT에서 클리닉 관련 TOP 10 질문 검색 → 인용 기록
+□ Perplexity에서 동일 질문 검색 → 인용 기록
+□ Google Search Console: 색인 상태, Core Web Vitals 확인
+□ docs/aeo-kpi-log.md에 베이스라인 수치 기록
+```

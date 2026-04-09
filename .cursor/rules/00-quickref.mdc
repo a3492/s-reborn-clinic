@@ -1,0 +1,107 @@
+---
+description: 에스리본 클리닉 Cursor AI 빠른 참조 — 어떤 작업에 어떤 규칙 파일을 쓰는지 한눈에 보는 인덱스
+alwaysApply: true
+---
+
+# Cursor 규칙 빠른 참조 (Quick Reference)
+
+## 작업 유형 → 참조 파일 매핑
+
+| 작업 유형 | 자동 활성화 규칙 | 수동 참조 |
+|-----------|----------------|-----------|
+| **새 블로그 글 작성** | `02-blog-content.mdc` | `04-geo-aeo-harness.mdc` |
+| **기존 블로그 글 수정** | `02-blog-content.mdc` | `05-existing-content-audit.mdc` |
+| **기존 글 일괄 감사** | `05-existing-content-audit.mdc` | — |
+| **컴포넌트 수정** | `01-design-harness.mdc` | — |
+| **CSS/스타일 작업** | `01-design-harness.mdc` | — |
+| **홈페이지/레이아웃 리뉴얼** | `03-website-redesign.mdc` | `04-geo-aeo-harness.mdc` |
+| **Schema/JSON-LD 작업** | `04-geo-aeo-harness.mdc` | — |
+| **마크다운 안전 작성** | `content-markdown-safety.mdc` | — |
+
+---
+
+## 자주 쓰는 Cursor 프롬프트 복사 모음
+
+### 새 블로그 글 작성
+
+```
+[카테고리: doctor-column]
+주제: "울쎄라와 써마지 비교"
+타겟 페르소나: A (35–45세 신중한 리서처)
+주요 키워드: "울쎄라 써마지 차이", "40대 리프팅 시술"
+목적: 두 시술 비교 정보 제공 + 상담 예약 CTA
+
+02-blog-content.mdc 규칙을 전부 적용해서 완성된 마크다운을 작성해줘.
+- frontmatter 포함
+- 첫 100자에 핵심 답변
+- H2는 전부 질문형
+- FAQ 섹션 3개 이상
+- JSON-LD Schema (MedicalProcedure + Article + FAQPage) 포함
+- 저자 크레딧 블록 포함
+```
+
+### 기존 글 AEO 업그레이드
+
+```
+src/content/blog/doctor-column/aging-priorities.md 파일을 읽고
+05-existing-content-audit.mdc 감사 체크시트를 적용해서:
+1. P1/P2/P3 항목 목록을 먼저 보고해줘
+2. P1 항목 즉시 수정
+3. P2 항목(AEO) 전부 적용: 오프닝 재작성, H2 질문형 전환, FAQ 섹션 추가, Schema 삽입
+```
+
+### 웹사이트 컴포넌트 수정
+
+```
+Header.astro 컴포넌트를 수정해줘.
+01-design-harness.mdc 규칙 준수:
+- 모바일(375px) 기준 설계
+- 인라인 style 금지, design.css 변수만 사용
+- CTA 버튼: var(--accent) 골드 컬러, border-radius: var(--radius-full)
+- 접근성: 모든 버튼에 aria-label
+```
+
+### 기존 글 전체 감사
+
+```
+src/content/blog/faq/ 디렉토리의 모든 .md 파일을 감사해줘.
+05-existing-content-audit.mdc 체크시트 기준으로:
+- 각 파일별 P1/P2/P3 수정 필요 항목 목록
+- P1 항목(금지 표현, alt 없는 이미지 등) 즉시 수정
+- 전체 결과를 표로 요약해줘
+```
+
+---
+
+## 핵심 규칙 즉시 참조
+
+### 컬러 (CSS 변수만 사용)
+```
+주 액센트: var(--accent)          /* --color-gold: #C9A96E */
+보조 액센트: var(--accent-pink)   /* --color-rose: #C97878 */
+메인 배경: var(--bg)              /* --color-soft-white: #FDFBF8 */
+본문 텍스트: var(--text)          /* --color-charcoal: #2A2420 */
+```
+
+### AEO 3대 규칙 (항상)
+```
+1. 첫 100자: 핵심 답변 직접 서술
+2. H2: 반드시 질문형 (~나요? ~까요?)
+3. FAQ: 글 하단 최소 3개 Q&A + FAQPage Schema
+```
+
+### Frontmatter 필수 필드
+```yaml
+title: ""        # 30~60자, 키워드 포함
+description: ""  # 80~120자, 첫 문장 핵심 답변
+date: YYYY-MM-DD
+category: ""     # doctor-column|faq|health-tips|before-after|clinic-news
+tags: ["시술명", "고통점", "타겟층", "콘텐츠유형", "작성-YYYYMMDD"]
+draft: false
+```
+
+### 금지 표현 (즉시 삭제)
+```
+최고 / 완벽 / 기적 / 100% 보장 / 무조건 효과 / 확실히
+타 병원 대비 / 지금이 기회 / 한정 특가 / 다들 하는 시술
+```

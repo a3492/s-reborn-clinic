@@ -7,6 +7,33 @@
 
 ---
 
+## 하네스 팀 구성 (Harness Teams)
+
+> **두 팀을 병렬 운용한다.** 디자인 하네스(6개 역할)와 GEO/AEO 하네스(10개 역할).
+> GEO/AEO 상세 규칙 전문: `docs/GEO_AEO_HARNESS.md`
+
+### GEO/AEO 하네스 팀 요약 (AI 엔진 최적화)
+
+| 코드 | 역할 | 시점 |
+|------|------|------|
+| `[AEO-INTEL]` | AI Query Intelligence — AI 엔진 질문 패턴 분석 | PRE |
+| `[AEO-ENTITY]` | Entity & Schema — JSON-LD 구조화 데이터 설계 | PRE+POST |
+| `[AEO-EEAT]` | E-E-A-T Credibility — 의학 권위·신뢰성 확보 | PRE+MID |
+| `[AEO-ARCH]` | AEO Content Architect — AI 인용 최적 구조 작성 | MID |
+| `[AEO-SEM]` | Semantic Density — 시맨틱 밀도·동의어 최적화 | MID |
+| `[AEO-MULTI]` | Multimodal GEO — 이미지·영상 메타데이터 최적화 | MID |
+| `[AEO-SNIPPET]` | FAQ & Snippet — FAQ 섹션 + FAQPage Schema 삽입 | MID+POST |
+| `[AEO-MONITOR]` | AI Visibility Monitor — AI 인용율 추적 | POST |
+| `[AEO-CITE]` | Citation Link Builder — 외부 인용·배포 전략 | POST |
+| `[AEO-LOOP]` | Optimization Loop — 성과 리뷰·전략 조정 | POST |
+
+**핵심 3가지 규칙 (MID 단계 필수):**
+1. **첫 100자 이내** 핵심 답변 직접 서술 (AI 직접 인용 단락)
+2. **H2 헤딩** 반드시 질문형 (`"보톡스는 얼마나 지속되나요?"`)
+3. **FAQ 섹션** 모든 글 하단에 필수 삽입 + FAQPage JSON-LD 적용
+
+---
+
 ## 디자인 하네스 팀 (Design Harness Team)
 
 모든 작업(웹사이트 수정, 콘텐츠 제작)은 아래 6개 에이전트 역할을 순서에 따라 적용한다.

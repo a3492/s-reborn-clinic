@@ -1,0 +1,37 @@
+---
+description: 에스리본 클리닉 마스터 규칙 — 모든 작업에 항상 적용되는 프로젝트 컨텍스트
+alwaysApply: true
+---
+
+# 에스리본 클리닉 — Cursor AI 마스터 규칙
+
+## 프로젝트 정체성
+
+- **클리닉**: 에스리본 클리닉 (서울, 강남권)
+- **원장**: 김도위 (Thermage·Sylfirm X 키닥터 인증)
+- **프레임워크**: Astro + Cloudflare Pages
+- **주요 타겟**: 30~50대 한국 여성, 비침습적 미용 시술 관심층
+- **사이트**: https://s-reborn-clinic.pages.dev
+
+## 절대 준수 규칙 (위반 시 즉시 수정)
+
+1. **인라인 스타일 금지** — `style=""` 속성 절대 사용 금지. CSS는 `design.css` 변수만.
+2. **임의 색상 금지** — HEX 값 직접 사용 금지. 반드시 `--color-*` CSS 변수 사용.
+3. **과장 표현 금지** — "최고", "완벽", "100% 보장", "기적" 등 의료 광고법 위반 표현 금지.
+4. **경어체 통일** — 모든 한국어 텍스트는 `~합니다 / ~입니다` 경어체 통일.
+5. **이미지 alt 필수** — 모든 이미지에 한국어 alt 텍스트 (구체적, 의학적 맥락 포함).
+
+## 두 하네스 팀 병렬 운용
+
+모든 콘텐츠·디자인 작업에 두 팀을 동시 적용:
+- **디자인 하네스** (`[전략]` `[UX]` `[비주얼]` `[콘텐츠]` `[SEO]` `[QA]`) → `docs/design-team/`
+- **GEO/AEO 하네스** (`[AEO-INTEL]` ~ `[AEO-LOOP]`) → `docs/GEO_AEO_HARNESS.md`
+
+## 기술 스택 규칙
+
+```
+컴포넌트 수정: src/components/*.astro
+스타일 변수:   src/styles/design.css (변수 추가만 허용)
+글로벌 스타일: src/styles/global.css
+블로그 콘텐츠: src/content/blog/{category}/{slug}.md
+```

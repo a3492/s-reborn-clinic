@@ -1,0 +1,459 @@
+---
+description: GEO/AEO 하네스 팀 10개 역할 전체 규칙 — ChatGPT·Perplexity·Gemini·Claude AI 엔진 인용 최적화. Schema 삽입, FAQ 구조, E-E-A-T 강화 작업 시 자동 적용.
+globs: ["src/content/blog/**/*.md", "src/pages/**/*.astro", "src/components/**/*.astro"]
+alwaysApply: false
+---
+
+# GEO/AEO 하네스 팀 — AI 엔진 최적화 전체 규칙
+
+> 목적: ChatGPT·Perplexity·Gemini·Claude·Naver AI Cue: 에서 에스리본 클리닉 콘텐츠가
+> 직접 인용·노출되도록 콘텐츠 구조와 마크업을 최적화한다.
+
+---
+
+## [AEO-INTEL] AI Query Intelligence Analyst
+
+### 역할
+새 콘텐츠 기획 전, AI 엔진이 이 주제에 어떻게 답하는지 분석한다.
+
+### Cursor 실행 지시문
+
+```
+작업 시작 전 아래 쿼리 패턴으로 AI 엔진 응답 패턴을 파악하라.
+직접 검색은 불가하므로, 해당 주제의 예상 AI 답변 구조를 추론하여 글 구조에 반영한다.
+
+쿼리 패턴:
+  "강남 [시술명] 어떤가요"
+  "[시술명] 부작용 있나요"
+  "[시술명] 비용 얼마나 해요"
+  "[시술명]이 [유사시술]보다 나은가요"
+  "[시술명] 후 회복 기간이 얼마나 걸려요"
+
+→ 위 질문들에 글이 직접 답해야 한다.
+→ 답변이 없는 질문이 있으면 H2 섹션 또는 FAQ Q로 추가한다.
+```
+
+---
+
+## [AEO-ENTITY] Entity & Schema Architect
+
+### 역할
+Google Knowledge Graph와 AI 엔진이 클리닉·원장·시술을 Named Entity로 인식하도록
+JSON-LD 구조화 데이터를 설계·삽입한다.
+
+### Named Entity 일관성 규칙
+
+모든 콘텐츠에서 아래 명칭을 정확하게 통일:
+
+```
+클리닉명:  에스리본 클리닉  (약칭 금지: "에스리본", "리본클리닉" 혼용 금지)
+원장명:    김도위  (표기 통일: "김도위 원장님" X → "김도위 원장" O)
+URL:       https://s-reborn-clinic.pages.dev  (trailing slash 없음)
+인증:      "Thermage 키닥터 인증의" / "Sylfirm X 키닥터 인증의"
+전문:      "에너지 기반 비침습 리프팅 전문"
+```
+
+### JSON-LD 삽입 위치
+
+```
+홈(/):              MedicalOrganization + Physician
+원장소개(/about/*): Physician (상세 버전)
+시술페이지:         MedicalProcedure + Physician
+블로그 글:          Article + FAQPage + MedicalProcedure
+```
+
+### 시술별 MedicalProcedure 템플릿
+
+```json
+{
+  "@type": "MedicalProcedure",
+  "name": "{{시술명 한국어}}",
+  "alternateName": "{{영문명}}",
+  "description": "{{원리 + 효과 1~2문장, 수치 포함}}",
+  "bodyLocation": "{{시술 부위}}",
+  "procedureType": "NoninvasiveProcedure",
+  "preparation": "{{시술 전 주의사항}}",
+  "followup": "{{시술 후 관리}}",
+  "howPerformed": "{{시술 과정 요약}}",
+  "recognizingAuthority": {
+    "@type": "MedicalOrganization",
+    "name": "에스리본 클리닉",
+    "url": "https://s-reborn-clinic.pages.dev"
+  },
+  "study": {
+    "@type": "MedicalStudy",
+    "description": "{{인용 근거 출처}}"
+  }
+}
+```
+
+---
+
+## [AEO-EEAT] E-E-A-T Credibility Strategist
+
+### 역할
+Google의 E-E-A-T(Experience·Expertise·Authoritativeness·Trustworthiness) 기준과
+YMYL(Your Money Your Life) 의료 콘텐츠 신뢰 기준을 충족한다.
+
+### 필수 신뢰 요소 삽입 패턴
+
+```markdown
+<!-- doctor-column, faq 카테고리: 저자 크레딧 블록 필수 -->
+> **집필: 김도위 원장**
+> 에스리본 클리닉 대표원장 | 피부과 전문의
+> Thermage FLX·Sylfirm X 키닥터 인증 | 에너지 기반 비침습 리프팅 전문
+> _이 글은 임상 경험과 최신 의학 연구를 바탕으로 작성되었습니다._
+
+<!-- 의학 근거 인용 패턴 -->
+임상 연구에 따르면 HIFU 기반 리프팅 시술은 시술 3개월 후
+피부 탄력이 평균 23% 향상되는 것으로 보고되었습니다.
+(출처: Journal of Cosmetic Dermatology, Vol.22 Issue 4, 2023)
+
+<!-- 한계·면책 고지 (YMYL 필수) -->
+개인 피부 상태, 시술 부위, 사용 장비에 따라 효과와 회복 기간은 다를 수 있습니다.
+정확한 진단과 시술 여부는 반드시 전문의 직접 상담을 통해 결정하시기 바랍니다.
+```
+
+### YMYL 금지·주의 표현
+
+```
+금지: "무조건", "확실히", "100%", "반드시 효과", "완치", "완벽"
+주의: 효과 수치 → 반드시 "(출처: ...)" 병기
+주의: "~에 좋습니다" → "~에 도움이 될 수 있습니다"로 완화
+주의: 가격 언급 시 → "상담을 통해 정확한 비용 안내" 권장
+```
+
+---
+
+## [AEO-ARCH] AEO Content Architect
+
+### 역할
+AI 엔진이 직접 인용하는 구조로 콘텐츠를 설계한다.
+AI는 "스니펫 단락"(명확한 답변이 담긴 짧은 단락)을 인용한다.
+
+### 스니펫 최적화 4가지 패턴
+
+#### 패턴 1: 정의 스니펫
+
+```markdown
+## 울쎄라(Ultherapy)란 무엇인가요?
+
+울쎄라(Ultherapy)는 집중 초음파(HIFU) 에너지를 피부 진피층과 SMAS층에 전달해
+콜라겐 재생을 유도하는 비침습 리프팅 시술입니다.
+메스나 주사 없이 열 에너지로 피부 탄력을 회복시키며, 효과는 시술 후 3~6개월에 걸쳐 나타납니다.
+```
+
+#### 패턴 2: 비교 스니펫
+
+```markdown
+## 울쎄라와 써마지의 차이는 무엇인가요?
+
+| 항목 | 울쎄라(Ultherapy) | 써마지(Thermage FLX) |
+|------|-----------------|---------------------|
+| 에너지 | 집중 초음파(HIFU) | 고주파(RF) |
+| 작용 깊이 | 진피 + SMAS층 | 진피층 |
+| 주요 효과 | 리프팅·처짐 개선 | 탄력·볼륨 회복 |
+| 시술 시간 | 60~90분 | 45~60분 |
+| 지속 기간 | 12~18개월 | 6~12개월 |
+
+두 시술은 상호 보완적이어서 병행 시 더 좋은 결과를 보이는 경우도 있습니다.
+```
+
+#### 패턴 3: 절차 스니펫
+
+```markdown
+## 울쎄라 시술은 어떻게 진행되나요?
+
+1. **상담 (15~30분)**: 피부 상태 진단, 시술 범위 결정
+2. **마취 (30분)**: 마취 크림 도포 후 대기
+3. **시술 (60~90분)**: 집중 초음파 에너지를 타겟 깊이에 전달
+4. **마무리 (10분)**: 진정 케어, 주의사항 안내
+5. **일상 복귀**: 당일~다음날 가능 (강도에 따라 차이)
+```
+
+#### 패턴 4: 숫자 목록 스니펫
+
+```markdown
+## 울쎄라 시술 전 꼭 알아야 할 5가지
+
+1. **시술 통증**: 개인차가 있으나 열감·따끔함이 느껴질 수 있습니다.
+2. **즉각 효과**: 시술 직후 일부 효과가 보이나, 본격 효과는 1~3개월 후입니다.
+3. **지속 기간**: 평균 12~18개월이며 생활습관에 따라 차이가 납니다.
+4. **금기 사항**: 임신 중, 금속 임플란트 부위, 피부 감염 시 시술 불가입니다.
+5. **병행 시술**: 필러·보톡스와 병행 가능하나 반드시 전문의 판단 하에 결정합니다.
+```
+
+---
+
+## [AEO-SEM] Semantic Density Editor
+
+### 역할
+동의어·관련어를 균등하게 분산 배치해 AI 엔진이 콘텐츠를 다양한 검색 의도와 매칭하도록 한다.
+
+### 시술별 시맨틱 클러스터 (복사해서 글에 분산 배치)
+
+```
+울쎄라 클러스터:
+  울쎄라 / Ultherapy / HIFU 리프팅 / 초음파 리프팅 / 집중 초음파 리프팅
+  피부 처짐 개선 / 얼굴 리프팅 / 비침습 리프팅 / 자연스러운 리프팅
+
+써마지 클러스터:
+  써마지 / Thermage / 써마지 FLX / 고주파 리프팅 / RF 리프팅
+  피부 탄력 회복 / 콜라겐 재생 / 탄력 저하 개선 / 비침습 탄력 시술
+
+보톡스 클러스터:
+  보톡스 / 보툴리눔 독소 / 보툴리눔 시술 / 주름 개선 / 근육 이완
+  미간 주름 / 이마 주름 / 눈가 주름 / 사각턱 개선 / 턱 보톡스
+
+필러 클러스터:
+  필러 / 더말 필러 / 히알루론산 필러 / 볼 필러 / 팔자 필러
+  볼륨 회복 / 골격 교정 / 눈밑 필러 / 입술 필러
+```
+
+### 적용 방법
+
+```markdown
+<!-- ❌ 단일 키워드 반복 -->
+울쎄라는 얼굴 리프팅 시술입니다. 울쎄라는 HIFU를 사용합니다.
+울쎄라의 효과는 오래 지속됩니다.
+
+<!-- ✅ 시맨틱 클러스터 분산 -->
+울쎄라(Ultherapy)는 집중 초음파(HIFU)를 이용한 비침습 리프팅 시술입니다.
+피부 처짐 개선과 탄력 회복에 효과적이며, 얼굴 리프팅 결과가 자연스럽게 나타납니다.
+```
+
+---
+
+## [AEO-MULTI] Multimodal GEO Specialist
+
+### 역할
+이미지·인포그래픽·영상의 메타데이터를 최적화해 AI 엔진의 멀티모달 검색에 대응한다.
+
+### 이미지 최적화 완전 체크리스트
+
+```
+파일명 규칙: [시술명]-[부위]-[특징]-[기간].webp
+  ✅ ultherapy-cheek-lifting-before-after-6weeks.webp
+  ✅ thermage-flx-forehead-wrinkle-result-3months.webp
+  ❌ KakaoTalk_Photo_2026.jpg
+  ❌ IMG_0012.png
+  ❌ before_after.jpg
+
+alt 텍스트 구조: [연령대] [성별] [부위] [시술명] [전후/과정] [기간]
+  ✅ "45세 여성 볼 처짐 울쎄라 리프팅 시술 전후 3개월 비교"
+  ✅ "40대 여성 이마 주름 써마지 시술 후 6주 탄력 개선 결과"
+  ❌ "시술 전후"
+  ❌ "울쎄라 사진"
+
+포맷·사이즈:
+  블로그 썸네일:  1200×675px, WebP, ≤150KB
+  비포/애프터:   800×800px, JPG, ≤200KB
+  원장 프로필:   600×600px, WebP, ≤100KB
+  히어로 배너:   1920×600px, WebP, ≤250KB
+```
+
+### OG(Open Graph) 메타 태그 패턴
+
+```astro
+<!-- BaseHead.astro에 적용 -->
+<meta property="og:type" content="article" />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:image" content="https://s-reborn-clinic.pages.dev/og/{slug}.webp" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:locale" content="ko_KR" />
+<meta property="og:site_name" content="에스리본 클리닉" />
+```
+
+---
+
+## [AEO-SNIPPET] FAQ & Snippet Engineer
+
+### 역할
+모든 글에 FAQPage Schema와 FAQ 섹션을 삽입해 Google Featured Snippet과 AI 인용을 확보한다.
+
+### FAQ 작성 원칙
+
+```
+Q 작성 규칙:
+  - 실제 환자가 검색할 법한 자연어 질문
+  - 의문사로 시작: "어떻게", "얼마나", "왜", "언제", "무엇이"
+  - 키워드 포함: 질문에 시술명 또는 증상 포함
+  - 최소 3개, 최대 6개
+
+A 작성 규칙:
+  - 첫 문장에서 직접 답변 (AI가 이 문장을 인용)
+  - 2~4문장, 수치 포함
+  - "~합니다" 경어체
+  - 한계 고지 포함 (필요 시)
+```
+
+### FAQ 마크다운 + Schema 통합 패턴
+
+```markdown
+## 자주 묻는 질문 (FAQ)
+
+### Q. 울쎄라 효과는 얼마나 지속되나요?
+A. 울쎄라 효과는 평균 12~18개월 지속됩니다. 피부 상태, 나이, 생활습관에 따라 6개월에서 2년까지 차이가 날 수 있으며, 콜라겐 생성이 3~6개월에 걸쳐 진행되므로 결과는 점진적으로 나타납니다.
+
+### Q. 울쎄라 시술 후 바로 일상생활이 가능한가요?
+A. 대부분의 경우 시술 당일 또는 다음날부터 일상생활이 가능합니다. 시술 직후 약간의 홍조와 부기가 있을 수 있으나 1~3일 내 자연스럽게 가라앉습니다. 강도 높은 운동이나 사우나는 1주일간 피하시길 권장합니다.
+
+### Q. 울쎄라와 써마지, 어떤 시술이 저에게 맞나요?
+A. 주된 고민이 피부 처짐과 리프팅이라면 울쎄라를, 탄력 저하와 피부결 개선이 목적이라면 써마지가 더 적합할 수 있습니다. 두 시술은 작용 층이 다르므로 병행 시 더 효과적인 경우도 있습니다. 정확한 판단은 전문의 직접 상담을 통해 결정하시기 바랍니다.
+```
+
+```html
+<!-- 동일 내용을 JSON-LD로 변환해 <head> 또는 글 하단에 삽입 -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "울쎄라 효과는 얼마나 지속되나요?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "울쎄라 효과는 평균 12~18개월 지속됩니다. 피부 상태, 나이, 생활습관에 따라 6개월에서 2년까지 차이가 날 수 있으며, 콜라겐 생성이 3~6개월에 걸쳐 진행되므로 결과는 점진적으로 나타납니다."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "울쎄라 시술 후 바로 일상생활이 가능한가요?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "대부분의 경우 시술 당일 또는 다음날부터 일상생활이 가능합니다. 시술 직후 약간의 홍조와 부기가 있을 수 있으나 1~3일 내 자연스럽게 가라앉습니다."
+      }
+    }
+  ]
+}
+</script>
+```
+
+---
+
+## [AEO-MONITOR] AI Visibility Monitor
+
+### 역할
+발행 후 AI 엔진 인용 현황을 추적하고 미인용 시 개선 전략을 제시한다.
+
+### 발행 후 3일 이내 인용 체크 절차
+
+```
+타겟 질문 3~5개를 아래 AI 엔진에서 직접 검색:
+
+□ ChatGPT (chatgpt.com)
+□ Perplexity (perplexity.ai)
+□ Google Gemini
+□ Claude (claude.ai)
+□ Naver AI Cue:
+
+결과 기록 형식:
+  날짜: YYYY-MM-DD
+  글 URL: /blog/{category}/{slug}
+  타겟 질문: "..."
+  인용 여부: 인용 / 부분 인용 / 미인용
+  인용 AI: ChatGPT / Perplexity / Gemini / Claude / Naver
+  스크린샷: docs/aeo-citations/YYYY-MM/{slug}-{ai}-{date}.png
+
+→ docs/aeo-kpi-log.md에 기록
+```
+
+### 미인용 시 개선 매뉴얼
+
+```
+미인용 원인 → 조치
+
+1. 첫 100자에 핵심 답변 없음
+   → 오프닝 단락을 [AEO-ARCH] 패턴 1로 재작성
+
+2. H2 헤딩이 질문형이 아님
+   → 모든 H2를 "~나요?" / "~까요?" 형식으로 교체
+
+3. FAQ 섹션 없음
+   → [AEO-SNIPPET] 패턴 적용, FAQPage Schema 삽입
+
+4. 수치/임상 데이터 없음
+   → [AEO-SEM] 규칙: 숫자 최소 2개 추가
+
+5. 저자 E-E-A-T 신호 없음
+   → [AEO-EEAT] 저자 크레딧 블록 추가
+```
+
+---
+
+## [AEO-CITE] Citation Link Builder
+
+### 역할
+콘텐츠를 외부 채널에 배포해 AI 엔진이 클리닉을 다양한 소스에서 인식하도록 한다.
+
+### 배포 채널 우선순위
+
+```
+P1 (즉시):
+  □ 네이버 블로그 — 한국 AI(Cue:) 학습 데이터 핵심 소스
+  □ 카카오뷰 — 한국 모바일 트래픽
+
+P2 (주간):
+  □ 의학 정보 포털 (하이닥, 의약품안전나라 등)
+  □ 네이버 지식인 — FAQ 콘텐츠를 Q&A 형식으로 재활용
+
+P3 (월간):
+  □ YouTube Shorts — 시술 요약 영상 + 한국어 자막
+  □ 학회 발표 자료 → 외부 권위 링크 확보
+```
+
+### 배포 시 필수 일관성
+
+```
+클리닉명:  에스리본 클리닉  (모든 채널 동일)
+원장명:    김도위 원장      (모든 채널 동일)
+URL:       https://s-reborn-clinic.pages.dev  (항상 포함)
+→ Named Entity 일관성이 AI 인식 신뢰도를 높인다
+```
+
+---
+
+## [AEO-LOOP] Continuous Optimization Loop Manager
+
+### 역할
+월간 성과를 리뷰하고 다음 콘텐츠 전략을 조정한다.
+
+### 월간 KPI 기록 템플릿 (docs/aeo-kpi-log.md)
+
+```markdown
+## YYYY-MM 월간 AEO KPI
+
+| 지표 | 이번 달 | 지난 달 | 목표 | 상태 |
+|------|---------|---------|------|------|
+| Perplexity 인용 (질문 20개 중) | N개 | N개 | 30% | 🔴/🟡/🟢 |
+| Google AI Overview 노출 키워드 | N개 | N개 | 5개 | |
+| AI 브랜드 멘션 ("에스리본") | N회 | N회 | 10회 | |
+| Featured Snippet 점유 | N개 | N개 | 15개 | |
+| 외부 인용 링크 수 | N개 | N개 | 50개 | |
+
+### 이번 달 인용된 글 TOP 3
+1. [글 제목] — Perplexity, ChatGPT 인용
+2. ...
+
+### 다음 달 우선 개선 작업
+- [ ] ...
+```
+
+### 최적화 루프 결정 흐름
+
+```
+Perplexity 인용율 < 10%
+  → [AEO-ARCH] 오프닝 단락 전면 재작성
+  → [AEO-SNIPPET] FAQ 섹션 질문 교체
+
+Google AI Overview 노출 없음
+  → [AEO-ENTITY] Schema 유효성 재검증 (Rich Results Test)
+  → [AEO-EEAT] 저자 권위 신호 강화
+
+브랜드 멘션 없음
+  → [AEO-CITE] 배포 채널 다각화
+  → 원장 김도위 외부 기고 또는 학회 발표 추진
+```
