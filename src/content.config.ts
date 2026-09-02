@@ -14,6 +14,14 @@ const blog = defineCollection({
 			/** English translation of the description — injected by translate-posts script */
 			description_en: z.string().optional(),
 			date: z.coerce.date(),
+			/** 의학 검수·내용 개정일. 일반 metadata 저장일과 분리해서 사용 */
+			updated: z.coerce.date().optional(),
+			/** H1 아래에서 본문 진입을 돕는 편집 리드 */
+			lead: z.string().optional(),
+			/** 카드 이미지 위/옆에 HTML 텍스트로 표시하는 짧은 훅 */
+			thumbnail_label: z.string().optional(),
+			/** 콘텐츠가 Journal 안에서 맡는 역할 */
+			content_role: z.enum(['entrance', 'trust', 'brand', 'practical', 'connector']).optional(),
 			/** 시술 안내 4축과 매칭 — 심화·FAQ 등 영역별 필터용 (선택) */
 			pillar: z.enum(['ebd', 'injection', 'oral', 'topical']).optional(),
 			category: z.string().optional(),
@@ -25,13 +33,32 @@ const blog = defineCollection({
 			difficulty: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
 			type: z.string().optional(),
 			/**
-			 * 시리즈 묶음 이름(예: "5분 AI 시리즈", "입문 시리즈"). 같은 문자열이면 한 시리즈로 묶입니다.
-			 * MD 예: `series: "5분 AI 시리즈"` (+ 선택 `series_order: 1` 로 순서 지정, 없으면 date 오름차순)
-			 * Supabase `posts` 테이블에는 `series` 컬럼이 없으면 migrations/20260407_posts_series_column.sql 적용 후 에디터·동기화에 반영하세요.
+			 * 시리즈 묶음 이름. Journal의 5개 공개 편집 시리즈도 이 기존 필드를 그대로 사용한다.
+			 * Doctor AI 등 다른 시리즈도 사용하므로 enum으로 제한하지 않는다.
 			 */
 			series: z.string().optional(),
 			/** 같은 series 내 표시 순서(작을수록 앞). 미지정 글은 date 순으로 뒤에 이어짐 */
 			series_order: z.number().optional(),
+			/** 편집자가 지정한 대표 다음 글 slug — 시리즈 순서와 별개인 의미 기반 이어읽기 */
+			primary_next: z.string().optional(),
+			/** 편집자가 지정한 연관 글 slug — 기본 2개, 더 저장해도 렌더러가 필요한 수만 사용 */
+			related: z.array(z.string()).optional().default([]),
+			/** 근거·참고자료. 본문 하단 references 영역에서 사용 */
+			references: z
+				.array(
+					z.object({
+						label: z.string(),
+						url: z.string().url(),
+						source_type: z.string().optional(),
+						note: z.string().optional(),
+					}),
+				)
+				.optional()
+				.default([]),
+			/** 실제 환자 1인을 재현하지 않은 composite case임을 공개하는 문구 */
+			case_disclosure: z.string().optional(),
+			/** SNS·쇼츠 재가공용 내부 카피 자산 */
+			social_hook: z.string().optional(),
 			/** Doctor AI Academy 섹션 — category 가 doctor-ai 일 때 필수 */
 			academy_section: z.enum(ACADEMY_SECTION_IDS).optional(),
 			/** 같은 섹션 내 정렬(작을수록 앞) — 미지정 시 날짜순 */
