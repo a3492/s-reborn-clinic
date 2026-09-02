@@ -36,6 +36,23 @@ export const NAVER_MAP_SEARCH_QUERY = '에스리본의원';
 /** 네이버 지도 웹 검색 (모바일·PC 공통) */
 export const NAVER_MAP_SEARCH_URL = `https://map.naver.com/p/search/${encodeURIComponent(NAVER_MAP_SEARCH_QUERY)}`;
 
+/**
+ * Journal 공개 편집 시리즈.
+ *
+ * 기존 Blog `series` frontmatter를 그대로 재사용한다. Doctor AI 등 다른 시리즈도 같은 필드를
+ * 사용하므로 content schema 자체를 이 5개 값으로 제한하지 않고, Journal UI에서만 이 목록을
+ * 공개 필터/배지의 기준으로 사용한다.
+ */
+export const JOURNAL_EDITORIAL_SERIES = [
+  { id: 'curious-qa', label: '궁금해서 물어봤습니다', labelEn: 'Asked Out of Curiosity' },
+  { id: 'clinic-cases', label: '진료실에 이런 일이', labelEn: 'From the Consultation Room' },
+  { id: 'connected-aesthetic-medicine', label: '꼬리에 꼬리를 무는 미용의학', labelEn: 'Aesthetic Medicine, Connected' },
+  { id: 'decision-guide', label: '그래서 뭘 해야 하나요?', labelEn: 'So, What Should I Do?' },
+  { id: 'doctor-view', label: '의사는 이렇게 봅니다', labelEn: "A Doctor's View" },
+] as const;
+
+export type JournalEditorialSeries = typeof JOURNAL_EDITORIAL_SERIES[number]['label'];
+
 export const CATEGORIES = [
   { id: 'procedures',    label: '시술·치료',        labelEn: 'Procedures & Treatments', description: '클리닉 시술 및 치료 안내' },
   { id: 'before-after',  label: '전후 사례',        labelEn: 'Before & After',          description: '시술 전후 비교 사례' },
