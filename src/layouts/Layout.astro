@@ -1,6 +1,7 @@
 ---
 import '../styles/design.css';
 import '../styles/global.css';
+import '../styles/journal.css';
 import BaseHead from '../components/BaseHead.astro';
 import AnalyticsScripts from '../components/AnalyticsScripts.astro';
 import Header from '../components/Header.astro';
@@ -111,5 +112,8 @@ const layoutMainAria = t(locale, 'layout.mainAria');
       <Footer siteTitle={resolvedSiteTitle} socialLinks={siteSettings.socialLinks} />
     </div>
     <WebVitalsCollector />
+    <script>
+      import '../scripts/journal-series-ui';
+    </script>
   </body>
 </html>
