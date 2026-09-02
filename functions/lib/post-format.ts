@@ -8,23 +8,48 @@ function escapeYamlString(value: unknown): string {
   return String(value ?? '').replaceAll('\\', '\\\\').replaceAll('"', '\\"').replaceAll('\n', '\\n');
 }
 
+function yamlString(value: unknown): string {
+  return `"${escapeYamlString(value)}"`;
+}
+
+/** JSON flow style은 YAML 1.2에서 유효하므로 배열·객체 frontmatter를 안전하게 직렬화하는 데 사용한다. */
+function yamlJson(value: unknown, fallback: unknown): string {
+  try {
+    return JSON.stringify(value ?? fallback);
+  } catch {
+    return JSON.stringify(fallback);
+  }
+}
+
 export function buildFrontmatter(post: Record<string, unknown>): string {
-  const tags = Array.isArray(post.tags)
-    ? `[${(post.tags as string[]).map((tag: string) => `"${tag}"`).join(', ')}]`
-    : '[]';
+  const tags = Array.isArray(post.tags) ? post.tags : [];
+  const relatedSlugs = Array.isArray(post.related_slugs) ? post.related_slugs : [];
+  const referenceLinks = Array.isArray(post.reference_links) ? post.reference_links : [];
+
   const parts = [
     '---',
-    `title: "${escapeYamlString(post.title)}"`,
-    `description: "${escapeYamlString(post.description)}"`,
+    `title: ${yamlString(post.title)}`,
+    `description: ${yamlString(post.description)}`,
     `date: ${post.published_at ?? isoNow()}`,
-    `category: "${escapeYamlString(post.category)}"`,
-    post.subcategory ? `subcategory: "${escapeYamlString(post.subcategory)}"` : '',
-    `tags: ${tags}`,
+    post.content_updated_at ? `updated: ${post.content_updated_at}` : '',
+    `category: ${yamlString(post.category)}`,
+    post.subcategory ? `subcategory: ${yamlString(post.subcategory)}` : '',
+    `tags: ${yamlJson(tags, [])}`,
     `draft: ${post.status !== 'published'}`,
-    post.thumbnail_url ? `thumbnail: "${escapeYamlString(post.thumbnail_url)}"` : '',
-    post.seo_title ? `seoTitle: "${escapeYamlString(post.seo_title)}"` : '',
-    post.seo_description ? `seoDescription: "${escapeYamlString(post.seo_description)}"` : '',
-    post.canonical_url ? `canonicalURL: "${escapeYamlString(post.canonical_url)}"` : '',
+    post.thumbnail_url ? `thumbnail: ${yamlString(post.thumbnail_url)}` : '',
+    post.series ? `series: ${yamlString(post.series)}` : '',
+    typeof post.series_order === 'number' ? `series_order: ${post.series_order}` : '',
+    post.lead ? `lead: ${yamlString(post.lead)}` : '',
+    post.thumbnail_label ? `thumbnail_label: ${yamlString(post.thumbnail_label)}` : '',
+    post.content_role ? `content_role: ${yamlString(post.content_role)}` : '',
+    post.primary_next_slug ? `primary_next: ${yamlString(post.primary_next_slug)}` : '',
+    relatedSlugs.length > 0 ? `related: ${yamlJson(relatedSlugs, [])}` : '',
+    referenceLinks.length > 0 ? `references: ${yamlJson(referenceLinks, [])}` : '',
+    post.case_disclosure ? `case_disclosure: ${yamlString(post.case_disclosure)}` : '',
+    post.social_hook ? `social_hook: ${yamlString(post.social_hook)}` : '',
+    post.seo_title ? `seoTitle: ${yamlString(post.seo_title)}` : '',
+    post.seo_description ? `seoDescription: ${yamlString(post.seo_description)}` : '',
+    post.canonical_url ? `canonicalURL: ${yamlString(post.canonical_url)}` : '',
     '---',
     '',
   ].filter(Boolean);
