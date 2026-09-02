@@ -2,6 +2,11 @@ import { JOURNAL_EDITORIAL_SERIES } from '../consts';
 
 const SERIES_HIDDEN_CLASS = 'is-editorial-series-hidden';
 
+type BlogFilterGlobal = typeof globalThis & {
+  applyBlogFilters?: () => void;
+  __journalSeriesFilterWrapped?: boolean;
+};
+
 function isJournalIndex(pathname: string) {
   return pathname === '/blog/' || pathname === '/blog' || pathname === '/en/blog/' || pathname === '/en/blog';
 }
@@ -141,8 +146,20 @@ function applyEditorialSeriesFilter(english: boolean) {
 
   const currentTitle = document.title;
   const pipeIndex = currentTitle.indexOf('|');
-  const suffix = pipeIndex >= 0 ? currentTitle.slice(pipeIndex) : '';
-  document.title = `${activeLabel} | Journal${suffix}`;
+  const suffix = pipeIndex >= 0 ? currentTitle.slice(pipeIndex).trim() : '';
+  document.title = suffix ? `${activeLabel} | Journal ${suffix}` : `${activeLabel} | Journal`;
+}
+
+function wrapLegacyBlogFilter(english: boolean) {
+  const global = globalThis as BlogFilterGlobal;
+  if (global.__journalSeriesFilterWrapped || typeof global.applyBlogFilters !== 'function') return;
+
+  const originalApplyBlogFilters = global.applyBlogFilters;
+  global.applyBlogFilters = () => {
+    originalApplyBlogFilters();
+    applyEditorialSeriesFilter(english);
+  };
+  global.__journalSeriesFilterWrapped = true;
 }
 
 function updateJournalNavigationLabel(english: boolean) {
@@ -160,8 +177,10 @@ function initJournalSeriesUi() {
   const english = window.location.pathname.startsWith('/en/');
   createSeriesNavigation(english);
   replaceCardSeriesBadges(english);
+  wrapLegacyBlogFilter(english);
   applyEditorialSeriesFilter(english);
   updateJournalNavigationLabel(english);
+  window.addEventListener('popstate', () => applyEditorialSeriesFilter(english));
 }
 
 if (document.readyState === 'loading') {
