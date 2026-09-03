@@ -2,6 +2,7 @@
 import { getCollection, render } from 'astro:content';
 import BlogPost from '../../layouts/BlogPost.astro';
 import JournalArticleExperience from '../../components/JournalArticleExperience.astro';
+import JournalEditorialArticleChrome from '../../components/JournalEditorialArticleChrome.astro';
 import { isAcademyBlogPost } from '../../lib/academy';
 import { buildBlogPostDownloadMarkdown } from '../../lib/blog-post-download-markdown';
 import { buildTocFromMarkdown } from '../../lib/blog-post-toc';
@@ -23,6 +24,8 @@ const tocItems = buildTocFromMarkdown(post.body ?? '');
 ---
 
 <BlogPost {...post.data} body={post.body} tocItems={tocItems} encodedDownloadMarkdown={encodedDownloadMarkdown}>
+  <JournalEditorialArticleChrome series={post.data.series} />
+
   <JournalArticleExperience
     placement="before"
     currentSlug={post.id}
