@@ -1,6 +1,7 @@
 import { JOURNAL_EDITORIAL_SERIES } from '../consts';
 
 const SERIES_HIDDEN_CLASS = 'is-editorial-series-hidden';
+const EDITORIAL_LABELS = new Set(JOURNAL_EDITORIAL_SERIES.map((series) => series.label));
 
 type BlogFilterGlobal = typeof globalThis & {
   applyBlogFilters?: () => void;
@@ -34,6 +35,9 @@ function replaceCardSeriesBadges(english: boolean) {
     replacement.textContent = english && meta ? meta.labelEn : seriesName;
     replacement.setAttribute('aria-label', english ? `Series: ${replacement.textContent}` : `시리즈: ${replacement.textContent}`);
     badge.replaceWith(replacement);
+
+    // Journal 공개 분류는 series가 기준이다. 호환용 legacy category 배지는 중복 노출하지 않는다.
+    if (meta) card.querySelector<HTMLElement>('.blog-post-card-cat')?.setAttribute('hidden', '');
   });
 }
 
@@ -172,8 +176,8 @@ function updateJournalNavigationLabel(english: boolean) {
   });
 }
 
-function initJournalSeriesUi() {
-  if (!isJournalIndex(window.location.pathname)) return;
+function initJournalIndex() {
+  if (!isJournalIndex(window.location.pathname)) return false;
   const english = window.location.pathname.startsWith('/en/');
   createSeriesNavigation(english);
   replaceCardSeriesBadges(english);
@@ -181,6 +185,63 @@ function initJournalSeriesUi() {
   applyEditorialSeriesFilter(english);
   updateJournalNavigationLabel(english);
   window.addEventListener('popstate', () => applyEditorialSeriesFilter(english));
+  return true;
+}
+
+function initEditorialSeriesHub() {
+  if (!window.location.pathname.startsWith('/series/')) return false;
+
+  const title = document.querySelector<HTMLElement>('.blog-header-title')?.textContent?.trim() ?? '';
+  const series = JOURNAL_EDITORIAL_SERIES.find((item) => item.label === title);
+  if (!series || !EDITORIAL_LABELS.has(title)) return false;
+
+  updateJournalNavigationLabel(false);
+
+  const back = document.querySelector<HTMLAnchorElement>('.blog-series-back');
+  if (back) {
+    back.textContent = '← Journal';
+    back.href = `/blog/?series=${encodeURIComponent(series.id)}`;
+  }
+
+  // 이 5개 시리즈에서는 legacy category가 아니라 editorial series가 공개 분류다.
+  document.querySelectorAll<HTMLElement>('.blog-series-card .blog-post-card-cat').forEach((badge) => {
+    badge.setAttribute('hidden', '');
+  });
+
+  // 기존 시리즈 페이지의 Doctor AI 전용 하드코딩 공유 문구를 editorial copy로 대체한다.
+  const shareButton = document.querySelector<HTMLButtonElement>('[data-share-complete]');
+  if (shareButton) {
+    shareButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+
+      const total = document.querySelectorAll('[data-series-card-id]').length;
+      const shareUrl = window.location.href;
+      const text = `S-Reborn Journal의 ‘${series.label}’ 시리즈 ${total}편을 읽었습니다.`;
+
+      if (navigator.share) {
+        void navigator.share({ text, url: shareUrl }).catch(() => {});
+        return;
+      }
+
+      if (navigator.clipboard?.writeText) {
+        void navigator.clipboard.writeText(`${text}\n${shareUrl}`).then(() => {
+          const original = shareButton.textContent;
+          shareButton.textContent = '복사했습니다';
+          window.setTimeout(() => {
+            shareButton.textContent = original;
+          }, 2000);
+        });
+      }
+    }, true);
+  }
+
+  return true;
+}
+
+function initJournalSeriesUi() {
+  if (initJournalIndex()) return;
+  initEditorialSeriesHub();
 }
 
 if (document.readyState === 'loading') {
