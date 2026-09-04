@@ -120,9 +120,13 @@ function applyEditorialSeriesFilter(english: boolean) {
   const activeId = url.searchParams.get('series') ?? '';
   const activeSeries = JOURNAL_EDITORIAL_SERIES.find((series) => series.id === activeId) ?? null;
   const cards = [...document.querySelectorAll<HTMLElement>('[data-blog-card]')];
+  const title = document.getElementById('blog-page-title');
+
+  if (!searchActive && title) title.textContent = 'Journal';
 
   document.querySelectorAll<HTMLAnchorElement>('[data-journal-series-id]').forEach((link) => {
-    const active = (link.dataset.journalSeriesId ?? '') === (activeSeries?.id ?? '');
+    const expectedId = searchActive ? '' : (activeSeries?.id ?? '');
+    const active = (link.dataset.journalSeriesId ?? '') === expectedId;
     link.classList.toggle('is-active', active);
     if (active) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
@@ -133,7 +137,16 @@ function applyEditorialSeriesFilter(english: boolean) {
     card.classList.toggle(SERIES_HIDDEN_CLASS, hidden);
   }
 
-  if (!activeSeries || searchActive) return;
+  if (searchActive) return;
+
+  const currentTitle = document.title;
+  const pipeIndex = currentTitle.indexOf('|');
+  const suffix = pipeIndex >= 0 ? currentTitle.slice(pipeIndex).trim() : '';
+
+  if (!activeSeries) {
+    document.title = suffix ? `Journal ${suffix}` : 'Journal';
+    return;
+  }
 
   const visibleCount = cards.filter(
     (card) => !card.classList.contains('is-filter-hidden') && !card.classList.contains(SERIES_HIDDEN_CLASS),
@@ -144,9 +157,6 @@ function applyEditorialSeriesFilter(english: boolean) {
 
   if (visibleCount === 0) showSeriesEmptyState(activeLabel, english);
 
-  const currentTitle = document.title;
-  const pipeIndex = currentTitle.indexOf('|');
-  const suffix = pipeIndex >= 0 ? currentTitle.slice(pipeIndex).trim() : '';
   document.title = suffix ? `${activeLabel} | Journal ${suffix}` : `${activeLabel} | Journal`;
 }
 
