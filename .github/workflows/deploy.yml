@@ -33,7 +33,7 @@ jobs:
         run: |
           missing=0
           for name in PUBLIC_SUPABASE_URL PUBLIC_SUPABASE_ANON_KEY PUBLIC_TURNSTILE_SITE_KEY; do
-            if [ -z "${!name:-}" ]; then
+            if [ -z "${!name}" ]; then
               echo "::error::Required GitHub Actions secret ${name} is missing or empty. Production Astro bundles would silently disable or break visitor interactions."
               missing=1
             fi
