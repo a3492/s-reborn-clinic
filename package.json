@@ -10,6 +10,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
+    "check:publish-contract": "tsx scripts/check-publish-contract.ts",
     "translate": "npx tsx scripts/translate-posts.ts",
     "translate:force": "npx tsx scripts/translate-posts.ts --force"
   },
