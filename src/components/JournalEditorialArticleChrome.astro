@@ -1,0 +1,27 @@
+---
+import { JOURNAL_EDITORIAL_SERIES } from '../consts';
+
+interface Props {
+  series?: string;
+}
+
+const seriesName = (Astro.props.series ?? '').trim();
+const editorialSeries = JOURNAL_EDITORIAL_SERIES.find((item) => item.label === seriesName) ?? null;
+---
+
+{editorialSeries && (
+  <script is:inline>
+    (() => {
+      // category는 레거시 호환·면책·내부 분류를 위해 유지하지만 공개 화면에서는 series를 우선한다.
+      const categoryBadge = document.querySelector('.blog-post-category.category-badge');
+      if (categoryBadge) categoryBadge.setAttribute('hidden', '');
+
+      // 새 editorial article에서는 기존 '블로그' 내비게이션 명칭을 Journal로 통일한다.
+      document.querySelectorAll('.site-nav a, .site-mobile-nav a').forEach((node) => {
+        if (!(node instanceof HTMLAnchorElement)) return;
+        const path = new URL(node.href, window.location.origin).pathname;
+        if (path === '/blog/' || path === '/blog') node.textContent = 'Journal';
+      });
+    })();
+  </script>
+)}
