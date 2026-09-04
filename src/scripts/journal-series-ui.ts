@@ -1,6 +1,7 @@
 import { JOURNAL_EDITORIAL_SERIES } from '../consts';
 
 const SERIES_HIDDEN_CLASS = 'is-editorial-series-hidden';
+let journalTitleSuffix = '';
 
 type BlogFilterGlobal = typeof globalThis & {
   applyBlogFilters?: () => void;
@@ -9,6 +10,11 @@ type BlogFilterGlobal = typeof globalThis & {
 
 function isJournalIndex(pathname: string) {
   return pathname === '/blog/' || pathname === '/blog' || pathname === '/en/blog/' || pathname === '/en/blog';
+}
+
+function captureJournalTitleSuffix() {
+  const pipeIndex = document.title.indexOf('|');
+  journalTitleSuffix = pipeIndex >= 0 ? document.title.slice(pipeIndex).trim() : '';
 }
 
 function buildSeriesHref(seriesId: string, english: boolean) {
@@ -139,12 +145,8 @@ function applyEditorialSeriesFilter(english: boolean) {
 
   if (searchActive) return;
 
-  const currentTitle = document.title;
-  const pipeIndex = currentTitle.indexOf('|');
-  const suffix = pipeIndex >= 0 ? currentTitle.slice(pipeIndex).trim() : '';
-
   if (!activeSeries) {
-    document.title = suffix ? `Journal ${suffix}` : 'Journal';
+    document.title = journalTitleSuffix ? `Journal ${journalTitleSuffix}` : 'Journal';
     return;
   }
 
@@ -157,7 +159,9 @@ function applyEditorialSeriesFilter(english: boolean) {
 
   if (visibleCount === 0) showSeriesEmptyState(activeLabel, english);
 
-  document.title = suffix ? `${activeLabel} | Journal ${suffix}` : `${activeLabel} | Journal`;
+  document.title = journalTitleSuffix
+    ? `${activeLabel} | Journal ${journalTitleSuffix}`
+    : `${activeLabel} | Journal`;
 }
 
 function wrapLegacyBlogFilter(english: boolean) {
@@ -185,6 +189,7 @@ function updateJournalNavigationLabel(english: boolean) {
 function initJournalSeriesUi() {
   if (!isJournalIndex(window.location.pathname)) return;
   const english = window.location.pathname.startsWith('/en/');
+  captureJournalTitleSuffix();
   createSeriesNavigation(english);
   replaceCardSeriesBadges(english);
   wrapLegacyBlogFilter(english);
