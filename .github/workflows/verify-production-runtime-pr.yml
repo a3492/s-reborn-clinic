@@ -43,6 +43,13 @@ jobs:
           const checks = Array.isArray(data.checks) ? data.checks : [];
           for (const check of checks) {
             console.log(`${check.key}: ${check.status}`);
+            if (check.key === 'env' && check.status === 'error') {
+              const prefix = '누락된 환경 변수: ';
+              const detail = String(check.detail || '');
+              if (detail.startsWith(prefix)) {
+                console.log(`env_missing_names: ${detail.slice(prefix.length)}`);
+              }
+            }
           }
           console.log(`publish_health_ok: ${Boolean(data.ok)}`);
           if (code < 200 || code >= 400 || !data.ok) process.exit(1);
