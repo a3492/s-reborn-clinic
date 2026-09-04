@@ -8,10 +8,19 @@ function escapeYamlString(value: unknown): string {
   return String(value ?? '').replaceAll('\\', '\\\\').replaceAll('"', '\\"').replaceAll('\n', '\\n');
 }
 
-export function buildFrontmatter(post: Record<string, unknown>): string {
+export interface FrontmatterOptions {
+  /**
+   * Astro가 이 Markdown artifact를 production build에서 제외해야 하는지 여부.
+   * DB의 editorial/publish workflow status와는 다른 개념이므로 status에서 추론하지 않는다.
+   */
+  draft?: boolean;
+}
+
+export function buildFrontmatter(post: Record<string, unknown>, options: FrontmatterOptions = {}): string {
   const tags = Array.isArray(post.tags)
     ? `[${(post.tags as string[]).map((tag: string) => `"${tag}"`).join(', ')}]`
     : '[]';
+  const artifactDraft = options.draft ?? false;
   const parts = [
     '---',
     `title: "${escapeYamlString(post.title)}"`,
@@ -20,7 +29,7 @@ export function buildFrontmatter(post: Record<string, unknown>): string {
     `category: "${escapeYamlString(post.category)}"`,
     post.subcategory ? `subcategory: "${escapeYamlString(post.subcategory)}"` : '',
     `tags: ${tags}`,
-    `draft: ${post.status !== 'published'}`,
+    `draft: ${artifactDraft}`,
     post.thumbnail_url ? `thumbnail: "${escapeYamlString(post.thumbnail_url)}"` : '',
     post.seo_title ? `seoTitle: "${escapeYamlString(post.seo_title)}"` : '',
     post.seo_description ? `seoDescription: "${escapeYamlString(post.seo_description)}"` : '',
