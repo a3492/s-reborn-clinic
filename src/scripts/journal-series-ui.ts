@@ -1,6 +1,7 @@
 import { JOURNAL_EDITORIAL_SERIES } from '../consts';
 
 const SERIES_HIDDEN_CLASS = 'is-editorial-series-hidden';
+const EDITORIAL_LABELS = new Set(JOURNAL_EDITORIAL_SERIES.map((series) => series.label));
 let journalTitleSuffix = '';
 
 type BlogFilterGlobal = typeof globalThis & {
@@ -186,8 +187,8 @@ function updateJournalNavigationLabel(english: boolean) {
   });
 }
 
-function initJournalSeriesUi() {
-  if (!isJournalIndex(window.location.pathname)) return;
+function initJournalIndex() {
+  if (!isJournalIndex(window.location.pathname)) return false;
   const english = window.location.pathname.startsWith('/en/');
   captureJournalTitleSuffix();
   createSeriesNavigation(english);
@@ -196,6 +197,73 @@ function initJournalSeriesUi() {
   applyEditorialSeriesFilter(english);
   updateJournalNavigationLabel(english);
   window.addEventListener('popstate', () => applyEditorialSeriesFilter(english));
+  return true;
+}
+
+function editorialSeriesFromPath() {
+  const parts = window.location.pathname.split('/').filter(Boolean);
+  if (parts.length !== 2 || parts[0] !== 'series') return null;
+
+  let label = parts[1];
+  try {
+    label = decodeURIComponent(label);
+  } catch {
+    return null;
+  }
+
+  if (!EDITORIAL_LABELS.has(label)) return null;
+  return JOURNAL_EDITORIAL_SERIES.find((series) => series.label === label) ?? null;
+}
+
+function initEditorialSeriesHub() {
+  const series = editorialSeriesFromPath();
+  if (!series) return false;
+
+  updateJournalNavigationLabel(false);
+
+  const back = document.querySelector<HTMLAnchorElement>('.blog-series-back');
+  if (back) {
+    back.textContent = '← Journal';
+    back.href = `/blog/?series=${encodeURIComponent(series.id)}`;
+  }
+
+  document.querySelectorAll<HTMLElement>('.blog-series-card .blog-post-card-cat').forEach((badge) => {
+    badge.setAttribute('hidden', '');
+  });
+
+  const shareButton = document.querySelector<HTMLButtonElement>('[data-share-complete]');
+  if (shareButton) {
+    shareButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+
+      const total = document.querySelectorAll('[data-series-card-id]').length;
+      const shareUrl = window.location.href;
+      const text = `S-Reborn Journal의 ‘${series.label}’ 시리즈 ${total}편을 읽었습니다.`;
+
+      if (navigator.share) {
+        void navigator.share({ text, url: shareUrl }).catch(() => {});
+        return;
+      }
+
+      if (navigator.clipboard?.writeText) {
+        void navigator.clipboard.writeText(`${text}\n${shareUrl}`).then(() => {
+          const original = shareButton.textContent;
+          shareButton.textContent = '복사했습니다';
+          window.setTimeout(() => {
+            shareButton.textContent = original;
+          }, 2000);
+        });
+      }
+    }, true);
+  }
+
+  return true;
+}
+
+function initJournalSeriesUi() {
+  if (initJournalIndex()) return;
+  initEditorialSeriesHub();
 }
 
 if (document.readyState === 'loading') {
