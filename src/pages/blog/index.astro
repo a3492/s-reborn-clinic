@@ -6,7 +6,6 @@ import { CATEGORIES, SITE_TITLE } from '../../consts';
 import { BLOG_PILLAR_NAV, blogPillarLabel } from '../../data/blog-nav';
 import { isAcademyBlogPost, postPermalink } from '../../lib/academy';
 import { blogTagPageHref } from '../../lib/blog-tag-url';
-import { seriesHubPath } from '../../lib/blog-series';
 import ContentImage from '../../components/ContentImage.astro';
 import { t, type Locale } from '../../i18n';
 
@@ -95,13 +94,12 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
                           </span>
                         )}
                         {post.data.series && (
-                          <a
-                            href={seriesHubPath(post.data.series)}
+                          <span
                             class="blog-post-card-series-badge"
-                            aria-label={`「${post.data.series}」 시리즈 글 목록으로 이동`}
+                            aria-label={`「${post.data.series}」 시리즈`}
                           >
-                            시리즈
-                          </a>
+                            {post.data.series}
+                          </span>
                         )}
                         <span class="blog-post-card-views" data-blog-card-views aria-label="조회수">—</span>
                       </div>
@@ -187,13 +185,11 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
   }
 
   function setPillAndSidebarActive(state) {
-    // Track tabs
     document.querySelectorAll('[data-blog-track]').forEach((el) => {
       const want = el.getAttribute('data-blog-track') ?? '';
       el.classList.toggle('is-active', want === (state.track || ''));
     });
 
-    // Show/hide sidebar sections based on track
     document.querySelectorAll('[data-sidebar-track]').forEach((el) => {
       const sectionTrack = el.getAttribute('data-sidebar-track');
       const visible = !state.track || state.track === sectionTrack;
@@ -206,13 +202,11 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
       }
     });
 
-    // Pillar links
     document.querySelectorAll('[data-blog-pillar]').forEach((el) => {
       const want = el.getAttribute('data-blog-pillar') ?? '';
       el.classList.toggle('is-active', want === (state.pillar || ''));
     });
 
-    // Category links
     document.querySelectorAll('[data-blog-cat]').forEach((el) => {
       const want = el.getAttribute('data-blog-cat') ?? '';
       el.classList.toggle('is-active', want === (state.category || ''));
@@ -237,15 +231,12 @@ const blogSearchFocus = Boolean((Astro.url.searchParams.get('q') ?? '').trim());
         const tags = (el.getAttribute('data-tags') || '').toLowerCase();
         if (!t.includes(ql) && !d.includes(ql) && !tags.includes(ql)) show = false;
       } else {
-        // Track filter
         if (state.track === 'procedures') {
           if (dc && !PROCEDURES_CATS.includes(dc)) show = false;
         } else if (state.track === 'lifestyle') {
           if (dc && !LIFESTYLE_CATS.includes(dc)) show = false;
         }
-        // Category filter
         if (state.category && dc !== state.category) show = false;
-        // Pillar filter — pillar 미지정 글은 어떤 영역 필터에서도 노출 유지
         if (state.pillar) {
           if (dp !== '' && dp !== state.pillar) show = false;
         }
