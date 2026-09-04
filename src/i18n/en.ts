@@ -16,6 +16,12 @@ export const en = {
     publishedAt: 'Published',
     pageTitle: 'Blog',
     pageDesc: 'S-REBORN Clinic Blog — Procedures, health tips, and doctor columns',
+    searchResultLabel: 'Showing search results for',
+    clearSearch: 'Clear search',
+    resetAll: 'Reset all filters',
+    noMatches: 'No posts matched your filters.',
+    viewAll: 'View all posts',
+    filterCount: '{{n}} posts',
   },
   disclaimer: {
     prefix: '⚕️',
@@ -173,13 +179,5 @@ export const en = {
     viewsCount: '{{n}} views',
     series: 'Series',
     translationPending: 'English version coming soon — read in Korean below',
-  },
-  blog: {
-    searchResultLabel: 'Showing search results for',
-    clearSearch: 'Clear search',
-    resetAll: 'Reset all filters',
-    noMatches: 'No posts matched your filters.',
-    viewAll: 'View all posts',
-    filterCount: '{{n}} posts',
   },
 } as const;
