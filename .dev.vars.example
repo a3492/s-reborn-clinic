@@ -1,18 +1,31 @@
 # Cloudflare Pages 로컬 Functions (`wrangler pages dev`)용 예시
 # 이 파일을 복사해 `.dev.vars`로 저장한 뒤 값을 채우세요.
+#
+# IMPORTANT — production source separation
+# - Astro browser bundle의 PUBLIC_*: 현재 production에서는 GitHub Actions가 `npm run build`를
+#   수행하므로 GitHub Actions repository/environment secrets가 canonical build source입니다.
+# - Pages Functions server secrets: Cloudflare Pages runtime environment/bindings가 canonical source입니다.
+# - 이 `.dev.vars` 파일은 로컬 Functions/runtime 테스트용이며 production GitHub build 값을 대체하지 않습니다.
 
-# Astro 빌드 시 클라이언트 애널리틱스(선택)
+# 로컬 Astro/클라이언트 테스트용 공개 값(선택)
 PUBLIC_CF_ANALYTICS_TOKEN=
 PUBLIC_GA_MEASUREMENT_ID=
+PUBLIC_SUPABASE_URL=
+PUBLIC_SUPABASE_ANON_KEY=
 
+# Pages Functions server runtime
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 # 댓글 API에서 OAuth 사용자 식별(선택). 없으면 anon 댓글만.
 SUPABASE_ANON_KEY=
 
-# Turnstile — 공개 키는 Astro 빌드용(.env) / Pages에 PUBLIC_ 로도 설정 가능
+# Turnstile
+# 공개 site key는 browser widget용. Production build에서는 GitHub Actions secret에 동일 값을 설정.
 PUBLIC_TURNSTILE_SITE_KEY=
+# 비밀 key는 Pages Functions runtime 전용.
 TURNSTILE_SECRET_KEY=
+# runtime secret이 있는데 PUBLIC site key가 없는 조합은 금지:
+# widget/token은 생성되지 않지만 server verification은 token을 요구해 403이 날 수 있습니다.
 
 RESEND_API_KEY=
 FROM_EMAIL=noreply@s-reborn.com
@@ -33,6 +46,7 @@ R2_PUBLIC_URL=https://media.s-reborn-blog.pages.dev
 # R2_REGION=auto
 
 # Astro 클라이언트: R2_PUBLIC_URL 과 동일 권장 (히어로·미디어 UI에서 WebP 쿼리 자동)
+# Production browser bundle에 사용하려면 GitHub Actions build-time PUBLIC_R2_MEDIA_URL에도 설정.
 PUBLIC_R2_MEDIA_URL=
 
 # 프로덕션 공개 사이트 원점 URL (알림 메일 링크용, 선택)
