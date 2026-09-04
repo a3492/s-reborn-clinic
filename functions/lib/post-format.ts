@@ -21,10 +21,19 @@ function yamlJson(value: unknown, fallback: unknown): string {
   }
 }
 
-export function buildFrontmatter(post: Record<string, unknown>): string {
+export interface FrontmatterOptions {
+  /**
+   * Astro가 이 Markdown artifact를 production build에서 제외해야 하는지 여부.
+   * DB의 editorial/publish workflow status와는 다른 개념이므로 status에서 추론하지 않는다.
+   */
+  draft?: boolean;
+}
+
+export function buildFrontmatter(post: Record<string, unknown>, options: FrontmatterOptions = {}): string {
   const tags = Array.isArray(post.tags) ? post.tags : [];
   const relatedSlugs = Array.isArray(post.related_slugs) ? post.related_slugs : [];
   const referenceLinks = Array.isArray(post.reference_links) ? post.reference_links : [];
+  const artifactDraft = options.draft ?? false;
 
   const parts = [
     '---',
@@ -35,7 +44,7 @@ export function buildFrontmatter(post: Record<string, unknown>): string {
     `category: ${yamlString(post.category)}`,
     post.subcategory ? `subcategory: ${yamlString(post.subcategory)}` : '',
     `tags: ${yamlJson(tags, [])}`,
-    `draft: ${post.status !== 'published'}`,
+    `draft: ${artifactDraft}`,
     post.thumbnail_url ? `thumbnail: ${yamlString(post.thumbnail_url)}` : '',
     post.series ? `series: ${yamlString(post.series)}` : '',
     typeof post.series_order === 'number' ? `series_order: ${post.series_order}` : '',
