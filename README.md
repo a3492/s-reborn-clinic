@@ -10,18 +10,20 @@
 
 ### Astro / 클라이언트
 
-- `PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY` — 블로그 조회수·반응 등
+Production 배포는 GitHub Actions에서 먼저 Astro를 build하므로 `PUBLIC_*` 값의 production canonical source는 **GitHub Actions repository secrets**입니다. Cloudflare Pages Functions runtime 환경변수와는 별개입니다.
+
+- `PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY` — 블로그 조회수·반응 등. production build에 필수.
 - `PUBLIC_R2_MEDIA_URL` — (선택) R2(또는 커스텀 도메인) 공개 미디어 베이스 URL. Pages Functions의 `R2_PUBLIC_URL`과 **동일한 값**으로 두면 글 히어로·미디어 관리 썸네일에 `width`·`format=webp` 쿼리가 자동 적용됩니다.
 - `PUBLIC_CF_ANALYTICS_TOKEN` — (선택) [Cloudflare Web Analytics](https://developers.cloudflare.com/analytics/web-analytics/) 비콘 토큰. 없으면 스크립트 미삽입.
 - `PUBLIC_GA_MEASUREMENT_ID` — (선택) Google Analytics 4 측정 ID(`G-…`). 없으면 gtag 미삽입. 글 페이지는 `content_id`가 config에 포함되며, 공유·반응·구독은 `gtag`가 있을 때만 커스텀 이벤트 전송.
-- `PUBLIC_TURNSTILE_SITE_KEY` — (선택) [Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/) 공개 사이트 키. 없으면 위젯이 렌더되지 않으며, 서버도 검증을 건너뜁니다.
+- `PUBLIC_TURNSTILE_SITE_KEY` — [Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/) 공개 사이트 키. production에서 runtime `TURNSTILE_SECRET_KEY`를 사용하는 경우 함께 설정해야 합니다. 공개 키만 없고 서버 secret만 있으면 위젯은 렌더되지 않지만 submit은 보안 검증 실패로 거절될 수 있습니다.
 
 ### Cloudflare Turnstile (스팸 방지)
 
 1. Cloudflare 대시보드 → **Turnstile** → 사이트 추가 → 호스트 도메인 등록.
-2. **사이트 키** → Astro/Pages 빌드에 `PUBLIC_TURNSTILE_SITE_KEY` 로 노출 (위젯 `data-sitekey`).
+2. **사이트 키** → local Astro build에서는 `.env`, production Astro build에서는 GitHub Actions repository secret `PUBLIC_TURNSTILE_SITE_KEY`로 제공 (위젯 `data-sitekey`).
 3. **비밀 키** → Pages Functions 환경에만 `TURNSTILE_SECRET_KEY` 로 저장 (클라이언트·Git에 넣지 않음).
-4. `BaseHead`에 Turnstile 스크립트가 포함되어 있으며, 블로그 댓글·구독 폼·글 오류 신고 모달에 위젯이 붙습니다. `POST /api/comments`, `/api/subscribe`, `/api/report` 가 토큰을 검증합니다. 시크릿이 비어 있으면 검증을 생략해 기존 폼이 그대로 동작합니다.
+4. `BaseHead`에 Turnstile 스크립트가 포함되어 있으며, 블로그 댓글·구독 폼·글 오류 신고 모달에 위젯이 붙습니다. `POST /api/comments`, `/api/subscribe`, `/api/report` 가 토큰을 검증합니다. runtime `TURNSTILE_SECRET_KEY`가 비어 있으면 서버 검증을 생략하지만, secret이 존재하면 유효한 client token이 필요합니다. 따라서 production에서는 public site key와 runtime secret의 parity를 유지해야 합니다.
 
 ### Cloudflare KV 캐시 (`SITE_CACHE`)
 
@@ -38,7 +40,7 @@
    - `GET /api/cached/settings-all` — 키 `settings:all`, TTL 600초
    - `GET /api/cached/faq-visible` — `faq:visible`, 600초
    - `GET /api/cached/views-top5` — `views:top5`, 300초
-   - `GET /api/cached/category-counts` — `category:counts`, 1800초
+   - `GET /api/cached/category-counts` — `views:category-counts`, 1800초
 
 헬스체크: `GET /api/admin/publish-health` 에 SITE_CACHE put/get 프로브 결과가 포함됩니다(미바인딩 시 `warn`).
 
@@ -68,7 +70,7 @@
 
 Supabase Storage 대신 **R2**에 이미지를 올리고 전 세계 CDN으로 서빙하려면:
 
-1. **버킷 생성** (프로젝트 루트에서):
+1. **버킷 생성** (프로젝트 루트에서, Wrangler v3+):
    ```bash
    npx wrangler r2 bucket create s-reborn-media
    ```
