@@ -40,7 +40,7 @@ Production 배포는 GitHub Actions에서 먼저 Astro를 build하므로 `PUBLIC
    - `GET /api/cached/settings-all` — 키 `settings:all`, TTL 600초
    - `GET /api/cached/faq-visible` — `faq:visible`, 600초
    - `GET /api/cached/views-top5` — `views:top5`, 300초
-   - `GET /api/cached/category-counts` — `views:category-counts`, 1800초
+   - `GET /api/cached/category-counts` — `category:counts`, 1800초
 
 헬스체크: `GET /api/admin/publish-health` 에 SITE_CACHE put/get 프로브 결과가 포함됩니다(미바인딩 시 `warn`).
 
