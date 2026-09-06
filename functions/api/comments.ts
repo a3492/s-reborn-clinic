@@ -109,20 +109,20 @@ export const onRequestPost = async (context: { request: Request; env: Record<str
     }
   }
 
+  // Public comment rows intentionally contain no email/contact column.
+  // Optional contact data is written to comment_contacts, which has no anon/auth access.
   const row: Record<string, unknown> = {
     slug,
     author_name,
     body: bodyText,
     parent_id,
     is_approved: false,
+    user_id,
   };
-  if (author_email_raw) row.author_email = author_email_raw;
-  if (user_id) row.user_id = user_id;
-  else row.user_id = null;
 
-  const insertRes = await fetch(`${env.SUPABASE_URL}/rest/v1/comments`, {
+  const insertRes = await fetch(`${env.SUPABASE_URL}/rest/v1/comments?select=id`, {
     method: 'POST',
-    headers: supabaseHeaders(env, { Prefer: 'return=minimal' }),
+    headers: supabaseHeaders(env, { Prefer: 'return=representation' }),
     body: JSON.stringify(row),
   });
 
@@ -132,6 +132,35 @@ export const onRequestPost = async (context: { request: Request; env: Record<str
       { error: err?.message || err?.hint || '댓글 저장에 실패했습니다.' },
       502,
     );
+  }
+
+  const insertedRows = (await safeJson(insertRes)) as Array<{ id?: string }> | null;
+  const commentId = Array.isArray(insertedRows) ? insertedRows[0]?.id : undefined;
+  if (!commentId || !UUID_RE.test(commentId)) {
+    return jsonResponse({ error: '댓글 저장 결과를 확인할 수 없습니다.' }, 502);
+  }
+
+  if (author_email_raw) {
+    const contactRes = await fetch(`${env.SUPABASE_URL}/rest/v1/comment_contacts`, {
+      method: 'POST',
+      headers: supabaseHeaders(env, { Prefer: 'return=minimal' }),
+      body: JSON.stringify({ comment_id: commentId, author_email: author_email_raw }),
+    });
+
+    if (!contactRes.ok) {
+      // Keep the operation fail-closed for the user's "비공개" contact promise.
+      // If private contact persistence fails, remove the just-created public comment row.
+      await fetch(`${env.SUPABASE_URL}/rest/v1/comments?id=eq.${encodeURIComponent(commentId)}`, {
+        method: 'DELETE',
+        headers: supabaseHeaders(env),
+      }).catch(() => null);
+
+      const err = await safeJson(contactRes);
+      return jsonResponse(
+        { error: err?.message || err?.hint || '비공개 연락처 저장에 실패했습니다.' },
+        502,
+      );
+    }
   }
 
   return jsonResponse({ ok: true });
