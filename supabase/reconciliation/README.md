@@ -10,12 +10,23 @@ Production migration history and the live schema diverged before this audit. His
 - status after restore: `ACTIVE_HEALTHY`
 - recorded migration history: only `20260403_admin_phase1`
 - public tables before reconciliation: 8
-- public rows: 0
-- auth users: 1 — preserve
+- exact row counts:
+  - `admin_profiles`: 1
+  - `posts`: 0
+  - `post_revisions`: 0
+  - `audit_logs`: 0
+  - `media_assets`: 0
+  - `publish_jobs`: 0
+  - `site_settings`: 0
+  - `consult_requests`: 0
+- auth users: 1
+- the single Auth user is mapped to the single `admin_profiles` row and the role is in the owner/editor set
 - storage buckets / objects: 0 / 0
 - deployed Supabase Edge Functions: 0
 - repo Edge Functions: 7
 - `vector`, `pg_cron`, `pg_net`: not installed
+
+Do not use Supabase `list_tables.rows` or `pg_stat_user_tables` as an exact data count immediately after project restore; those statistics were stale during this audit.
 
 ## Candidate scope
 
@@ -71,7 +82,7 @@ Result: **PASS** — no DDL, RLS, grant, trigger, publication, or object-name co
 1. PR Validation must pass on the latest head.
 2. Review changed files and confirm no accidental vector/cron/seed work entered scope.
 3. Apply the candidate as a **new reconciliation migration**, not by replaying historical migrations.
-4. Immediately verify tables, RLS, grants, RPC execution and preserved Auth user count.
+4. Immediately verify tables, RLS, grants, RPC execution and preserved Auth/admin mapping.
 5. Re-run Supabase security and performance advisors.
 6. Only after DB capability verification, restore GitHub `PUBLIC_SUPABASE_*` and Cloudflare runtime env.
 7. Then merge PR #15 and require its post-deploy smoke gate to pass.
