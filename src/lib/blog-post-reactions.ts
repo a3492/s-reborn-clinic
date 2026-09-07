@@ -1,5 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { getOrCreateReaderSessionId } from './interaction-events';
+import {
+	getOrCreateReaderSessionId,
+	recordInteractionEventBestEffort,
+} from './interaction-events';
 
 export { getOrCreateReaderSessionId } from './interaction-events';
 
@@ -9,6 +12,19 @@ export type ReactionType = (typeof REACTION_TYPES)[number];
 export type ReactionIdentity =
 	| { kind: 'anon'; sessionId: string }
 	| { kind: 'user'; userId: string };
+
+function recordReactionEvent(
+	supabase: SupabaseClient,
+	slug: string,
+	reaction: ReactionType,
+	action: 'added' | 'removed',
+) {
+	recordInteractionEventBestEffort(supabase, {
+		eventName: 'article.reacted',
+		context: { slug, pageType: 'article' },
+		metadata: { reaction, action },
+	});
+}
 
 export async function getReactionIdentity(supabase: SupabaseClient): Promise<ReactionIdentity> {
 	const { data } = await supabase.auth.getUser();
@@ -74,7 +90,9 @@ export async function togglePostReaction(
 				.eq('slug', slug)
 				.eq('reaction', reaction)
 				.eq('user_id', identity.userId);
-			return error ? null : 'removed';
+			if (error) return null;
+			recordReactionEvent(supabase, slug, reaction, 'removed');
+			return 'removed';
 		}
 
 		const { error } = await supabase.from('post_reactions').insert({
@@ -83,7 +101,9 @@ export async function togglePostReaction(
 			user_id: identity.userId,
 			session_id: null,
 		});
-		return error ? null : 'added';
+		if (error) return null;
+		recordReactionEvent(supabase, slug, reaction, 'added');
+		return 'added';
 	}
 
 	const { data: existing } = await supabase
@@ -103,7 +123,9 @@ export async function togglePostReaction(
 			.eq('reaction', reaction)
 			.eq('session_id', identity.sessionId)
 			.is('user_id', null);
-		return error ? null : 'removed';
+		if (error) return null;
+		recordReactionEvent(supabase, slug, reaction, 'removed');
+		return 'removed';
 	}
 
 	const { error } = await supabase.from('post_reactions').insert({
@@ -112,7 +134,9 @@ export async function togglePostReaction(
 		session_id: identity.sessionId,
 		user_id: null,
 	});
-	return error ? null : 'added';
+	if (error) return null;
+	recordReactionEvent(supabase, slug, reaction, 'added');
+	return 'added';
 }
 
 /** 어드민: slug 목록별 반응 행 수 합산 */
