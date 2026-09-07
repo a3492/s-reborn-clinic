@@ -118,11 +118,11 @@ function renderReleaseState(post: any, jobs: any[]) {
     contentVersion,
   ]);
 
-  if (root.dataset.ir101Signature === signature) return;
+  if (root.dataset.ir101Signature === signature && root.querySelector('[data-ir101-release-owned]')) return;
   root.dataset.ir101Signature = signature;
 
   root.innerHTML = `
-    <li class="admin-list-row">
+    <li class="admin-list-row" data-ir101-release-owned>
       <div>
         <p class="admin-item-title">Editorial status</p>
         <p class="admin-item-meta">DB 편집·검토 상태</p>
@@ -162,9 +162,9 @@ function renderHistory(jobs: any[]) {
   if (!(root instanceof HTMLElement)) return;
 
   if (!jobs.length) {
-    if (root.dataset.ir101Signature === 'empty') return;
+    if (root.dataset.ir101Signature === 'empty' && root.querySelector('[data-ir101-history-owned]')) return;
     root.dataset.ir101Signature = 'empty';
-    root.innerHTML = '<p class="admin-help">이력 없음</p>';
+    root.innerHTML = '<p class="admin-help" data-ir101-history-owned>이력 없음</p>';
     return;
   }
 
@@ -184,11 +184,11 @@ function renderHistory(jobs: any[]) {
     job.content_version,
   ]));
 
-  if (root.dataset.ir101Signature === signature) return;
+  if (root.dataset.ir101Signature === signature && root.querySelector('[data-ir101-history-owned]')) return;
   root.dataset.ir101Signature = signature;
 
   root.innerHTML = `
-    <div class="admin-change-row">
+    <div class="admin-change-row" data-ir101-history-owned>
       <span class="admin-cell-subtle">최근 job${latestSha ? ` · <code>${escapeHtml(latestSha)}</code>` : ''}</span>
       <span class="admin-cell-date admin-cell-subtle">${formatDate(latest.created_at)}</span>
       <span class="admin-status ${escapeHtml(statusClass(latest.status))}">${escapeHtml(statusLabel(latest.status))}</span>
