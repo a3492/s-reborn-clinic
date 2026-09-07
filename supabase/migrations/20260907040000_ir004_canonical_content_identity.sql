@@ -177,8 +177,58 @@ create index if not exists idx_bookmarks_post_id
   on public.bookmarks (post_id)
   where post_id is not null;
 
--- Existing callers still send p_slug. Resolve the UUID when a Supabase post exists;
+-- Legacy clients still submit only slug. Fill post_id when that slug has a Supabase
+-- content row. SECURITY DEFINER is limited to this deterministic lookup and the function
+-- is not executable through the Data API roles.
+create or replace function public.attach_interaction_post_id()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  interaction_slug text;
+begin
+  if new.post_id is not null then
+    return new;
+  end if;
+
+  interaction_slug := nullif(to_jsonb(new) ->> 'slug', '');
+  if interaction_slug is null then
+    return new;
+  end if;
+
+  select p.id
+  into new.post_id
+  from public.posts p
+  where p.slug = interaction_slug
+  limit 1;
+
+  return new;
+end;
+$$;
+
+revoke all on function public.attach_interaction_post_id() from public, anon, authenticated;
+
+drop trigger if exists trg_post_reactions_attach_post_id on public.post_reactions;
+create trigger trg_post_reactions_attach_post_id
+before insert or update of slug, post_id on public.post_reactions
+for each row execute function public.attach_interaction_post_id();
+
+drop trigger if exists trg_comments_attach_post_id on public.comments;
+create trigger trg_comments_attach_post_id
+before insert or update of slug, post_id on public.comments
+for each row execute function public.attach_interaction_post_id();
+
+drop trigger if exists trg_bookmarks_attach_post_id on public.bookmarks;
+create trigger trg_bookmarks_attach_post_id
+before insert or update of slug, post_id on public.bookmarks
+for each row execute function public.attach_interaction_post_id();
+
+-- Existing view callers still send p_slug. Resolve the UUID when a Supabase post exists;
 -- static legacy Markdown with no posts row continues to work with post_id = null.
+-- When the slug of a canonical post changes, update the existing UUID-bound counter row
+-- rather than creating a second counter for the same content.
 create or replace function public.increment_post_view(p_slug text)
 returns bigint
 language plpgsql
@@ -198,6 +248,19 @@ begin
   from public.posts p
   where p.slug = p_slug
   limit 1;
+
+  if resolved_post_id is not null then
+    update public.post_views
+    set post_slug = p_slug,
+        view_count = view_count + 1,
+        last_viewed_at = now()
+    where post_id = resolved_post_id
+    returning view_count into next_count;
+
+    if found then
+      return next_count;
+    end if;
+  end if;
 
   insert into public.post_views as pv (post_id, post_slug, view_count, last_viewed_at)
   values (resolved_post_id, p_slug, 1, now())
