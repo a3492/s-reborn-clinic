@@ -44,16 +44,23 @@ export async function fetchViewCountsMap(
 	const map = new Map<string, number>();
 	const unique = [...new Set(slugs.filter(Boolean))];
 	if (!unique.length) return map;
-	const { data, error } = await supabase.from('post_views').select('slug, view_count').in('slug', unique);
+	const { data, error } = await supabase
+		.from('post_views')
+		.select('post_slug, view_count')
+		.in('post_slug', unique);
 	if (error || !data) return map;
 	for (const row of data) {
-		map.set(row.slug, Number(row.view_count ?? 0));
+		map.set(row.post_slug, Number(row.view_count ?? 0));
 	}
 	return map;
 }
 
 /**
  * 세션당 slug 1회만 DB 반영. 반환값은 표시용 최종 view_count.
+ *
+ * Gate 0 hardened post_views는 browser direct write를 허용하지 않는다.
+ * increment_post_view RPC가 유일한 public write path이며, RPC 실패 시에는 현재
+ * count만 읽고 임의의 client-side upsert로 우회하지 않는다.
  */
 export async function trackBlogPostView(
 	supabase: SupabaseClient,
@@ -62,7 +69,11 @@ export async function trackBlogPostView(
 	if (!slug) return null;
 
 	if (alreadyCountedThisSession(slug)) {
-		const { data, error } = await supabase.from('post_views').select('view_count').eq('slug', slug).maybeSingle();
+		const { data, error } = await supabase
+			.from('post_views')
+			.select('view_count')
+			.eq('post_slug', slug)
+			.maybeSingle();
 		if (error) return null;
 		return Number(data?.view_count ?? 0);
 	}
@@ -76,15 +87,8 @@ export async function trackBlogPostView(
 	const { data: existing, error: selErr } = await supabase
 		.from('post_views')
 		.select('view_count')
-		.eq('slug', slug)
+		.eq('post_slug', slug)
 		.maybeSingle();
 	if (selErr) return null;
-	const next = Number(existing?.view_count ?? 0) + 1;
-	const { error: upErr } = await supabase.from('post_views').upsert(
-		{ slug, view_count: next, updated_at: new Date().toISOString() },
-		{ onConflict: 'slug' }
-	);
-	if (upErr) return null;
-	markCountedThisSession(slug);
-	return next;
+	return Number(existing?.view_count ?? 0);
 }
