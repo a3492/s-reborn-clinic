@@ -41,8 +41,10 @@ jobs:
             console.log(`CHECK ${key} ${status}`);
           }
 
-          const missing = Array.isArray(data?.missing) ? data.missing.filter((x) => typeof x === 'string') : [];
-          for (const name of missing) {
-            console.log(`MISSING_ENV ${name}`);
+          const envCheck = checks.find((check) => check?.key === 'env');
+          const detail = typeof envCheck?.detail === 'string' ? envCheck.detail : '';
+          const allowedNames = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'GITHUB_TOKEN', 'GITHUB_REPO'];
+          for (const name of allowedNames) {
+            if (detail.includes(name)) console.log(`MISSING_ENV ${name}`);
           }
           NODE
