@@ -1,22 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { getOrCreateReaderSessionId } from './interaction-events';
+
+export { getOrCreateReaderSessionId } from './interaction-events';
 
 export const REACTION_TYPES = ['helpful', 'like', 'bookmark'] as const;
 export type ReactionType = (typeof REACTION_TYPES)[number];
-
-const SESSION_STORAGE_KEY = 'sreborn_reader_session_id';
-
-export function getOrCreateReaderSessionId(): string {
-	try {
-		let id = localStorage.getItem(SESSION_STORAGE_KEY);
-		if (!id || !id.trim()) {
-			id = crypto.randomUUID();
-			localStorage.setItem(SESSION_STORAGE_KEY, id);
-		}
-		return id;
-	} catch {
-		return crypto.randomUUID();
-	}
-}
 
 export type ReactionIdentity =
 	| { kind: 'anon'; sessionId: string }
