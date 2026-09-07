@@ -1,16 +1,14 @@
 # Gate 0 Supabase production reconciliation
 
-This directory is intentionally **not** `supabase/migrations/` yet.
-
 Production migration history and the live schema diverged before this audit. Historical migrations must not be replayed blindly.
 
-## Current production baseline
+## Production baseline before reconciliation
 
 - project: `s-reborn-clinic`
 - status after restore: `ACTIVE_HEALTHY`
-- recorded migration history: only `20260403_admin_phase1`
+- recorded migration history before this work: only `20260403_admin_phase1`
 - public tables before reconciliation: 8
-- exact row counts:
+- exact row counts before reconciliation:
   - `admin_profiles`: 1
   - `posts`: 0
   - `post_revisions`: 0
@@ -26,11 +24,15 @@ Production migration history and the live schema diverged before this audit. His
 - repo Edge Functions: 7
 - `vector`, `pg_cron`, `pg_net`: not installed
 
-Do not use Supabase `list_tables.rows` or `pg_stat_user_tables` as an exact data count immediately after project restore; those statistics were stale during this audit.
+Do not use Supabase `list_tables.rows` or `pg_stat_user_tables` as an exact data count immediately after project restore; those statistics were stale during this audit. Exact `COUNT(*)` queries were used for preservation checks.
 
-## Candidate scope
+## Applied production migrations
 
-`gate0_production_reconciliation.sql` restores only capabilities already referenced by current `main`:
+### `20260906140618_gate0_production_reconciliation.sql`
+
+Applied successfully to production and codified under `supabase/migrations/` with the exact Supabase migration version.
+
+It restores only capabilities already referenced by current `main`:
 
 - Journal/editorial fields on `posts`
 - public site-settings read policy
@@ -45,7 +47,7 @@ Do not use Supabase `list_tables.rows` or `pg_stat_user_tables` as an exact data
 - Postgres full-text `search_vector`
 - fixed `search_path` for existing public helper/trigger functions
 
-It deliberately excludes:
+Deliberately excluded:
 
 - pgvector / `posts.embedding`
 - `match_posts`
@@ -54,35 +56,95 @@ It deliberately excludes:
 - `interaction_events`
 - editorial seed data
 
-## Privacy correction included
+### `20260907031345_gate0_least_privilege_hardening.sql`
 
-Current comment UI labels email as private, while the historical schema path could have placed `author_email` on a publicly readable comment row.
+Applied successfully after a production `BEGIN ... ROLLBACK` dry-run.
 
-The candidate instead stores:
+It:
+
+- removes unnecessary anon access from admin/internal tables
+- preserves anon `INSERT` for `consult_requests` while removing anon read/update/delete
+- makes the `comment_contacts` client deny contract explicit
+- optimizes `admin_profiles` RLS auth lookup
+- consolidates duplicate permissive policies on `comments` and `post_reactions`
+- adds covering indexes for foreign keys flagged by Supabase advisor
+- removes one exact duplicate `consult_requests(created_at DESC)` index
+
+## Privacy correction
+
+The comment UI labels email as private. Historical code could have placed `author_email` on a comment row that public clients read and receive through Realtime.
+
+The current contract is:
 
 - public comment content → `comments`
 - optional private email → `comment_contacts`
+- `comment_contacts`: no anon/authenticated Data API access
+- server service-role API is the writer
 
-`comment_contacts` grants no access to `anon` or `authenticated`; the service-role server API is the only current writer.
+## Verification evidence
 
-## Dry-run evidence
+Both production migrations were dry-run against the live schema before application.
 
-The full candidate DDL was executed against the live production schema inside:
+After application:
 
-```sql
-BEGIN;
--- candidate SQL
-ROLLBACK;
-```
+- Auth users: 1 — preserved
+- `admin_profiles`: 1 — preserved
+- Auth ↔ admin mapping: 1 — preserved
+- owner/editor mapping: 1 — preserved
+- new tables: RLS enabled
+- `comment_contacts`: anon/authenticated read and write blocked
+- `comments`: Realtime enabled without email-bearing columns
+- `post_views`: anon direct INSERT/UPDATE blocked
+- `increment_post_view`: anon RPC smoke test passed; test row removed
+- Journal/editorial `posts` columns present
+- existing and new helper functions have fixed `search_path`
+- unnecessary anon SELECT on admin/internal tables removed
+- `consult_requests`: anon INSERT preserved, anon SELECT removed
+- comments authenticated SELECT permissive-policy count: 1
+- reactions authenticated INSERT/DELETE permissive-policy count: 1 each
+- advisor-flagged foreign-key indexes present
+- exact duplicate consult index removed
 
-Result: **PASS** — no DDL, RLS, grant, trigger, publication, or object-name conflicts were raised. The transaction was rolled back, so production schema was unchanged by the dry-run.
+## Advisor status after hardening
 
-## Before production apply
+### Security
 
-1. PR Validation must pass on the latest head.
-2. Review changed files and confirm no accidental vector/cron/seed work entered scope.
-3. Apply the candidate as a **new reconciliation migration**, not by replaying historical migrations.
-4. Immediately verify tables, RLS, grants, RPC execution and preserved Auth/admin mapping.
-5. Re-run Supabase security and performance advisors.
-6. Only after DB capability verification, restore GitHub `PUBLIC_SUPABASE_*` and Cloudflare runtime env.
-7. Then merge PR #15 and require its post-deploy smoke gate to pass.
+Resolved/reduced:
+
+- mutable function `search_path` warnings
+- anon GraphQL discoverability for internal admin/audit/media/publish/revision/consult tables
+- `comment_contacts` no-policy informational warning through an explicit deny policy
+
+Intentionally remaining:
+
+- public-content tables exposed to anon because the website reads them publicly
+- public counter RPCs (`increment_post_view`, A/B counters) are intentionally callable and therefore still appear as `SECURITY DEFINER` exposure warnings
+- authenticated GraphQL visibility remains for tables used by authenticated reader/admin flows; RLS still determines row access
+
+Operational follow-up outside this migration:
+
+- Supabase Auth leaked-password protection is still disabled and should be enabled in Auth settings when available
+
+### Performance
+
+Resolved:
+
+- unindexed foreign-key warnings
+- `admin_profiles` auth RLS initplan warning
+- multiple permissive policy warnings for comments/reactions
+- duplicate consult index warning
+
+Remaining entries are `unused_index` INFO notices. Production tables are effectively empty, so these are not evidence that the indexes are unnecessary yet; do not remove them before real traffic/query plans exist.
+
+## Next gate
+
+Database Gate 0 is now production-applied and verified.
+
+Next sequence:
+
+1. latest PR #16 validation PASS
+2. merge PR #16 so repository history matches production migration history
+3. restore/verify GitHub build-time `PUBLIC_SUPABASE_*` values without exposing secrets
+4. restore/verify Cloudflare runtime Supabase values without exposing secrets
+5. run PR #15 fail-fast + post-deploy smoke gate
+6. only after smoke PASS, proceed to Living Website OS interaction-event foundation / canonical content identity work
