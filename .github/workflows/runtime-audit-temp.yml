@@ -1,0 +1,48 @@
+name: Temporary Production Runtime Audit
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Audit public production endpoints without secret values
+        shell: bash
+        run: |
+          set -u
+          site="https://s-reborn-clinic.pages.dev"
+
+          for path in / /blog/; do
+            status="$(curl --silent --show-error --max-time 30 --output /dev/null --write-out '%{http_code}' "${site}${path}" || true)"
+            echo "PUBLIC ${path} HTTP ${status}"
+          done
+
+          health_file="$(mktemp)"
+          health_status="$(curl --silent --show-error --max-time 30 --output "${health_file}" --write-out '%{http_code}' "${site}/api/admin/publish-health" || true)"
+          echo "PUBLISH_HEALTH HTTP ${health_status}"
+
+          HEALTH_FILE="${health_file}" node <<'NODE'
+          const fs = require('fs');
+          let data = null;
+          try {
+            data = JSON.parse(fs.readFileSync(process.env.HEALTH_FILE, 'utf8'));
+          } catch {
+            console.log('PUBLISH_HEALTH_JSON unreadable');
+            process.exit(0);
+          }
+
+          console.log(`PUBLISH_HEALTH_OK ${Boolean(data?.ok)}`);
+          const checks = Array.isArray(data?.checks) ? data.checks : [];
+          for (const check of checks) {
+            const key = typeof check?.key === 'string' ? check.key : 'unknown';
+            const status = typeof check?.status === 'string' ? check.status : 'unknown';
+            console.log(`CHECK ${key} ${status}`);
+          }
+
+          const missing = Array.isArray(data?.missing) ? data.missing.filter((x) => typeof x === 'string') : [];
+          for (const name of missing) {
+            console.log(`MISSING_ENV ${name}`);
+          }
+          NODE
