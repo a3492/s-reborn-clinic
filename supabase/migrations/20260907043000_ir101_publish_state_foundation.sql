@@ -1,6 +1,8 @@
--- IR-101 Publishing Correctness foundation
+-- IR-101 Publishing Correctness foundation — EXPAND phase
 -- Separates Git commit/build intent from verified public-live state.
--- Safe additive migration; no table reset/recreate.
+-- This migration is intentionally backward-compatible with the currently deployed
+-- legacy publisher so DB can be expanded before application cutover.
+-- A later CONTRACT migration may remove legacy job statuses after verified-live rollout.
 
 alter table public.posts
   add column if not exists deploy_status text not null default 'idle',
@@ -30,14 +32,15 @@ alter table public.publish_jobs
   add column if not exists public_verified_at timestamptz,
   add column if not exists live_check jsonb not null default '{}'::jsonb;
 
--- Preserve compatibility with legacy rows if this migration is replayed on a
--- database that already contains historical jobs.
+-- EXPAND-phase compatibility:
+-- legacy deployed code still writes processing/success until the new application
+-- revision is live. Do not rewrite or forbid those states during the DB-first rollout.
 alter table public.publish_jobs drop constraint if exists publish_jobs_status_check;
-update public.publish_jobs set status = 'validating' where status = 'processing';
-update public.publish_jobs set status = 'live' where status = 'success';
 alter table public.publish_jobs add constraint publish_jobs_status_check
   check (status in (
     'pending',
+    'processing',
+    'success',
     'validating',
     'build_pending',
     'deploying',
@@ -47,10 +50,11 @@ alter table public.publish_jobs add constraint publish_jobs_status_check
   ));
 
 -- Same content version may have at most one active publish job.
+-- Treat legacy processing as active during rollout so old/new publisher races remain blocked.
 -- Failed/rolled-back versions may be retried explicitly.
 create unique index if not exists idx_publish_jobs_one_active_version
   on public.publish_jobs(post_id, content_version)
-  where status in ('pending', 'validating', 'build_pending', 'deploying');
+  where status in ('pending', 'processing', 'validating', 'build_pending', 'deploying');
 
 create index if not exists idx_publish_jobs_commit_sha
   on public.publish_jobs(commit_sha)
@@ -65,3 +69,5 @@ comment on column public.posts.public_verified_at is
   'Timestamp of successful public smoke verification for the current live version.';
 comment on column public.publish_jobs.content_version is
   'Canonical posts.content_version reserved by this publish attempt; used for idempotency.';
+comment on constraint publish_jobs_status_check on public.publish_jobs is
+  'IR-101 EXPAND contract: legacy processing/success remain temporarily accepted until new publisher is verified live.';
