@@ -1,102 +1,34 @@
--- IR-004 Canonical Content Identity + current publisher schema bridge
+-- IR-004 Canonical Content Identity
 --
 -- Goals:
 -- 1) Keep public.posts.id as the immutable canonical content UUID.
 -- 2) Keep slug as a mutable URL/editorial identifier, never as lineage identity.
--- 3) Restore the additive columns already required by the current admin/publisher code.
--- 4) Add source lineage/version metadata for the Notion -> staging -> publish pipeline.
--- 5) Let legacy interaction tables begin carrying post_id without breaking slug-based clients.
+-- 3) Add source lineage/version metadata for the Notion -> staging -> publish pipeline.
+-- 4) Let legacy interaction tables carry post_id without breaking existing slug-based clients.
+--
+-- Verified production prerequisite (2026-09-07):
+-- - current admin/publisher columns already exist on public.posts
+-- - posts_status_check already allows draft/review/scheduled/published/archived
 --
 -- Safety:
 -- - no table reset/recreate
--- - no legacy column drop/rename
+-- - no existing post/editorial column drop/rename
 -- - no visitor/session data copied into content-source metadata
--- - interaction post_id is nullable for static legacy content that has no Supabase posts row yet
+-- - interaction post_id remains nullable for static legacy content with no Supabase posts row
 
 -- -----------------------------------------------------------------------------
--- 1. Restore current admin/publisher columns additively
--- -----------------------------------------------------------------------------
-
-alter table public.posts
-  add column if not exists subcategory text,
-  add column if not exists thumbnail_url text,
-  add column if not exists body_markdown text not null default '',
-  add column if not exists seo_title text,
-  add column if not exists seo_description text,
-  add column if not exists canonical_url text,
-  add column if not exists created_by uuid references public.admin_profiles (id),
-  add column if not exists updated_by uuid references public.admin_profiles (id);
-
--- Production historically used body/image while current admin/publisher uses
--- body_markdown/thumbnail_url. Preserve the legacy columns and backfill only when the
--- new columns are empty.
-do $$
-begin
-  if exists (
-    select 1 from information_schema.columns
-    where table_schema = 'public' and table_name = 'posts' and column_name = 'body'
-  ) then
-    update public.posts
-    set body_markdown = body
-    where coalesce(body_markdown, '') = ''
-      and coalesce(body, '') <> '';
-  end if;
-
-  if exists (
-    select 1 from information_schema.columns
-    where table_schema = 'public' and table_name = 'posts' and column_name = 'image'
-  ) then
-    update public.posts
-    set thumbnail_url = image
-    where thumbnail_url is null
-      and image is not null;
-  end if;
-end
-$$;
-
--- Current admin UI supports review/scheduled. Normalize only the status constraint;
--- do not change any existing row status.
-alter table public.posts drop constraint if exists posts_status_check;
-alter table public.posts
-  add constraint posts_status_check
-  check (status in ('draft', 'review', 'scheduled', 'published', 'archived'));
-
--- -----------------------------------------------------------------------------
--- 2. Canonical content identity / source lineage
+-- 1. Canonical content identity / source lineage
 -- -----------------------------------------------------------------------------
 
 alter table public.posts
   add column if not exists locale text not null default 'ko',
   add column if not exists content_type text not null default 'article',
-  add column if not exists source_system text,
+  add column if not exists source_system text not null default 'manual',
   add column if not exists source_external_id text,
   add column if not exists source_version text,
   add column if not exists source_hash text,
   add column if not exists content_version bigint not null default 1,
   add column if not exists public_path text;
-
--- Preserve the meaning of the legacy source column if it exists. New writes use
--- source_system; legacy source remains untouched for compatibility.
-do $$
-begin
-  if exists (
-    select 1 from information_schema.columns
-    where table_schema = 'public' and table_name = 'posts' and column_name = 'source'
-  ) then
-    update public.posts
-    set source_system = coalesce(nullif(source_system, ''), nullif(source, ''), 'manual')
-    where source_system is null or source_system = '';
-  else
-    update public.posts
-    set source_system = 'manual'
-    where source_system is null or source_system = '';
-  end if;
-end
-$$;
-
-alter table public.posts
-  alter column source_system set default 'manual',
-  alter column source_system set not null;
 
 alter table public.posts drop constraint if exists posts_locale_length_check;
 alter table public.posts
@@ -124,6 +56,8 @@ create index if not exists idx_posts_locale
 create index if not exists idx_posts_content_type
   on public.posts (content_type);
 
+-- A source record may legitimately have distinct localized derivatives, hence locale
+-- participates in the uniqueness key.
 create unique index if not exists idx_posts_source_external_locale_unique
   on public.posts (source_system, source_external_id, locale)
   where source_external_id is not null;
@@ -138,6 +72,8 @@ comment on column public.posts.slug is
   'Mutable URL/editorial identifier. Do not use as immutable content lineage identity.';
 comment on column public.posts.locale is
   'BCP47-style content locale identifier, e.g. ko, en, zh-Hant.';
+comment on column public.posts.content_type is
+  'Content family used by publication/discovery contracts. Editorial role remains separate.';
 comment on column public.posts.source_system is
   'Editorial source system such as manual, notion, import, or api. Never stores visitor identity.';
 comment on column public.posts.source_external_id is
@@ -152,7 +88,7 @@ comment on column public.posts.public_path is
   'Last intended public URL path for this content version. Canonical identity remains posts.id.';
 
 -- -----------------------------------------------------------------------------
--- 3. Attach canonical post identity to legacy interaction tables
+-- 2. Attach canonical post identity to legacy interaction tables
 -- -----------------------------------------------------------------------------
 
 alter table public.post_views
@@ -164,6 +100,7 @@ alter table public.comments
 alter table public.bookmarks
   add column if not exists post_id uuid references public.posts (id) on delete set null;
 
+-- post_views represents one aggregate counter per canonical post when post_id is known.
 create unique index if not exists idx_post_views_post_id_unique
   on public.post_views (post_id)
   where post_id is not null;
@@ -227,8 +164,8 @@ for each row execute function public.attach_interaction_post_id();
 
 -- Existing view callers still send p_slug. Resolve the UUID when a Supabase post exists;
 -- static legacy Markdown with no posts row continues to work with post_id = null.
--- When the slug of a canonical post changes, update the existing UUID-bound counter row
--- rather than creating a second counter for the same content.
+-- When a canonical post slug changes, update the UUID-bound counter instead of creating
+-- a second counter for the same content.
 create or replace function public.increment_post_view(p_slug text)
 returns bigint
 language plpgsql
