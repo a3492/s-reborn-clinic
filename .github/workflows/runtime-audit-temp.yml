@@ -8,6 +8,21 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
+      - name: Audit GitHub public build secret presence without values
+        shell: bash
+        env:
+          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+          PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
+          PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.PUBLIC_TURNSTILE_SITE_KEY }}
+        run: |
+          for name in PUBLIC_SUPABASE_URL PUBLIC_SUPABASE_ANON_KEY PUBLIC_TURNSTILE_SITE_KEY; do
+            if [ -n "${!name}" ]; then
+              echo "BUILD_SECRET ${name} PRESENT"
+            else
+              echo "BUILD_SECRET ${name} MISSING"
+            fi
+          done
+
       - name: Audit public production endpoints without secret values
         shell: bash
         run: |
