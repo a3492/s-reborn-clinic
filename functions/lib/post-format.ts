@@ -29,14 +29,41 @@ export interface FrontmatterOptions {
   draft?: boolean;
 }
 
+/**
+ * 현재 static route와 동일한 public path를 계산한다.
+ * 이 값은 주소/배포 artifact 식별자이고 canonical identity는 항상 posts.id(content_id)다.
+ */
+export function buildPublicPath(post: Record<string, unknown>): string {
+  const category = String(post.category || 'uncategorized');
+  const nested = [post.subcategory ? String(post.subcategory) : '', String(post.slug || '')]
+    .filter(Boolean)
+    .join('/');
+
+  if (category === 'doctor-ai' || category === 'doctor-ai-academy') {
+    return `/doctor-ai-academy/${nested}/`;
+  }
+
+  return `/blog/${[category, nested].filter(Boolean).join('/')}/`;
+}
+
 export function buildFrontmatter(post: Record<string, unknown>, options: FrontmatterOptions = {}): string {
   const tags = Array.isArray(post.tags) ? post.tags : [];
   const relatedSlugs = Array.isArray(post.related_slugs) ? post.related_slugs : [];
   const referenceLinks = Array.isArray(post.reference_links) ? post.reference_links : [];
   const artifactDraft = options.draft ?? false;
+  const publicPath = post.public_path ? String(post.public_path) : buildPublicPath(post);
 
   const parts = [
     '---',
+    post.id ? `content_id: ${yamlString(post.id)}` : '',
+    `locale: ${yamlString(post.locale || 'ko')}`,
+    `content_type: ${yamlString(post.content_type || 'article')}`,
+    `source_system: ${yamlString(post.source_system || 'manual')}`,
+    post.source_external_id ? `source_external_id: ${yamlString(post.source_external_id)}` : '',
+    post.source_version ? `source_version: ${yamlString(post.source_version)}` : '',
+    post.source_hash ? `source_hash: ${yamlString(post.source_hash)}` : '',
+    post.content_version != null ? `content_version: ${Number(post.content_version)}` : '',
+    publicPath ? `public_path: ${yamlString(publicPath)}` : '',
     `title: ${yamlString(post.title)}`,
     `description: ${yamlString(post.description)}`,
     `date: ${post.published_at ?? isoNow()}`,
