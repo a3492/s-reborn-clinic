@@ -7,6 +7,18 @@ const blog = defineCollection({
 	loader: glob({ base: './src/content/blog', pattern: '**/*.{md,mdx}' }),
 	schema: z
 		.object({
+			/** Immutable Supabase posts.id. Legacy file-only articles may omit it. */
+			content_id: z.string().uuid().optional(),
+			/** Editorial/source lineage. Defaults preserve existing Markdown compatibility. */
+			locale: z.string().min(2).max(35).optional().default('ko'),
+			content_type: z.string().min(1).max(80).optional().default('article'),
+			source_system: z.string().min(1).max(80).optional().default('manual'),
+			source_external_id: z.string().optional(),
+			source_version: z.string().optional(),
+			source_hash: z.string().optional(),
+			content_version: z.number().int().min(1).optional(),
+			/** URL artifact identifier; canonical identity remains content_id. */
+			public_path: z.string().optional(),
 			title: z.string(),
 			description: z.string(),
 			/** English translation of the title — injected by translate-posts script */
