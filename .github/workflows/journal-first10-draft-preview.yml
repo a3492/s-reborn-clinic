@@ -50,9 +50,16 @@ jobs:
         run: node scripts/verify-journal-first10-public.mjs
 
       - name: Build isolated production-renderer draft preview
-        run: node scripts/build-journal-first10-draft-preview.mjs
+        shell: bash
+        run: |
+          set +e
+          node scripts/build-journal-first10-draft-preview.mjs > /tmp/journal-preview.log 2>&1
+          status=$?
+          cat /tmp/journal-preview.log
+          exit "$status"
 
       - name: Prove source articles were restored byte-for-byte
+        if: always()
         run: |
           git diff --exit-code -- \
             src/content/blog/doctor-column/consultation-no-treatment.md \
@@ -66,7 +73,17 @@ jobs:
             src/content/blog/doctor-column/when-not-to-reduce-facial-fat.md \
             src/content/blog/doctor-column/when-not-to-treat.md
 
+      - name: Upload preview diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: journal-first10-preview-diagnostics
+          path: /tmp/journal-preview.log
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Upload isolated preview artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: journal-first10-draft-preview
