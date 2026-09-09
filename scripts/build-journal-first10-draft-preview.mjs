@@ -85,8 +85,11 @@ console.log(`[journal-first10-preview] inspecting output root: ${path.relative(r
 
 let primaryCount = 0;
 let relatedCount = 0;
+let noindexCount = 0;
 const brokenLinks = [];
 const generated = [];
+const robotsMeta = '<meta name="robots" content="noindex,nofollow,noarchive" />';
+const robotsMetaPattern = /<meta\s+name=["']robots["'][^>]*>/i;
 
 for (const [, id] of records) {
   const htmlPath = articleHtmlPath(publicRoot, id);
@@ -103,19 +106,28 @@ for (const [, id] of records) {
     if (!target || !fs.existsSync(target)) brokenLinks.push(`${id} -> ${href}`);
   }
 
-  const robotsMeta = '<meta name="robots" content="noindex,nofollow,noarchive" />';
-  if (!html.includes('name="robots"')) {
+  if (robotsMetaPattern.test(html)) {
+    html = html.replace(robotsMetaPattern, robotsMeta);
+  } else {
     if (!html.includes('</head>')) throw new Error(`${id}: missing </head> for noindex injection`);
     html = html.replace('</head>', `${robotsMeta}</head>`);
-    fs.writeFileSync(htmlPath, html, 'utf8');
   }
+  fs.writeFileSync(htmlPath, html, 'utf8');
 
-  generated.push({ id, path: path.relative(publicRoot, htmlPath), primary_next_links: primary.length, related_links: related.length });
+  const hardenedHtml = fs.readFileSync(htmlPath, 'utf8');
+  if (!hardenedHtml.includes(robotsMeta)) throw new Error(`${id}: noindex robots hardening did not persist`);
+  if (/<meta\s+name=["']robots["'][^>]*content=["'][^"']*\bindex\b/i.test(hardenedHtml)) {
+    throw new Error(`${id}: indexable robots metadata remains after hardening`);
+  }
+  noindexCount += 1;
+
+  generated.push({ id, path: path.relative(publicRoot, htmlPath), primary_next_links: primary.length, related_links: related.length, noindex: true });
 }
 
 if (primaryCount !== 10) throw new Error(`expected 10 rendered primary-next links, found ${primaryCount}`);
 if (relatedCount !== 20) throw new Error(`expected 20 rendered related links, found ${relatedCount}`);
 if (brokenLinks.length) throw new Error(`broken curated links:\n${brokenLinks.join('\n')}`);
+if (noindexCount !== records.length) throw new Error(`expected ${records.length} noindex articles, found ${noindexCount}`);
 
 fs.writeFileSync(
   path.join(publicRoot, '_headers'),
@@ -143,10 +155,11 @@ const manifest = {
   article_count: records.length,
   primary_next_links: primaryCount,
   related_links: relatedCount,
+  noindex_articles: noindexCount,
   broken_curated_links: brokenLinks,
   records: generated,
 };
 fs.writeFileSync(path.join(landingDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
 
-console.log(`[journal-first10-preview] PASS: articles=${records.length}/10 primary_next=${primaryCount}/10 related=${relatedCount}/20 broken=0`);
+console.log(`[journal-first10-preview] PASS: articles=${records.length}/10 primary_next=${primaryCount}/10 related=${relatedCount}/20 noindex=${noindexCount}/10 broken=0`);
 console.log('[journal-first10-preview] output is preview-only and stamped noindex/no-store');
