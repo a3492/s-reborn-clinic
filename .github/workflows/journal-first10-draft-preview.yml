@@ -87,6 +87,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: journal-first10-draft-preview
-          path: dist
+          path: dist/client
           if-no-files-found: error
           retention-days: 30
