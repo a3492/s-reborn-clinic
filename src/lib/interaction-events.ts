@@ -36,18 +36,37 @@ export interface InteractionEventInput {
 }
 
 const SESSION_STORAGE_KEY = 'sreborn_reader_session_id';
+const SESSION_COOKIE_NAME = 'sreborn_reader_session_id';
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_METADATA_BYTES = 8 * 1024;
+
+function syncReaderSessionToFeedbackApis(sessionId: string): void {
+  if (typeof document === 'undefined') return;
+  try {
+    const secure = typeof location !== 'undefined' && location.protocol === 'https:' ? '; Secure' : '';
+    const base = `${SESSION_COOKIE_NAME}=${encodeURIComponent(sessionId)}; SameSite=Lax${secure}`;
+    // Scope the pseudonymous ID only to the two server endpoints that need
+    // success-path interaction events. It is not sent with unrelated requests.
+    document.cookie = `${base}; Path=/api/comments`;
+    document.cookie = `${base}; Path=/api/report`;
+  } catch {
+    // Analytics/session bridging must never affect the primary interaction.
+  }
+}
 
 export function getOrCreateReaderSessionId(): string {
   try {
     let id = localStorage.getItem(SESSION_STORAGE_KEY);
-    if (!id || !id.trim()) {
+    if (!id || !UUID_RE.test(id.trim())) {
       id = crypto.randomUUID();
       localStorage.setItem(SESSION_STORAGE_KEY, id);
     }
+    syncReaderSessionToFeedbackApis(id);
     return id;
   } catch {
-    return crypto.randomUUID();
+    const id = crypto.randomUUID();
+    syncReaderSessionToFeedbackApis(id);
+    return id;
   }
 }
 
