@@ -1,6 +1,6 @@
 # IR-301 Interaction Event Contract
 
-Status: **Implemented on branch — migration and smoke prepared / non-production DB execution pending**
+Status: **Implemented on branch — production DB migration applied and verified / application code not merged or Verified Live**
 
 This contract adds an append-only event stream without replacing existing aggregate/current-state tables.
 
@@ -78,23 +78,30 @@ Search event metadata deliberately excludes the raw query. Only bounded derived 
 
 For comment/report server-side dual-write, the shared pseudonymous reader session ID is bridged through narrowly scoped SameSite cookies for `/api/comments` and `/api/report`; it is not made site-wide. Raw comment body, email, report description, IP address, and Turnstile token are excluded from generic event metadata.
 
-## 5. Database security contract for the pending migration
+## 5. Database security contract and production rollout
 
-The migration is generated with `supabase migration new ir301_interaction_events`; do not invent or rename its timestamped filename.
+The migration was initially generated with Supabase CLI and is now aligned to the actual production migration-history version:
 
-Required database behavior:
+- `20260909045719_ir301_interaction_events.sql`
 
-1. Create `public.interaction_events` with RLS enabled.
+Production behavior verified after apply:
+
+1. `public.interaction_events` exists with RLS enabled.
 2. `anon` and `authenticated` receive **INSERT only**.
-3. Do not grant `SELECT`, `UPDATE`, or `DELETE` to browser roles.
+3. Browser roles have no `SELECT`, `UPDATE`, or `DELETE` privilege.
 4. `event_name` is constrained to the v1 allow-list.
 5. `event_version` is constrained to `1` initially.
-6. `metadata` must be a JSON object and bounded (target <= 8 KiB serialized).
+6. `metadata` must be a JSON object and bounded to <= 8 KiB serialized.
 7. `session_id`, `slug`, `page_type`, `locale`, `source`, and `public_path` have explicit length bounds.
 8. `content_id` is nullable FK to `posts.id`.
-9. Before insert, DB discards client-supplied `content_id` and resolves it from the current `posts.slug` match. A browser cannot forge canonical content identity, and public clients do not need `posts` SELECT access for event recording.
+9. Before insert, DB discards client-supplied `content_id` and resolves it from the current `posts.slug` match. `received_at` is also replaced with DB receive time.
 10. Events are append-only for browser roles.
 11. No raw email, comment body, question narrative, diagnosis, treatment detail, search query, IP address, or Turnstile token belongs in generic event `metadata`.
+12. `private.canonicalize_interaction_event()` is not executable by `anon` or `authenticated`.
+
+A Supabase development branch was attempted for isolated validation, but the current plan does not support branching. Instead, the complete migration and positive/negative security smoke were executed against the live production schema inside explicit transactions ending in `ROLLBACK`. Verification confirmed that no test table/rows survived those dry-runs before the formal migration was applied.
+
+After the formal production apply, a second transactional smoke confirmed canonical `content_id` / `received_at` behavior and rolled back all test data. Security Advisor showed no new IR-301-specific WARN. Performance Advisor only reported the two new indexes as unused INFO, which is expected while the event table is empty.
 
 ## 6. Dual-write semantics
 
@@ -126,10 +133,11 @@ Event rows therefore retain both `content_id` and the historical slug/path snaps
 - [x] bookmark dual-write
 - [x] comment/report server-side dual-write
 - [x] search execute/no-result/result-click instrumentation without raw query capture
-- [x] CLI-generated migration
-- [x] transactional RLS / grants smoke script
-- [x] canonical `content_id` trigger smoke assertion
+- [x] CLI-generated migration contract
+- [x] transactional RLS / grants / canonical positive smoke
+- [x] negative security smoke for unknown event, sensitive/oversized metadata, non-web anon source, and anon read denial
 - [x] CI contract assertions for event allow-list, best-effort semantics, migration least privilege, feedback success paths, and search privacy
-- [ ] disposable local/preview DB migration apply + transactional RLS/grants/canonical smoke execution
-- [ ] migration security advisor verification after apply
-- [ ] production apply + live event smoke
+- [x] production migration apply (`20260909045719_ir301_interaction_events`)
+- [x] post-apply Security / Performance Advisor verification
+- [ ] application code merged and deployed
+- [ ] production live event smoke through the browser/server paths
