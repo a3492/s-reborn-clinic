@@ -64,6 +64,7 @@ const recommendLinks = [
 <script define:vars={{ categoryLabels }}>
 	import { createClient } from '@supabase/supabase-js';
 	import { postHrefFromDbSlug } from '../lib/academy';
+	import { recordInteractionEventBestEffort } from '../lib/interaction-events';
 
 	const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 	const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
@@ -120,7 +121,16 @@ const recommendLinks = [
 		return q.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
 	}
 
+	function queryShape(query: string) {
+		const trimmed = query.trim();
+		return {
+			query_length: Array.from(trimmed).length,
+			query_token_count: trimmed ? trimmed.split(/\s+/).filter(Boolean).length : 0,
+		};
+	}
+
 	type Row = {
+		id: string;
 		slug: string;
 		title: string;
 		description: string | null;
@@ -165,8 +175,9 @@ const recommendLinks = [
 			errorEl.textContent = '';
 		}
 
-		const selectCols = 'slug, title, description, category, tags, published_at, thumbnail_url';
-
+		const selectCols = 'id, slug, title, description, category, tags, published_at, thumbnail_url';
+		const startedAt = performance.now();
+		let strategy: 'fulltext' | 'fallback' = 'fulltext';
 		let rows: Row[] = [];
 
 		const tsRes = await supabase
@@ -179,6 +190,7 @@ const recommendLinks = [
 		if (!tsRes.error) {
 			rows = (tsRes.data as Row[]) ?? [];
 		} else {
+			strategy = 'fallback';
 			const esc = escapeIlikePattern(q);
 			const orFilter = `title.ilike.%${esc}%,description.ilike.%${esc}%`;
 			const fb = await supabase
@@ -196,6 +208,27 @@ const recommendLinks = [
 				return;
 			}
 			rows = (fb.data as Row[]) ?? [];
+		}
+
+		const shape = queryShape(q);
+		const searchMetadata = {
+			...shape,
+			result_count: rows.length,
+			strategy,
+			duration_ms: Math.max(0, Math.round(performance.now() - startedAt)),
+		};
+
+		recordInteractionEventBestEffort(supabase, {
+			eventName: 'search.executed',
+			context: { pageType: 'search', source: 'web', publicPath: window.location.pathname },
+			metadata: searchMetadata,
+		});
+		if (rows.length === 0) {
+			recordInteractionEventBestEffort(supabase, {
+				eventName: 'search.no_result',
+				context: { pageType: 'search', source: 'web', publicPath: window.location.pathname },
+				metadata: searchMetadata,
+			});
 		}
 
 		skeletonEl?.setAttribute('hidden', '');
@@ -219,7 +252,7 @@ const recommendLinks = [
 		resultsEl.hidden = false;
 
 		resultsEl.innerHTML = rows
-			.map((row) => {
+			.map((row, index) => {
 				const href = postHrefFromDbSlug(row.slug);
 				const cat = row.category || '';
 				const badge = categoryLabels[cat] || cat || '블로그';
@@ -245,7 +278,7 @@ const recommendLinks = [
 					.join('');
 
 				return `<article class="blog-post-card" data-search-hit>
-          <a href="${escapeHtmlAttr(href)}" class="blog-post-card-main">
+          <a href="${escapeHtmlAttr(href)}" class="blog-post-card-main" data-search-result-link data-content-id="${escapeHtmlAttr(row.id)}" data-content-slug="${escapeHtmlAttr(row.slug)}" data-result-rank="${index + 1}">
             ${thumbBlock}
             <div class="blog-post-card-body">
               <div class="blog-post-card-badges">
@@ -262,6 +295,28 @@ const recommendLinks = [
         </article>`;
 			})
 			.join('');
+
+		resultsEl.querySelectorAll<HTMLAnchorElement>('[data-search-result-link]').forEach((link) => {
+			link.addEventListener('click', () => {
+				const rank = Number.parseInt(link.dataset.resultRank || '', 10);
+				recordInteractionEventBestEffort(supabase, {
+					eventName: 'search.result_clicked',
+					context: {
+						contentId: link.dataset.contentId || null,
+						slug: link.dataset.contentSlug || null,
+						pageType: 'search',
+						source: 'web',
+						publicPath: window.location.pathname,
+					},
+					metadata: {
+						...shape,
+						result_count: rows.length,
+						result_rank: Number.isFinite(rank) ? rank : null,
+						strategy,
+					},
+				});
+			});
+		});
 	}
 
 	function readQuery() {
