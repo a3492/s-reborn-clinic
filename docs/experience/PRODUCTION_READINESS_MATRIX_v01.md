@@ -30,7 +30,7 @@ Blocked/final later:
 
 Current blocker:
 
-- `INTERNAL-P01-R2` real-phone instrumentation acceptance.
+- `INTERNAL-P01-R3` real-phone instrumentation acceptance against v0.3.2.
 
 Then:
 
@@ -159,9 +159,9 @@ Required before production release:
 
 Allowed: contracts, inventory, scripts, isolated prototype, non-runtime documentation.
 
-### Gate 1 — INTERNAL-P01-R2 Technical PASS
+### Gate 1 — INTERNAL-P01-R3 Technical PASS
 
-Allows: H01-H05 real human sessions.
+Allows: H01-H05 real human sessions. R3 itself is instrumentation acceptance only and never enters Human Gate denominators.
 
 ### Gate 2 — Human Green/Yellow/Red
 
