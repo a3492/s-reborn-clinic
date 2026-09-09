@@ -143,3 +143,14 @@ Event rows therefore retain both `content_id` and the historical slug/path snaps
 - [x] post-apply Security / Performance Advisor verification
 - [ ] application code merged and deployed
 - [ ] production live event smoke through the browser/server paths
+
+## 9. Rollback / containment
+
+Because IR-301 is additive and does not replace current-state tables, the first containment action for a rollout problem is to stop new browser writes without touching existing visitor features:
+
+1. revoke `INSERT` on `public.interaction_events` from `anon, authenticated`;
+2. keep the table/event rows for diagnosis;
+3. revert application instrumentation if needed;
+4. drop the table/trigger/private helper only if an explicit data-retention decision says the event stream can be discarded.
+
+No existing `post_views`, reactions, bookmarks, comments, reports, or search state depends on `interaction_events`, so event-pipeline rollback does not require rolling back those primary features.
