@@ -25,4 +25,4 @@ This directory prepares production contracts that are safe to build before the f
 
 ## Current blocking physical gate
 
-`INTERNAL-P01-R2` must be rerun on a real mobile device against v0.3.1. After technical PASS, H01-H05 are the minimum first human batch. Contract work in this directory may continue in parallel, but no human-dependent field is declared validated until those sessions exist.
+`INTERNAL-P01-R3` must be run on a real mobile device against v0.3.2 after the navigation hotfix. After machine + manual Technical PASS, H01-H05 are the minimum first human batch. Contract work in this directory may continue in parallel, but no human-dependent field is declared validated until those sessions exist.
