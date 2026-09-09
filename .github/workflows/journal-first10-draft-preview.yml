@@ -1,0 +1,75 @@
+name: Journal First 10 Draft Preview
+
+on:
+  push:
+    branches:
+      - qa/journal-first10-draft-preview-v01
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    name: Build isolated draft preview artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify publisher contract
+        run: npm run check:publish-contract
+
+      - name: Verify interaction event client contract
+        run: npm run check:interaction-contract
+
+      - name: Verify IR-301 migration security contract
+        run: npm run check:ir301-migration
+
+      - name: Verify Experience contract
+        run: npm run check:experience-contract
+
+      - name: Run read-only Experience inventory audit
+        run: npm run audit:experience-readiness -- --out /tmp/experience-readiness.json
+
+      - name: Build normal public site
+        run: npm run build
+
+      - name: Prove staged drafts are absent from normal public build
+        run: node scripts/verify-journal-first10-public.mjs
+
+      - name: Build isolated production-renderer draft preview
+        run: node scripts/build-journal-first10-draft-preview.mjs
+
+      - name: Prove source articles were restored byte-for-byte
+        run: |
+          git diff --exit-code -- \
+            src/content/blog/doctor-column/consultation-no-treatment.md \
+            src/content/blog/doctor-column/filler-migration.md \
+            src/content/blog/doctor-column/hifu-vs-radiofrequency.md \
+            src/content/blog/doctor-column/laser-black-balloon.md \
+            src/content/blog/doctor-column/sagging-lift-fill-reduce.md \
+            src/content/blog/doctor-column/self-face-perception.md \
+            src/content/blog/doctor-column/survivorship-bias.md \
+            src/content/blog/doctor-column/weight-loss-face-aging.md \
+            src/content/blog/doctor-column/when-not-to-reduce-facial-fat.md \
+            src/content/blog/doctor-column/when-not-to-treat.md
+
+      - name: Upload isolated preview artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: journal-first10-draft-preview
+          path: dist
+          if-no-files-found: error
+          retention-days: 30
