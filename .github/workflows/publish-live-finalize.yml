@@ -8,6 +8,7 @@ on:
 permissions:
   contents: read
   actions: read
+  id-token: write
 
 jobs:
   finalize:
@@ -22,13 +23,33 @@ jobs:
       - name: Finalize verified-live publish jobs
         shell: bash
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_API_TOKEN: ${{ github.token }}
           COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
-          RUN_ID: ${{ github.event.workflow_run.id }}
+          DEPLOY_RUN_ID: ${{ github.event.workflow_run.id }}
+          FINALIZER_RUN_ID: ${{ github.run_id }}
+          OIDC_AUDIENCE: s-reborn-publish-finalizer
           SITE_URL: https://s-reborn-clinic.pages.dev
         run: |
           set -euo pipefail
-          payload="$(printf '{\"commitSha\":\"%s\",\"runId\":%s}' "$COMMIT_SHA" "$RUN_ID")"
+
+          oidc_response="$(curl \
+            --fail \
+            --silent \
+            --show-error \
+            --max-time 30 \
+            -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${OIDC_AUDIENCE}")"
+
+          OIDC_TOKEN="$(OIDC_RESPONSE="${oidc_response}" node <<'NODE'
+          const data = JSON.parse(process.env.OIDC_RESPONSE || '{}');
+          if (typeof data.value !== 'string' || !data.value) process.exit(1);
+          process.stdout.write(data.value);
+          NODE
+          )"
+
+          test -n "${OIDC_TOKEN}"
+          payload="$(printf '{\"commitSha\":\"%s\",\"deployRunId\":%s,\"callerRunId\":%s}' "$COMMIT_SHA" "$DEPLOY_RUN_ID" "$FINALIZER_RUN_ID")"
+
           curl \
             --fail-with-body \
             --silent \
@@ -38,7 +59,8 @@ jobs:
             --retry-delay 3 \
             --max-time 120 \
             -X POST \
-            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Authorization: Bearer ${OIDC_TOKEN}" \
+            -H "X-GitHub-Token: ${GITHUB_API_TOKEN}" \
             -H "Content-Type: application/json" \
             --data "$payload" \
             "${SITE_URL%/}/api/admin/publish-finalize"
