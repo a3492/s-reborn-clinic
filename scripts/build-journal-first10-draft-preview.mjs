@@ -20,8 +20,13 @@ const records = [
 const originals = new Map();
 let buildSucceeded = false;
 
-function articleHtmlPath(id) {
-  return path.join(distRoot, 'blog', ...id.split('/'), 'index.html');
+function resolvePublicRoot() {
+  const clientRoot = path.join(distRoot, 'client');
+  return fs.existsSync(clientRoot) ? clientRoot : distRoot;
+}
+
+function articleHtmlPath(publicRoot, id) {
+  return path.join(publicRoot, 'blog', ...id.split('/'), 'index.html');
 }
 
 function extractClassLinks(html, className) {
@@ -35,11 +40,11 @@ function extractClassLinks(html, className) {
   return hrefs;
 }
 
-function hrefToHtmlPath(href) {
+function hrefToHtmlPath(publicRoot, href) {
   const clean = href.split('#')[0].split('?')[0];
   if (!clean.startsWith('/blog/')) return null;
   const relative = clean.replace(/^\//, '').replace(/\/$/, '');
-  return path.join(distRoot, ...relative.split('/'), 'index.html');
+  return path.join(publicRoot, ...relative.split('/'), 'index.html');
 }
 
 try {
@@ -75,14 +80,17 @@ for (const [fullPath, original] of originals) {
 }
 console.log(`[journal-first10-preview] source restoration PASS: ${records.length}/${records.length} byte-identical`);
 
+const publicRoot = resolvePublicRoot();
+console.log(`[journal-first10-preview] inspecting output root: ${path.relative(repoRoot, publicRoot) || '.'}`);
+
 let primaryCount = 0;
 let relatedCount = 0;
 const brokenLinks = [];
 const generated = [];
 
 for (const [, id] of records) {
-  const htmlPath = articleHtmlPath(id);
-  if (!fs.existsSync(htmlPath)) throw new Error(`${id}: expected preview HTML was not generated`);
+  const htmlPath = articleHtmlPath(publicRoot, id);
+  if (!fs.existsSync(htmlPath)) throw new Error(`${id}: expected preview HTML was not generated at ${path.relative(repoRoot, htmlPath)}`);
 
   let html = fs.readFileSync(htmlPath, 'utf8');
   const primary = extractClassLinks(html, 'journal-primary-next');
@@ -91,7 +99,7 @@ for (const [, id] of records) {
   relatedCount += related.length;
 
   for (const href of [...primary, ...related]) {
-    const target = hrefToHtmlPath(href);
+    const target = hrefToHtmlPath(publicRoot, href);
     if (!target || !fs.existsSync(target)) brokenLinks.push(`${id} -> ${href}`);
   }
 
@@ -102,7 +110,7 @@ for (const [, id] of records) {
     fs.writeFileSync(htmlPath, html, 'utf8');
   }
 
-  generated.push({ id, path: path.relative(distRoot, htmlPath), primary_next_links: primary.length, related_links: related.length });
+  generated.push({ id, path: path.relative(publicRoot, htmlPath), primary_next_links: primary.length, related_links: related.length });
 }
 
 if (primaryCount !== 10) throw new Error(`expected 10 rendered primary-next links, found ${primaryCount}`);
@@ -110,12 +118,12 @@ if (relatedCount !== 20) throw new Error(`expected 20 rendered related links, fo
 if (brokenLinks.length) throw new Error(`broken curated links:\n${brokenLinks.join('\n')}`);
 
 fs.writeFileSync(
-  path.join(distRoot, '_headers'),
+  path.join(publicRoot, '_headers'),
   '/*\n  X-Robots-Tag: noindex, nofollow, noarchive\n  Cache-Control: no-store\n',
   'utf8',
 );
 
-const landingDir = path.join(distRoot, '__journal-preview');
+const landingDir = path.join(publicRoot, '__journal-preview');
 fs.mkdirSync(landingDir, { recursive: true });
 const landingItems = records
   .map(([, id]) => `<li><a href="/blog/${id}/">${id}</a></li>`)
@@ -131,13 +139,14 @@ const manifest = {
   source_head: process.env.GITHUB_SHA ?? null,
   preview_only: true,
   repository_sources_restored: true,
+  output_root: path.relative(repoRoot, publicRoot),
   article_count: records.length,
   primary_next_links: primaryCount,
   related_links: relatedCount,
   broken_curated_links: brokenLinks,
   records: generated,
 };
-fs.writeFileSync(path.join(distRoot, '__journal-preview', 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+fs.writeFileSync(path.join(landingDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
 
 console.log(`[journal-first10-preview] PASS: articles=${records.length}/10 primary_next=${primaryCount}/10 related=${relatedCount}/20 broken=0`);
 console.log('[journal-first10-preview] output is preview-only and stamped noindex/no-store');
