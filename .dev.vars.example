@@ -3,7 +3,7 @@
 #
 # IMPORTANT — production source separation
 # - Astro browser bundle의 PUBLIC_*: 현재 production에서는 GitHub Actions가 `npm run build`를
-#   수행하므로 GitHub Actions repository/environment secrets가 canonical build source입니다.
+#   수행하므로 GitHub Repository Variables가 권장 source이고 기존 Secrets는 fallback입니다.
 # - Pages Functions server secrets: Cloudflare Pages runtime environment/bindings가 canonical source입니다.
 # - 이 `.dev.vars` 파일은 로컬 Functions/runtime 테스트용이며 production GitHub build 값을 대체하지 않습니다.
 
@@ -20,7 +20,7 @@ SUPABASE_SERVICE_ROLE_KEY=
 SUPABASE_ANON_KEY=
 
 # Turnstile
-# 공개 site key는 browser widget용. Production build에서는 GitHub Actions secret에 동일 값을 설정.
+# 공개 site key는 browser widget용. Production build에서는 GitHub Repository Variable을 권장하며 Secret도 fallback 지원.
 PUBLIC_TURNSTILE_SITE_KEY=
 # 비밀 key는 Pages Functions runtime 전용.
 TURNSTILE_SECRET_KEY=
