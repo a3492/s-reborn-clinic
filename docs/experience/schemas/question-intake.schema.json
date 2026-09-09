@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://s-reborn.example/schemas/question-intake.schema.json",
+  "title": "S-Reborn Question Intake v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "raw_question_id",
+    "submitted_at",
+    "question_raw",
+    "source_surface",
+    "language",
+    "consent_scope",
+    "privacy_state",
+    "moderation_state",
+    "coverage_disposition"
+  ],
+  "properties": {
+    "raw_question_id": { "type": "string", "minLength": 1 },
+    "submitted_at": { "type": "string", "format": "date-time" },
+    "question_raw": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "question_normalized": { "type": ["string", "null"], "maxLength": 2000 },
+    "source_surface": { "enum": ["no_direct", "partial", "question_bar", "article", "other"] },
+    "language": { "type": "string", "minLength": 2 },
+    "consent_scope": { "type": "string", "minLength": 1 },
+    "privacy_state": { "enum": ["accepted", "rejected_sensitive", "needs_review"] },
+    "moderation_state": { "enum": ["new", "triaged", "duplicate", "accepted_editorial", "rejected", "resolved_by_existing_content"] },
+    "coverage_disposition": { "enum": ["STRONG_EXISTING", "PARTIAL_EXISTING", "NO_DIRECT", "OUT_OF_SCOPE", "SENSITIVE_REVIEW"] },
+    "question_cluster_id": { "type": ["string", "null"] },
+    "resulting_content_id": { "type": ["string", "null"] },
+    "editorial_tags": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "triage_notes": { "type": ["string", "null"] }
+  }
+}
