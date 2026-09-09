@@ -57,7 +57,7 @@ Initial v1 intentionally does **not** require a durable visitor/user profile ID.
 
 Adding a new event name is a contract change. Do not silently overload `metadata` to create hidden event types.
 
-## 4. Initial implemented client slice
+## 4. Implemented branch slices
 
 Implemented on `feat/ir301-interaction-event-client`:
 
@@ -68,8 +68,15 @@ Implemented on `feat/ir301-interaction-event-client`:
 - curated primary-next click
 - reaction add/remove — only after current-state mutation succeeds
 - bookmark add/remove — only after bookmark mutation/local-state change succeeds when Supabase is available
+- comment submit — server-side event append only after durable comment insert and optional private contact handling succeed
+- error report — server-side event append only after durable `post_reports` insert succeeds
+- search execute — append only after a successful full-text or fallback search response
+- search no-result — append only when the successful search returns zero rows
+- search result click — carries canonical result `posts.id`, slug snapshot, result rank, result count, and search strategy
 
-Comments and error reports should be dual-written from their server API success path in the next slice, not from pre-submit clicks.
+Search event metadata deliberately excludes the raw query. Only bounded derived metrics are recorded: query character count, query token count, result count, search strategy, execution duration, and result rank where applicable.
+
+For comment/report server-side dual-write, the shared pseudonymous reader session ID is bridged through narrowly scoped SameSite cookies for `/api/comments` and `/api/report`; it is not made site-wide. Raw comment body, email, report description, IP address, and Turnstile token are excluded from generic event metadata.
 
 ## 5. Database security contract for the pending migration
 
@@ -87,7 +94,7 @@ Required database behavior:
 8. `content_id` is nullable FK to `posts.id`.
 9. Before insert, DB discards client-supplied `content_id` and resolves it from the current `posts.slug` match. A browser cannot forge canonical content identity, and public clients do not need `posts` SELECT access for event recording.
 10. Events are append-only for browser roles.
-11. No raw email, comment body, question narrative, diagnosis, treatment detail, IP address, or Turnstile token belongs in generic event `metadata`.
+11. No raw email, comment body, question narrative, diagnosis, treatment detail, search query, IP address, or Turnstile token belongs in generic event `metadata`.
 
 ## 6. Dual-write semantics
 
@@ -98,7 +105,7 @@ A visitor action has two independent outcomes:
 
 For state-changing actions such as reactions/bookmarks/comments/reports, append the event only after primary success. If event append fails, retain the successful primary action and surface event-pipeline health separately.
 
-`article.viewed/engaged/completed` are analytics-only and therefore have no primary state dependency beyond the existing view aggregate.
+`article.viewed/engaged/completed` and search instrumentation are analytics-only and therefore have no primary state dependency beyond successful rendering/search execution.
 
 ## 7. Canonical identity
 
@@ -117,9 +124,12 @@ Event rows therefore retain both `content_id` and the historical slug/path snaps
 - [x] related/primary-next click instrumentation
 - [x] reaction dual-write
 - [x] bookmark dual-write
+- [x] comment/report server-side dual-write
+- [x] search execute/no-result/result-click instrumentation without raw query capture
 - [x] CLI-generated migration
 - [x] transactional RLS / grants smoke script
 - [x] canonical `content_id` trigger smoke assertion
-- [ ] comment/report server-side dual-write
-- [x] CI contract assertions for event allow-list, best-effort semantics, and migration least privilege
+- [x] CI contract assertions for event allow-list, best-effort semantics, migration least privilege, feedback success paths, and search privacy
+- [ ] disposable local/preview DB migration apply + transactional RLS/grants/canonical smoke execution
+- [ ] migration security advisor verification after apply
 - [ ] production apply + live event smoke
