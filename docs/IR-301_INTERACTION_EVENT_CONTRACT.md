@@ -103,6 +103,8 @@ A Supabase development branch was attempted for isolated validation, but the cur
 
 After the formal production apply, a second transactional smoke confirmed canonical `content_id` / `received_at` behavior and rolled back all test data. Security Advisor showed no new IR-301-specific WARN. Performance Advisor only reported the two new indexes as unused INFO, which is expected while the event table is empty.
 
+Current production `interaction_events` row count after validation: **0**.
+
 ## 6. Dual-write semantics
 
 A visitor action has two independent outcomes:
