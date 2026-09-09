@@ -13,6 +13,8 @@
     "check:publish-contract": "tsx scripts/check-publish-contract.ts",
     "check:interaction-contract": "tsx scripts/check-interaction-contract.ts",
     "check:ir301-migration": "tsx scripts/check-ir301-migration.ts",
+    "check:experience-contract": "node scripts/check-experience-contract.mjs",
+    "audit:experience-readiness": "node scripts/audit-experience-readiness.mjs",
     "translate": "npx tsx scripts/translate-posts.ts",
     "translate:force": "npx tsx scripts/translate-posts.ts --force"
   },
