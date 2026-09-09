@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://s-reborn.example/schemas/relation-edge.schema.json",
+  "title": "S-Reborn Experience RelationEdge v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "source_content_id",
+    "target_content_id",
+    "relation_type",
+    "branch_type",
+    "reason",
+    "priority",
+    "provenance",
+    "status",
+    "reviewed_at"
+  ],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "source_content_id": { "type": "string", "minLength": 1 },
+    "target_content_id": { "type": "string", "minLength": 1 },
+    "relation_type": { "enum": ["primary_next", "related"] },
+    "branch_type": { "enum": ["question", "decision", "principle", "clinical_reasoning", "case", "viewpoint", "other"] },
+    "reason": { "type": "string", "minLength": 1 },
+    "priority": { "type": "integer", "minimum": 0 },
+    "provenance": { "enum": ["manual", "suggested", "approved_suggestion"] },
+    "status": { "enum": ["active", "review", "archived"] },
+    "reviewed_at": { "type": "string", "format": "date-time" }
+  },
+  "allOf": [
+    {
+      "not": {
+        "properties": {
+          "source_content_id": { "const": "__SELF__" },
+          "target_content_id": { "const": "__SELF__" }
+        },
+        "required": ["source_content_id", "target_content_id"]
+      }
+    }
+  ]
+}
