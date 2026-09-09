@@ -44,8 +44,11 @@ const { slug } = Astro.props;
 </button>
 
 <script>
+  import { mountArticleInteractionTracker } from '../lib/article-interaction-tracker';
   import { mountReaderBookmarkButtons } from '../lib/reader-bookmark-button';
+
   mountReaderBookmarkButtons();
+  mountArticleInteractionTracker();
 </script>
 
 <style>

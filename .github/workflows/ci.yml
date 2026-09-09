@@ -34,5 +34,11 @@ jobs:
       - name: Verify publisher contract
         run: npm run check:publish-contract
 
+      - name: Verify interaction event client contract
+        run: npm run check:interaction-contract
+
+      - name: Verify IR-301 migration security contract
+        run: npm run check:ir301-migration
+
       - name: Build
         run: npm run build

@@ -1,3 +1,4 @@
+import { readReaderSessionId, recordServerInteractionEvent } from '../lib/interaction-events';
 import { verifyTurnstile } from '../lib/turnstile';
 
 async function safeJson(response: Response) {
@@ -74,6 +75,7 @@ export const onRequestPost = async (context: { request: Request; env: Record<str
     return jsonResponse({ error: 'Server misconfigured.' }, 500);
   }
 
+  const readerSessionId = readReaderSessionId(request);
   const ip = request.headers.get('CF-Connecting-IP') ?? undefined;
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   if (!body || typeof body !== 'object') {
@@ -122,6 +124,15 @@ export const onRequestPost = async (context: { request: Request; env: Record<str
       502,
     );
   }
+
+  // Record only the bounded report category after the durable report row exists.
+  // Description, email, Turnstile token and request IP are intentionally excluded.
+  await recordServerInteractionEvent(env, {
+    eventName: 'error.reported',
+    slug,
+    sessionId: readerSessionId,
+    metadata: { report_type: reportType },
+  });
 
   await insertAdminNotification(env, {
     type: 'new_report',

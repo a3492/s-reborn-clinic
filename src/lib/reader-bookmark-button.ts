@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { recordInteractionEventBestEffort } from './interaction-events';
 import { isLocalBookmarked, readLocalBookmarkSlugs, setLocalBookmark } from './reader-bookmarks';
 
 function syncBookmarkButtonUi(btn: HTMLButtonElement, saved: boolean) {
@@ -83,6 +84,11 @@ export function mountReaderBookmarkButtons() {
 					} else {
 						setLocalBookmark(slug, next);
 					}
+					recordInteractionEventBestEffort(supabase, {
+						eventName: 'article.bookmarked',
+						context: { slug, pageType: 'article' },
+						metadata: { action: next ? 'added' : 'removed' },
+					});
 				} else {
 					setLocalBookmark(slug, next);
 				}
@@ -139,7 +145,13 @@ export async function removeReaderBookmark(
 					.delete()
 					.eq('user_id', user.id)
 					.eq('slug', s);
-				return !error;
+				if (error) return false;
+				recordInteractionEventBestEffort(supabase, {
+					eventName: 'article.bookmarked',
+					context: { slug: s, pageType: 'bookmarks' },
+					metadata: { action: 'removed' },
+				});
+				return true;
 			}
 		}
 		setLocalBookmark(s, false);

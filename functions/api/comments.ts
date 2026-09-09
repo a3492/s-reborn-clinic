@@ -1,3 +1,4 @@
+import { readReaderSessionId, recordServerInteractionEvent } from '../lib/interaction-events';
 import { verifyTurnstile } from '../lib/turnstile';
 
 async function safeJson(response: Response) {
@@ -49,6 +50,7 @@ export const onRequestPost = async (context: { request: Request; env: Record<str
     return jsonResponse({ error: 'Server misconfigured.' }, 500);
   }
 
+  const readerSessionId = readReaderSessionId(request);
   const ip = request.headers.get('CF-Connecting-IP') ?? undefined;
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   if (!body) {
@@ -162,6 +164,15 @@ export const onRequestPost = async (context: { request: Request; env: Record<str
       );
     }
   }
+
+  // Only emit after the public comment and optional private contact persistence
+  // have both succeeded. Raw comment/contact data is deliberately excluded.
+  await recordServerInteractionEvent(env, {
+    eventName: 'comment.submitted',
+    slug,
+    sessionId: readerSessionId,
+    metadata: { is_reply: Boolean(parent_id) },
+  });
 
   return jsonResponse({ ok: true });
 };
