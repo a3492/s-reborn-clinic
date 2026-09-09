@@ -21,9 +21,20 @@ const post = Astro.props;
 const { Content } = await render(post);
 const encodedDownloadMarkdown = encodeURIComponent(buildBlogPostDownloadMarkdown(post));
 const tocItems = buildTocFromMarkdown(post.body ?? '');
+const contentId = post.data.content_id ?? '';
+const contentVersion = post.data.content_version ?? '';
 ---
 
 <BlogPost {...post.data} body={post.body} tocItems={tocItems} encodedDownloadMarkdown={encodedDownloadMarkdown}>
+  {contentId && (
+    <span
+      hidden
+      data-s-reborn-content-id={contentId}
+      data-s-reborn-content-version={String(contentVersion)}
+      aria-hidden="true"
+    />
+  )}
+
   <JournalEditorialArticleChrome series={post.data.series} />
 
   <JournalArticleExperience

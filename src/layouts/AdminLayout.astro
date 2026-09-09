@@ -218,5 +218,9 @@ const showAdminMobileFab = pathNorm === '/admin' || pathNorm === '/admin/posts';
         });
       }
     </script>
+    <script>
+      import { installPublishStateUi } from '../scripts/admin-publish-state-ui';
+      installPublishStateUi();
+    </script>
   </body>
 </html>

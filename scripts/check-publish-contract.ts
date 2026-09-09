@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { buildFrontmatter, buildPublicPath } from '../functions/lib/post-format';
 
 const basePost = {
@@ -39,12 +40,7 @@ assert.equal(
 );
 
 const explicitDraftArtifact = buildFrontmatter(basePost, { draft: true });
-assert.match(
-  explicitDraftArtifact,
-  /\ndraft: true\n/,
-  'A caller must still be able to explicitly create a draft-only artifact.',
-);
-
+assert.match(explicitDraftArtifact, /\ndraft: true\n/);
 const publishedArtifact = buildFrontmatter({ ...basePost, status: 'published' });
 assert.match(publishedArtifact, /\ndraft: false\n/);
 
@@ -61,4 +57,44 @@ assert.doesNotMatch(legacyArtifact, /content_id:/);
 assert.match(legacyArtifact, /locale: "ko"/);
 assert.match(legacyArtifact, /source_system: "manual"/);
 
-console.log('Publisher frontmatter + canonical content identity contract: OK');
+// IR-101 static safety invariants. These intentionally fail CI if commit truth and
+// verified-live truth are accidentally collapsed again.
+const publisher = readFileSync(new URL('../functions/api/admin/publish.ts', import.meta.url), 'utf8');
+const finalizer = readFileSync(new URL('../functions/api/admin/publish-finalize.ts', import.meta.url), 'utf8');
+const scheduler = readFileSync(new URL('../supabase/functions/scheduled-publish/index.ts', import.meta.url), 'utf8');
+const finalizeWorkflow = readFileSync(new URL('../.github/workflows/publish-live-finalize.yml', import.meta.url), 'utf8');
+
+assert.match(publisher, /buildFrontmatter\(post, \{ draft: false \}\)/);
+assert.match(publisher, /status: 'build_pending'/);
+assert.match(publisher, /deploy_status: 'build_pending'/);
+assert.doesNotMatch(
+  publisher,
+  /status:\s*'published'/,
+  'Commit-stage publisher must never declare the post publicly published.',
+);
+assert.doesNotMatch(
+  publisher,
+  /triggerEmbedPost\(/,
+  'Embedding must be a verified-live side effect, not a commit-stage side effect.',
+);
+assert.doesNotMatch(
+  publisher,
+  /notify-subscribers/,
+  'Subscriber notification must occur only after verified-live finalization.',
+);
+
+assert.match(finalizer, /data-s-reborn-content-id/);
+assert.match(finalizer, /data-s-reborn-content-version/);
+assert.match(finalizer, /conclusion === 'success'/);
+assert.match(finalizer, /status: 'published'/);
+assert.match(finalizer, /deploy_status: 'live'/);
+assert.match(finalizer, /triggerEmbedPost\(/);
+assert.match(finalizer, /notify-subscribers/);
+
+assert.match(scheduler, /\.in\('deploy_status', \['idle', 'failed', 'rolled_back'\]\)/);
+assert.match(scheduler, /contentVersion/);
+assert.match(finalizeWorkflow, /workflow_run:/);
+assert.match(finalizeWorkflow, /workflows: \["Deploy to Cloudflare Pages"\]/);
+assert.match(finalizeWorkflow, /GITHUB_TOKEN: \$\{\{ github\.token \}\}/);
+
+console.log('Publisher identity + IR-101 verified-live contract: OK');

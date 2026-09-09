@@ -1,0 +1,44 @@
+name: Finalize Published Content
+
+on:
+  workflow_run:
+    workflows: ["Deploy to Cloudflare Pages"]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  finalize:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Finalize verified-live publish jobs
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          SITE_URL: https://s-reborn-clinic.pages.dev
+        run: |
+          set -euo pipefail
+          payload="$(printf '{\"commitSha\":\"%s\",\"runId\":%s}' "$COMMIT_SHA" "$RUN_ID")"
+          curl \
+            --fail-with-body \
+            --silent \
+            --show-error \
+            --retry 3 \
+            --retry-all-errors \
+            --retry-delay 3 \
+            --max-time 120 \
+            -X POST \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data "$payload" \
+            "${SITE_URL%/}/api/admin/publish-finalize"
