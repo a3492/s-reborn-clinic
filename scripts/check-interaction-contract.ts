@@ -176,7 +176,7 @@ Object.defineProperty(globalThis, 'fetch', { configurable: true, value: realFetc
 
 const commentsSource = await readFile(new URL('../functions/api/comments.ts', import.meta.url), 'utf8');
 const reportSource = await readFile(new URL('../functions/api/report.ts', import.meta.url), 'utf8');
-const commentInsertIndex = commentsSource.indexOf("/rest/v1/comments?select=id");
+const commentInsertIndex = commentsSource.indexOf('/rest/v1/comments?select=id');
 const commentEventIndex = commentsSource.indexOf("eventName: 'comment.submitted'");
 assert.ok(commentInsertIndex >= 0 && commentEventIndex > commentInsertIndex, 'comment event must occur after durable comment insert');
 const contactInsertIndex = commentsSource.indexOf('/rest/v1/comment_contacts');
@@ -187,10 +187,9 @@ assert.ok(!commentsSource.slice(commentEventIndex, commentEventIndex + 260).incl
 const reportInsertIndex = reportSource.indexOf('/rest/v1/post_reports');
 const reportEventIndex = reportSource.indexOf("eventName: 'error.reported'");
 assert.ok(reportInsertIndex >= 0 && reportEventIndex > reportInsertIndex, 'report event must occur after durable report insert');
-const reportEventSlice = reportSource.slice(reportEventIndex, reportEventIndex + 260);
-assert.ok(!reportEventSlice.includes('description'), 'report event metadata must exclude report narrative');
-assert.ok(!reportEventSlice.includes('reporterEmail'), 'report event metadata must exclude email');
-assert.ok(!reportEventSlice.includes('tsToken'), 'report event metadata must exclude Turnstile token');
-assert.ok(!reportEventSlice.includes('ip'), 'report event metadata must exclude request IP');
+const reportEventCall = reportSource.match(
+  /recordServerInteractionEvent\(env,\s*\{\s*eventName: 'error\.reported',\s*slug,\s*sessionId: readerSessionId,\s*metadata: \{ report_type: reportType \},\s*\}\s*\);/s,
+);
+assert.ok(reportEventCall, 'report event must contain only bounded report_type metadata');
 
 console.log('Interaction event client/server contract: OK');
