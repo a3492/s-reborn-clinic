@@ -24,36 +24,6 @@ function setSessionFlag(prefix: string, slug: string) {
   }
 }
 
-async function resolveContext(
-  supabase: ReturnType<typeof createClient>,
-  slug: string,
-): Promise<InteractionContext> {
-  const fallback: InteractionContext = {
-    slug,
-    pageType: 'article',
-    locale: document.documentElement.lang || 'ko',
-    source: 'web',
-    publicPath: window.location.pathname,
-  };
-
-  try {
-    const { data, error } = await supabase
-      .from('posts')
-      .select('id, locale, public_path')
-      .eq('slug', slug)
-      .maybeSingle();
-    if (error || !data) return fallback;
-    return {
-      ...fallback,
-      contentId: data.id ?? null,
-      locale: data.locale || fallback.locale,
-      publicPath: data.public_path || fallback.publicPath,
-    };
-  } catch {
-    return fallback;
-  }
-}
-
 function targetPathFromAnchor(anchor: HTMLAnchorElement): string {
   try {
     return new URL(anchor.href, window.location.href).pathname;
@@ -180,9 +150,8 @@ export function mountArticleInteractionTracker() {
     { once: true },
   );
 
-  void (async () => {
-    context = await resolveContext(supabase, slug);
-    recordViewed();
-    checkCompletion();
-  })();
+  // content_id is deliberately resolved by the database trigger from slug.
+  // Browser clients do not need SELECT access to the editorial posts table.
+  recordViewed();
+  checkCompletion();
 }

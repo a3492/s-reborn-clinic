@@ -1,6 +1,6 @@
 # IR-301 Interaction Event Contract
 
-Status: **Implemented on branch — client slice / DB migration pending**
+Status: **Implemented on branch — migration and smoke prepared / non-production DB execution pending**
 
 This contract adds an append-only event stream without replacing existing aggregate/current-state tables.
 
@@ -73,7 +73,7 @@ Comments and error reports should be dual-written from their server API success 
 
 ## 5. Database security contract for the pending migration
 
-The migration must be generated with `supabase migration new ir301_interaction_events`; do not invent a timestamped migration filename.
+The migration is generated with `supabase migration new ir301_interaction_events`; do not invent or rename its timestamped filename.
 
 Required database behavior:
 
@@ -85,7 +85,7 @@ Required database behavior:
 6. `metadata` must be a JSON object and bounded (target <= 8 KiB serialized).
 7. `session_id`, `slug`, `page_type`, `locale`, `source`, and `public_path` have explicit length bounds.
 8. `content_id` is nullable FK to `posts.id`.
-9. Before insert, if `slug` matches a current post, DB canonicalizes `content_id` from `posts.id`. A browser must not be able to forge a different canonical content ID for a matching slug.
+9. Before insert, DB discards client-supplied `content_id` and resolves it from the current `posts.slug` match. A browser cannot forge canonical content identity, and public clients do not need `posts` SELECT access for event recording.
 10. Events are append-only for browser roles.
 11. No raw email, comment body, question narrative, diagnosis, treatment detail, IP address, or Turnstile token belongs in generic event `metadata`.
 
@@ -117,9 +117,9 @@ Event rows therefore retain both `content_id` and the historical slug/path snaps
 - [x] related/primary-next click instrumentation
 - [x] reaction dual-write
 - [x] bookmark dual-write
-- [ ] CLI-generated migration
-- [ ] RLS / grants transactional smoke
-- [ ] canonical `content_id` trigger smoke
+- [x] CLI-generated migration
+- [x] transactional RLS / grants smoke script
+- [x] canonical `content_id` trigger smoke assertion
 - [ ] comment/report server-side dual-write
-- [ ] CI contract assertions for event allow-list and best-effort semantics
+- [x] CI contract assertions for event allow-list, best-effort semantics, and migration least privilege
 - [ ] production apply + live event smoke

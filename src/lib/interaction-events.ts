@@ -92,12 +92,12 @@ export async function recordInteractionEvent(
   try {
     const { error } = await supabase.from('interaction_events').insert(row);
     if (error) {
-      if (import.meta.env.DEV) console.debug('[interaction-events] write skipped:', error.message);
+      if (import.meta.env?.DEV) console.debug('[interaction-events] write skipped:', error.message);
       return false;
     }
     return true;
   } catch (error) {
-    if (import.meta.env.DEV) console.debug('[interaction-events] write failed:', error);
+    if (import.meta.env?.DEV) console.debug('[interaction-events] write failed:', error);
     return false;
   }
 }
