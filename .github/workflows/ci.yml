@@ -40,5 +40,11 @@ jobs:
       - name: Verify IR-301 migration security contract
         run: npm run check:ir301-migration
 
+      - name: Verify Experience contract
+        run: npm run check:experience-contract
+
+      - name: Run read-only Experience inventory audit
+        run: npm run audit:experience-readiness -- --out /tmp/experience-readiness.json
+
       - name: Build
         run: npm run build
