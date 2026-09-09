@@ -42,8 +42,9 @@ serve(async (req: Request) => {
 
     const { data: rows, error: qErr } = await supabase
       .from('posts')
-      .select('id, slug, scheduled_at')
+      .select('id, slug, scheduled_at, content_version, deploy_status')
       .eq('status', 'draft')
+      .in('deploy_status', ['idle', 'failed', 'rolled_back'])
       .not('scheduled_at', 'is', null)
       .lte('scheduled_at', nowIso)
       .order('scheduled_at', { ascending: true });
@@ -57,10 +58,11 @@ serve(async (req: Request) => {
     }
 
     const list = rows ?? [];
-    console.log(`[scheduled-publish] candidates at ${nowIso}: ${list.length}`);
+    console.log(`[scheduled-publish] eligible candidates at ${nowIso}: ${list.length}`);
 
     const results: Array<{
       slug: string;
+      contentVersion: number;
       ok: boolean;
       status?: number;
       detail?: string;
@@ -70,6 +72,7 @@ serve(async (req: Request) => {
 
     for (const row of list) {
       const slug = row.slug as string;
+      const contentVersion = Number(row.content_version ?? 1);
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
@@ -83,6 +86,7 @@ serve(async (req: Request) => {
           headers,
           body: JSON.stringify({
             slug,
+            contentVersion,
             dryRun: false,
             requestedBy: null,
           }),
@@ -97,12 +101,15 @@ serve(async (req: Request) => {
           /* plain text */
         }
 
-        results.push({ slug, ok: res.ok, status: res.status, detail });
-        console.log(`[scheduled-publish] ${slug} → HTTP ${res.status}`, detail.slice(0, 160));
+        results.push({ slug, contentVersion, ok: res.ok, status: res.status, detail });
+        console.log(
+          `[scheduled-publish] ${slug}@v${contentVersion} → HTTP ${res.status}`,
+          detail.slice(0, 160),
+        );
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        console.error(`[scheduled-publish] ${slug} fetch error:`, msg);
-        results.push({ slug, ok: false, detail: msg });
+        console.error(`[scheduled-publish] ${slug}@v${contentVersion} fetch error:`, msg);
+        results.push({ slug, contentVersion, ok: false, detail: msg });
       }
     }
 
