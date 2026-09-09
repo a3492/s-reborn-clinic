@@ -1,6 +1,17 @@
 import { invalidatePublishRelatedCaches } from '../../lib/kv-cache';
 import { isoNow } from '../../lib/post-format';
 
+const OIDC_ISSUER = 'https://token.actions.githubusercontent.com';
+const OIDC_JWKS_URL = 'https://token.actions.githubusercontent.com/.well-known/jwks';
+const OIDC_AUDIENCE = 's-reborn-publish-finalizer';
+const EXPECTED_REPOSITORY_ID = '1200829432';
+const EXPECTED_FINALIZER_WORKFLOW = 'Finalize Published Content';
+const EXPECTED_FINALIZER_WORKFLOW_PATH = '.github/workflows/publish-live-finalize.yml';
+const EXPECTED_DEPLOY_WORKFLOW = 'Deploy to Cloudflare Pages';
+const EXPECTED_DEPLOY_WORKFLOW_PATH = '.github/workflows/deploy.yml';
+const CLOCK_SKEW_SECONDS = 60;
+const MAX_TOKEN_AGE_SECONDS = 10 * 60;
+
 async function safeJson(response: Response) {
   const text = await response.text();
   if (!text) return null;
@@ -13,6 +24,114 @@ async function safeJson(response: Response) {
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return Response.json(body, { status });
+}
+
+function base64UrlToBytes(value: string) {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+function decodeJwtJson(value: string) {
+  const text = new TextDecoder().decode(base64UrlToBytes(value));
+  return JSON.parse(text);
+}
+
+function audienceMatches(aud: unknown, expected: string) {
+  if (aud === expected) return true;
+  return Array.isArray(aud) && aud.some((item) => item === expected);
+}
+
+async function verifyGitHubOidcToken(
+  token: string,
+  repo: string,
+  branch: string,
+  callerRunId: number,
+) {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return { ok: false, reason: 'malformed_jwt' };
+
+    const [encodedHeader, encodedPayload, encodedSignature] = parts;
+    const header = decodeJwtJson(encodedHeader);
+    const payload = decodeJwtJson(encodedPayload);
+
+    if (header?.alg !== 'RS256' || typeof header?.kid !== 'string' || !header.kid) {
+      return { ok: false, reason: 'unsupported_jwt_header' };
+    }
+
+    const jwksRes = await fetch(OIDC_JWKS_URL, {
+      headers: { Accept: 'application/json' },
+    });
+    if (!jwksRes.ok) return { ok: false, reason: `jwks_http_${jwksRes.status}` };
+    const jwks = await safeJson(jwksRes);
+    const jwk = Array.isArray(jwks?.keys)
+      ? jwks.keys.find((candidate: any) => candidate?.kid === header.kid && candidate?.kty === 'RSA')
+      : null;
+    if (!jwk) return { ok: false, reason: 'signing_key_not_found' };
+
+    const key = await crypto.subtle.importKey(
+      'jwk',
+      jwk,
+      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+      false,
+      ['verify'],
+    );
+    const signatureOk = await crypto.subtle.verify(
+      'RSASSA-PKCS1-v1_5',
+      key,
+      base64UrlToBytes(encodedSignature),
+      new TextEncoder().encode(`${encodedHeader}.${encodedPayload}`),
+    );
+    if (!signatureOk) return { ok: false, reason: 'invalid_signature' };
+
+    const now = Math.floor(Date.now() / 1000);
+    const exp = Number(payload?.exp ?? 0);
+    const nbf = Number(payload?.nbf ?? 0);
+    const iat = Number(payload?.iat ?? 0);
+    if (!Number.isFinite(exp) || exp <= now - CLOCK_SKEW_SECONDS) {
+      return { ok: false, reason: 'expired_token' };
+    }
+    if (nbf && nbf > now + CLOCK_SKEW_SECONDS) {
+      return { ok: false, reason: 'token_not_yet_valid' };
+    }
+    if (!Number.isFinite(iat) || iat <= 0 || iat > now + CLOCK_SKEW_SECONDS || iat < now - MAX_TOKEN_AGE_SECONDS) {
+      return { ok: false, reason: 'invalid_token_age' };
+    }
+
+    const expectedRef = `refs/heads/${branch}`;
+    const expectedWorkflowRef = `${repo}/${EXPECTED_FINALIZER_WORKFLOW_PATH}@${expectedRef}`;
+    const subject = String(payload?.sub ?? '');
+    const claimsOk =
+      payload?.iss === OIDC_ISSUER &&
+      audienceMatches(payload?.aud, OIDC_AUDIENCE) &&
+      payload?.repository === repo &&
+      String(payload?.repository_id ?? '') === EXPECTED_REPOSITORY_ID &&
+      payload?.ref === expectedRef &&
+      payload?.ref_type === 'branch' &&
+      payload?.event_name === 'workflow_run' &&
+      payload?.workflow === EXPECTED_FINALIZER_WORKFLOW &&
+      payload?.workflow_ref === expectedWorkflowRef &&
+      String(payload?.run_id ?? '') === String(callerRunId) &&
+      subject.startsWith(`repo:${repo}:`);
+
+    if (!claimsOk) return { ok: false, reason: 'oidc_claim_mismatch' };
+
+    return {
+      ok: true,
+      proof: {
+        repositoryId: String(payload.repository_id),
+        workflowRef: String(payload.workflow_ref),
+        callerRunId: String(payload.run_id),
+        jti: typeof payload?.jti === 'string' ? payload.jti : null,
+      },
+    };
+  } catch {
+    return { ok: false, reason: 'oidc_verification_error' };
+  }
 }
 
 async function supabaseFetch(env: any, path: string, init?: RequestInit) {
@@ -89,7 +208,8 @@ async function verifyGitHubDeployRun(token: string, repo: string, runId: number,
   if (!res.ok) return { ok: false, reason: data?.message || `GitHub run lookup HTTP ${res.status}` };
 
   const ok =
-    data?.name === 'Deploy to Cloudflare Pages' &&
+    data?.name === EXPECTED_DEPLOY_WORKFLOW &&
+    data?.path === EXPECTED_DEPLOY_WORKFLOW_PATH &&
     data?.event === 'push' &&
     data?.head_branch === branch &&
     data?.head_sha === commitSha &&
@@ -143,28 +263,39 @@ function triggerEmbedPost(env: any, slug: string) {
 }
 
 export const onRequestPost = async ({ request, env }: any) => {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-    return jsonResponse({ error: 'Missing Supabase runtime bindings.' }, 500);
-  }
-
-  const auth = request.headers.get('Authorization') ?? '';
-  const tokenMatch = auth.match(/^Bearer\s+(.+)$/i);
-  if (!tokenMatch?.[1]) {
-    return jsonResponse({ error: 'GitHub Actions bearer token is required.' }, 401);
-  }
-
   const body = await request.json().catch(() => null);
   const commitSha = String(body?.commitSha ?? '').trim();
-  const runId = Number(body?.runId ?? 0);
-  if (!/^[0-9a-f]{40}$/i.test(commitSha) || !Number.isInteger(runId) || runId <= 0) {
-    return jsonResponse({ error: 'Valid commitSha and runId are required.' }, 400);
+  const deployRunId = Number(body?.deployRunId ?? 0);
+  const callerRunId = Number(body?.callerRunId ?? 0);
+  if (
+    !/^[0-9a-f]{40}$/i.test(commitSha) ||
+    !Number.isInteger(deployRunId) || deployRunId <= 0 ||
+    !Number.isInteger(callerRunId) || callerRunId <= 0
+  ) {
+    return jsonResponse({ error: 'Valid commitSha, deployRunId and callerRunId are required.' }, 400);
+  }
+
+  const oidcAuth = request.headers.get('Authorization') ?? '';
+  const oidcMatch = oidcAuth.match(/^Bearer\s+(.+)$/i);
+  const githubApiToken = String(request.headers.get('X-GitHub-Token') ?? '').trim();
+  if (!oidcMatch?.[1] || !githubApiToken) {
+    return jsonResponse({ error: 'GitHub Actions OIDC token and GitHub API token are required.' }, 401);
   }
 
   const repo = String(env.GITHUB_REPO || 'a3492/s-reborn-clinic');
   const branch = String(env.GITHUB_BRANCH || 'main');
-  const deployProof = await verifyGitHubDeployRun(tokenMatch[1], repo, runId, commitSha, branch);
+  const oidcProof = await verifyGitHubOidcToken(oidcMatch[1], repo, branch, callerRunId);
+  if (!oidcProof.ok) {
+    return jsonResponse({ error: 'GitHub Actions OIDC verification failed.', reason: oidcProof.reason }, 403);
+  }
+
+  const deployProof = await verifyGitHubDeployRun(githubApiToken, repo, deployRunId, commitSha, branch);
   if (!deployProof.ok) {
     return jsonResponse({ error: deployProof.reason }, 403);
+  }
+
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    return jsonResponse({ error: 'Missing Supabase runtime bindings.' }, 500);
   }
 
   const jobsRes = await supabaseFetch(
@@ -242,6 +373,8 @@ export const onRequestPost = async ({ request, env }: any) => {
           stage: 'public_verify',
           commitSha,
           publicUrl,
+          deployRunId,
+          callerRunId,
           ...artifact,
         },
       });
@@ -259,7 +392,9 @@ export const onRequestPost = async ({ request, env }: any) => {
       last_publish_result: {
         stage: 'live',
         commitSha,
-        workflowRunId: runId,
+        workflowRunId: deployRunId,
+        finalizerRunId: callerRunId,
+        oidcRepositoryId: oidcProof.proof?.repositoryId ?? EXPECTED_REPOSITORY_ID,
         publicUrl,
         ...artifact,
       },
@@ -272,8 +407,10 @@ export const onRequestPost = async ({ request, env }: any) => {
       completed_at: verifiedAt,
       error_message: null,
       live_check: {
-        workflowRunId: runId,
+        workflowRunId: deployRunId,
+        finalizerRunId: callerRunId,
         commitSha,
+        oidcRepositoryId: oidcProof.proof?.repositoryId ?? EXPECTED_REPOSITORY_ID,
         ...artifact,
       },
     });
@@ -287,7 +424,9 @@ export const onRequestPost = async ({ request, env }: any) => {
         slug: post.slug,
         content_version: jobVersion,
         commit_sha: commitSha,
-        workflow_run_id: runId,
+        workflow_run_id: deployRunId,
+        finalizer_run_id: callerRunId,
+        oidc_repository_id: oidcProof.proof?.repositoryId ?? EXPECTED_REPOSITORY_ID,
         public_url: publicUrl,
         verified_at: verifiedAt,
       },
