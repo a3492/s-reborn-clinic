@@ -192,4 +192,24 @@ const reportEventCall = reportSource.match(
 );
 assert.ok(reportEventCall, 'report event must contain only bounded report_type metadata');
 
+const searchSource = await readFile(new URL('../src/pages/search.astro', import.meta.url), 'utf8');
+assert.ok(searchSource.includes("eventName: 'search.executed'"), 'search success must append search.executed');
+assert.ok(searchSource.includes("eventName: 'search.no_result'"), 'zero-result search must append search.no_result');
+assert.ok(searchSource.includes("eventName: 'search.result_clicked'"), 'result navigation must append search.result_clicked');
+assert.ok(
+  searchSource.includes("const selectCols = 'id, slug, title, description, category, tags, published_at, thumbnail_url'"),
+  'search results must carry canonical post id for result-click identity',
+);
+const searchMetadataBlock = searchSource.match(/const searchMetadata = \{([\s\S]*?)\n\t\t\};/)?.[1] ?? '';
+assert.ok(searchMetadataBlock.includes('...shape'), 'search metadata must use derived query shape');
+assert.ok(searchMetadataBlock.includes('result_count: rows.length'), 'search metadata must include result count');
+assert.ok(searchMetadataBlock.includes('strategy'), 'search metadata must include fulltext/fallback strategy');
+assert.ok(searchMetadataBlock.includes('duration_ms'), 'search metadata must include bounded execution duration');
+assert.ok(!/\bquery\s*:/.test(searchMetadataBlock), 'search metadata must never store the raw query');
+assert.ok(!/\bq\s*[,}]/.test(searchMetadataBlock), 'search metadata must never store the raw q value');
+const queryShapeBlock = searchSource.match(/function queryShape\(query: string\) \{([\s\S]*?)\n\t\}/)?.[1] ?? '';
+assert.ok(queryShapeBlock.includes('query_length'), 'search metadata must expose query length only as a derived metric');
+assert.ok(queryShapeBlock.includes('query_token_count'), 'search metadata must expose query token count only as a derived metric');
+assert.ok(!queryShapeBlock.includes('return { query'), 'queryShape must not return the raw search query');
+
 console.log('Interaction event client/server contract: OK');
