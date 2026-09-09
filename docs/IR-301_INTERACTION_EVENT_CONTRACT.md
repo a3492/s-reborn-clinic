@@ -80,7 +80,7 @@ For comment/report server-side dual-write, the shared pseudonymous reader sessio
 
 ## 5. Database security contract and production rollout
 
-The migration was initially generated with Supabase CLI and is now aligned to the actual production migration-history version:
+The migration content was initially generated through the Supabase CLI workflow. After formal production apply, the repository filename was aligned to the actual Supabase migration-history version:
 
 - `20260909045719_ir301_interaction_events.sql`
 
@@ -133,7 +133,7 @@ Event rows therefore retain both `content_id` and the historical slug/path snaps
 - [x] bookmark dual-write
 - [x] comment/report server-side dual-write
 - [x] search execute/no-result/result-click instrumentation without raw query capture
-- [x] CLI-generated migration contract
+- [x] migration contract generated and version-aligned with production history
 - [x] transactional RLS / grants / canonical positive smoke
 - [x] negative security smoke for unknown event, sensitive/oversized metadata, non-web anon source, and anon read denial
 - [x] CI contract assertions for event allow-list, best-effort semantics, migration least privilege, feedback success paths, and search privacy
